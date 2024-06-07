@@ -72,6 +72,12 @@ void BOARD_InitLpuartPins(void) {                          /*!< Function assigne
                         IOMUXC_PCR_PS_MASK);
 }
 
+void BOARD_DeinitLpuartPins(void) {
+    IOMUXC_SetPinMux(IOMUXC_PTA18_LPUART0_TX, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA18_LPUART0_TX, 0U);
+    IOMUXC_SetPinMux(IOMUXC_PTA15_LPUART0_RX, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA15_LPUART0_RX, 0U);
+}
 
 /*
  * TEXT BELOW IS USED AS SETTING FOR TOOLS *************************************
@@ -283,17 +289,11 @@ BOARD_InitPmicModePins:
  * END ****************************************************************************************************************/
 void BOARD_InitPmicModePins(void) {                        /*!< Function assigned for the core: Cortex-M33[cm33] */
     IOMUXC_SetPinMux(IOMUXC_PTB7_PMIC0_MODE2, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTB7_PMIC0_MODE2,
-                        IOMUXC_PCR_PE_MASK |
-                        IOMUXC_PCR_PS_MASK);
+    IOMUXC_SetPinConfig(IOMUXC_PTB7_PMIC0_MODE2, 0U); // pull-down on the board
     IOMUXC_SetPinMux(IOMUXC_PTB8_PMIC0_MODE1, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTB8_PMIC0_MODE1,
-                        IOMUXC_PCR_PE_MASK |
-                        IOMUXC_PCR_PS_MASK);
+    IOMUXC_SetPinConfig(IOMUXC_PTB8_PMIC0_MODE1, 0U); // pull-down on the board
     IOMUXC_SetPinMux(IOMUXC_PTB9_PMIC0_MODE0, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTB9_PMIC0_MODE0,
-                        IOMUXC_PCR_PE_MASK |
-                        IOMUXC_PCR_PS_MASK);
+    IOMUXC_SetPinConfig(IOMUXC_PTB9_PMIC0_MODE0, 0U); // pull-down on the board
 }
 
 

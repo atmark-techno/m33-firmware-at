@@ -418,10 +418,7 @@ void APP_PowerPreSwitchHook(lpm_rtd_power_mode_e targetMode)
          * Debug console RX pin: Set to pinmux to analog.
          * Debug console TX pin: Set to pinmux to analog.
          */
-        IOMUXC_SetPinMux(IOMUXC_PTA10_LPUART1_TX, 0);
-        IOMUXC_SetPinConfig(IOMUXC_PTA10_LPUART1_TX, 0);
-        IOMUXC_SetPinMux(IOMUXC_PTA11_LPUART1_RX, 0);
-        IOMUXC_SetPinConfig(IOMUXC_PTA11_LPUART1_RX, 0);
+        BOARD_DeinitLpuartPins();
 
         if (LPM_PowerModePowerDown == targetMode || LPM_PowerModeDeepSleep == targetMode)
         {
@@ -463,10 +460,7 @@ void APP_PowerPostSwitchHook(lpm_rtd_power_mode_e targetMode, bool result)
          * Debug console RX pin was set to disable for current leakage, need to re-configure pinmux.
          * Debug console TX pin was set to disable for current leakage, need to re-configure pinmux.
          */
-        IOMUXC_SetPinMux(IOMUXC_PTA10_LPUART1_TX, 0U);
-        IOMUXC_SetPinConfig(IOMUXC_PTA10_LPUART1_TX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
-        IOMUXC_SetPinMux(IOMUXC_PTA11_LPUART1_RX, 0U);
-        IOMUXC_SetPinConfig(IOMUXC_PTA11_LPUART1_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+        BOARD_InitLpuartPins();
 
         BOARD_InitClock(); /* initialize system osc for uart(using osc as clock source) */
         BOARD_InitDebugConsole();
