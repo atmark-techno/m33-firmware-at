@@ -426,6 +426,11 @@ void APP_WakeupACore(void)
 {
     if (wake_acore_flag)
     {
+        if (UPOWER_ChngPmicVoltage(PMIC_LSW2, 1800*1000))
+        {
+            PRINTF("failed to set PMIC_LSW2 voltage to 1.8 [V]\r\n");
+        }
+
         /*
          * For case: when RTD is the ower of LPAV and APD enter PD/DPD, Mcore don't enter lp mode, but wakes up
          * directly. RTD need restore related settings.
@@ -2047,6 +2052,26 @@ int32_t MU0_A_IRQHandler(void)
         SRTM_PeerCore_SetState(core, SRTM_PeerCore_State_Deactivated);
 
         PRINTF("AD entered PD(linux suspend to ram)/DPD(linux shutdown) mode\r\n");
+
+        status = UPOWER_ChngPmicVoltage(PMIC_LSW2, 0);
+        if (status == 0)
+        {
+            int vol;
+            status = UPOWER_GetPmicVoltage(PMIC_LSW2, &vol);
+            if (status == 0)
+            {
+                PRINTF("PMIC_LSW2 is %d [uV]\r\n", vol);
+            }
+            else
+            {
+                PRINTF("failed to get PMIC_LSW2 voltage\r\n");
+            }
+        }
+        else
+        {
+            PRINTF("failed to set PMIC_LSW2 voltage to %u [uV]\r\n", 0);
+        }
+
         MU_ClearStatusFlags(MU0_MUA, (uint32_t)kMU_OtherSideEnterPowerDownInterruptFlag);
 
         if (AD_WillEnterMode == AD_DPD)
