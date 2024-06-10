@@ -156,7 +156,7 @@ enum
 #define APP_PIN_TOUCH_INT  (APP_PIN_PTB5)
 #define APP_PIN_PTB4       (0x0104U)          /* PTB4 */
 #define APP_PIN_RTD_BTN1   (0x010DU)          /* PTB13 */
-#define APP_PIN_RTD_BTN2   (0x010CU)          /* PTB12 */
+#define APP_PIN_RTD_BTN2   (0x010EU)          /* PTB14 */
 
 /*
  * BOARD Relative Settings:

@@ -247,11 +247,11 @@ static void APP_Suspend(void)
         }
 
         /*
-         * If it's wakeup source, need to set as WUU0_P24
+         * If it's wakeup source, need to set as WUU0_P26
          * Power Down/Deep Power Down wakeup through WUU and NMI pin
          * Sleep/Deep Sleep wakeup via interrupt from M33 peripherals or external GPIO pins. WIC detects wakeup source.
          */
-        if ((i == 12) && (WUU0->PE2 & WUU_PE2_WUPE24_MASK))
+        if ((i == 14) && (WUU0->PE2 & WUU_PE2_WUPE26_MASK))
         {
             if (targetPowerMode == LPM_PowerModeDeepSleep)
             {
@@ -259,7 +259,7 @@ static void APP_Suspend(void)
                  * Deep Sleep wakeup via interrupt not WUU,
                  * so do nothing in here for Deep Sleep Mode
                  */
-                /* enable interrupts for PTB12 */
+                /* enable interrupts for PTB14 */
                 GPIOB->ICR[i] = gpioICRBackup[backupIndex];
             }
             else
@@ -268,11 +268,11 @@ static void APP_Suspend(void)
                  * Disable interrupt temperarily to prevent glitch
                  * interrupt during switching IOMUXC pin selection
                  */
-                setting = WUU0->PE2 & WUU_PE2_WUPE24_MASK;
-                WUU0->PE2 &= !WUU_PE2_WUPE24_MASK;
+                setting = WUU0->PE2 & WUU_PE2_WUPE26_MASK;
+                WUU0->PE2 &= !WUU_PE2_WUPE26_MASK;
 
-                /* Change PTB12's function as WUU0_P24(IOMUXC_PTB12_WUU0_P24) */
-                IOMUXC0->PCR0_IOMUXCARRAY1[i] = IOMUXC0_PCR0_IOMUXCARRAY1_MUX(13);
+                /* Change PTB14's function as WUU0_P26(IOMUXC_PTB14_WUU0_P26) */
+                IOMUXC0->PCR0_IOMUXCARRAY1[i] = IOMUXC0_PCR0_IOMUXCARRAY1_MUX(15);
 
                 WUU0->PE2 |= setting;
             }
@@ -427,16 +427,16 @@ void APP_PowerPreSwitchHook(lpm_rtd_power_mode_e targetMode)
         else if (LPM_PowerModeDeepPowerDown == targetMode)
         {
             APP_DisableGPIO();
-            /* If PTB12 is wakeup source, set to WUU0_P24 */
-            if ((WUU0->PE2 & WUU_PE2_WUPE24_MASK) != 0)
+            /* If PTB14 is wakeup source, set to WUU0_P26 */
+            if ((WUU0->PE2 & WUU_PE2_WUPE26_MASK) != 0)
             {
                 /* Disable interrupt temperarily to prevent glitch
                  * interrupt during switching IOMUXC pin selection
                  */
-                setting = WUU0->PE2 & WUU_PE2_WUPE24_MASK;
-                WUU0->PE2 &= !WUU_PE2_WUPE24_MASK;
+                setting = WUU0->PE2 & WUU_PE2_WUPE26_MASK;
+                WUU0->PE2 &= !WUU_PE2_WUPE26_MASK;
 
-                IOMUXC0->PCR0_IOMUXCARRAY1[12] = IOMUXC0_PCR0_IOMUXCARRAY0_MUX(13);
+                IOMUXC0->PCR0_IOMUXCARRAY1[14] = IOMUXC0_PCR0_IOMUXCARRAY0_MUX(15);
 
                 WUU0->PE2 |= setting;
             }

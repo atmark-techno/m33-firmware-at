@@ -249,7 +249,7 @@ void BOARD_InitTouchIntPins(void) {                        /*!< Function assigne
 BOARD_InitButtonPins:
 - options: {callFromInitBoot: 'true', coreID: cm33}
 - pin_list:
-  - {pin_num: AE15, peripheral: GPIOB, signal: 'ptb, 12', pin_signal: PTB12, IBE: ENABLED}
+  - {pin_num: AH16, peripheral: GPIOB, signal: 'ptb, 14', pin_signal: PTB14, IBE: ENABLED, PS: UP, PE: ENABLED}
   - {pin_num: AF16, peripheral: GPIOB, signal: 'ptb, 13', pin_signal: PTB13, IBE: ENABLED}
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS ***********
  */
@@ -261,9 +261,11 @@ BOARD_InitButtonPins:
  *
  * END ****************************************************************************************************************/
 void BOARD_InitButtonPins(void) {                          /*!< Function assigned for the core: Cortex-M33[cm33] */
-    IOMUXC_SetPinMux(IOMUXC_PTB12_PTB12, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTB12_PTB12,
-                        IOMUXC_PCR_IBE_MASK);
+    IOMUXC_SetPinMux(IOMUXC_PTB14_PTB14, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTB14_PTB14,
+                        IOMUXC_PCR_IBE_MASK |
+                        IOMUXC_PCR_PE_MASK |
+                        IOMUXC_PCR_PS_MASK);
     IOMUXC_SetPinMux(IOMUXC_PTB13_PTB13, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTB13_PTB13,
                         IOMUXC_PCR_IBE_MASK);
