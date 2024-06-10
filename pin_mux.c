@@ -43,6 +43,7 @@ void BOARD_InitBootPins(void)
     BOARD_InitButtonPins();
     BOARD_InitPmicModePins();
     BOARD_InitLsm6dsoPins();
+    BOARD_InitRegulatorPins();
 }
 
 /*
@@ -319,6 +320,16 @@ void BOARD_InitLsm6dsoPins(void) {                         /*!< Function assigne
     IOMUXC_SetPinConfig(IOMUXC_PTB4_PTB4,
                         IOMUXC_PCR_PE_MASK |
                         IOMUXC_PCR_PS_MASK);
+}
+
+void BOARD_InitRegulatorPins(void) {
+    IOMUXC_SetPinMux(IOMUXC_PTB6_PTB6, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTB6_PTB6,
+                        IOMUXC_PCR_OBE_MASK);
+
+    IOMUXC_SetPinMux(IOMUXC_PTB12_PTB12, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTB12_PTB12,
+                        IOMUXC_PCR_OBE_MASK);
 }
 
 /***********************************************************************************************************************

@@ -316,6 +316,24 @@ static MU_Type mu0_mua;
 /*******************************************************************************
  * Code
  ******************************************************************************/
+static void gpio_out(RGPIO_Type *base, int gpio_num, int value)
+{
+    uint32_t direction;
+
+    // set value
+    if (value)
+        base->PSOR = BIT(gpio_num); // set
+    else
+        base->PCOR = BIT(gpio_num); // clear
+
+    // set direction to output if it is input
+    direction = base->PDDR;
+    if (!(direction & BIT(gpio_num))) {
+        direction |= BIT(gpio_num);
+        base->PDDR = direction;
+    }
+}
+
 /* For Deep Sleep Mode of APD */
 bool APP_SRTM_GetSupportDSLForApd(void)
 {
@@ -2487,6 +2505,9 @@ static void SRTM_DispatcherTask(void *pvParameters)
 
 static void APP_SRTM_InitPeriph(bool resume)
 {
+    /* enable regulators */
+    gpio_out(GPIOB, 12, 1); // enable VDD1V8
+    gpio_out(GPIOB, 6, 1);  // enable VDD3V3
 }
 
 void APP_SRTM_Init(void)
