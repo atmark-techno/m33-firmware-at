@@ -101,16 +101,16 @@ BOARD_InitI2cPins:
 void BOARD_InitI2cPins(void) {                             /*!< Function assigned for the core: Cortex-M33[cm33] */
     IOMUXC_SetPinMux(IOMUXC_PTA12_LPI2C1_SCL, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA12_LPI2C1_SCL,
-                        IOMUXC_PCR_ODE_MASK);
+                        IOMUXC_PCR_ODE_MASK); // nc
     IOMUXC_SetPinMux(IOMUXC_PTA13_LPI2C1_SDA, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA13_LPI2C1_SDA,
-                        IOMUXC_PCR_ODE_MASK);
+                        IOMUXC_PCR_ODE_MASK); // nc
     IOMUXC_SetPinMux(IOMUXC_PTA8_LPI2C0_SCL, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA8_LPI2C0_SCL,
-                        IOMUXC_PCR_ODE_MASK);
+                        IOMUXC_PCR_ODE_MASK); // nc
     IOMUXC_SetPinMux(IOMUXC_PTA9_LPI2C0_SDA, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA9_LPI2C0_SDA,
-                        IOMUXC_PCR_ODE_MASK);
+                        IOMUXC_PCR_ODE_MASK); // nc
 
     /* Secure Element */
     IOMUXC_SetPinMux(IOMUXC_PTB4_LPI2C2_SCL, 0U);
@@ -169,18 +169,18 @@ BOARD_InitI2sPins:
 void BOARD_InitI2sPins(void) {                             /*!< Function assigned for the core: Cortex-M33[cm33] */
     IOMUXC_SetPinMux(IOMUXC_PTA0_I2S0_RX_BCLK, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA0_I2S0_RX_BCLK,
-                        IOMUXC_PCR_DSE_MASK);
+                        IOMUXC_PCR_DSE_MASK); // PTA0 : BT0 CFG0, 100k pull down
     IOMUXC_SetPinMux(IOMUXC_PTA1_I2S0_RX_FS, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA1_I2S0_RX_FS,
-                        IOMUXC_PCR_DSE_MASK);
-    IOMUXC_SetPinMux(IOMUXC_PTA2_I2S0_RXD0, 0U);
+                        IOMUXC_PCR_DSE_MASK); // PTA1 : BT0 CFG1, 100k pull down
+    IOMUXC_SetPinMux(IOMUXC_PTA2_I2S0_RXD0, 0U); // nc
     IOMUXC_SetPinMux(IOMUXC_PTA4_I2S0_MCLK, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA4_I2S0_MCLK,
                         IOMUXC_PCR_OBE_MASK |
-                        IOMUXC_PCR_DSE_MASK);
+                        IOMUXC_PCR_DSE_MASK); // PTA4 : LPI2C1_SCL, 4.7k pull up VDD_3V3
     IOMUXC_SetPinMux(IOMUXC_PTA7_I2S0_TXD0, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA7_I2S0_TXD0,
-                        IOMUXC_PCR_DSE_MASK);
+                        IOMUXC_PCR_DSE_MASK); // PTA7 : BT0_CFG7, 100k pull down
 }
 
 
@@ -202,7 +202,7 @@ BOARD_InitTpmPins:
 void BOARD_InitTpmPins(void) {                             /*!< Function assigned for the core: Cortex-M33[cm33] */
     IOMUXC_SetPinMux(IOMUXC_PTA3_TPM0_CH2, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA3_TPM0_CH2,
-                        IOMUXC_PCR_DSE_MASK);
+                        IOMUXC_PCR_DSE_MASK); // nc
 }
 
 
@@ -225,7 +225,7 @@ void BOARD_InitHdmiIntPins(void) {                         /*!< Function assigne
     IOMUXC_SetPinMux(IOMUXC_PTA19_PTA19, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA19_PTA19,
                         IOMUXC_PCR_PE_MASK |
-                        IOMUXC_PCR_PS_MASK);
+                        IOMUXC_PCR_PS_MASK); // nc
 }
 
 
@@ -248,7 +248,7 @@ void BOARD_InitTouchIntPins(void) {                        /*!< Function assigne
     IOMUXC_SetPinMux(IOMUXC_PTB5_PTB5, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTB5_PTB5,
                         IOMUXC_PCR_PE_MASK |
-                        IOMUXC_PCR_PS_MASK);
+                        IOMUXC_PCR_PS_MASK); // PTB5: LPI2C2_SDA 4.7k pull up BUCK1_1V8
 }
 
 
@@ -273,10 +273,10 @@ void BOARD_InitButtonPins(void) {                          /*!< Function assigne
     IOMUXC_SetPinConfig(IOMUXC_PTB14_PTB14,
                         IOMUXC_PCR_IBE_MASK |
                         IOMUXC_PCR_PE_MASK |
-                        IOMUXC_PCR_PS_MASK);
+                        IOMUXC_PCR_PS_MASK); // nc
     IOMUXC_SetPinMux(IOMUXC_PTB13_PTB13, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTB13_PTB13,
-                        IOMUXC_PCR_IBE_MASK);
+                        IOMUXC_PCR_IBE_MASK); // PTB13 : RTC_INT_B 100k pull up VDD_1V8
 }
 
 
@@ -326,17 +326,17 @@ void BOARD_InitLsm6dsoPins(void) {                         /*!< Function assigne
     IOMUXC_SetPinMux(IOMUXC_PTB4_PTB4, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTB4_PTB4,
                         IOMUXC_PCR_PE_MASK |
-                        IOMUXC_PCR_PS_MASK);
+                        IOMUXC_PCR_PS_MASK); // PTB4 : LPI2C2_SCL 4.7k pull up BUCK1_1V8
 }
 
 void BOARD_InitRegulatorPins(void) {
     IOMUXC_SetPinMux(IOMUXC_PTB6_PTB6, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTB6_PTB6,
-                        IOMUXC_PCR_OBE_MASK);
+                        IOMUXC_PCR_OBE_MASK); // PTB6 : VDD_3V3_EN 4.7k pull up EXT_1V8, 100k pull down
 
     IOMUXC_SetPinMux(IOMUXC_PTB12_PTB12, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTB12_PTB12,
-                        IOMUXC_PCR_OBE_MASK);
+                        IOMUXC_PCR_OBE_MASK); // PTB12 : VDD_3V3_EN 4.7k pull up EXT_1V8, 100k pull down
 }
 
 /***********************************************************************************************************************
