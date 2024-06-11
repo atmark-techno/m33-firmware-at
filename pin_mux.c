@@ -36,7 +36,7 @@ void BOARD_InitBootPins(void)
     BOARD_InitLpuartPins();
     BOARD_InitI2cPins();
     BOARD_InitPmicI2cPins();
-    BOARD_InitI2sPins();
+    //BOARD_InitI2sPins();
     BOARD_InitTpmPins();
     BOARD_InitHdmiIntPins();
     BOARD_InitTouchIntPins();
