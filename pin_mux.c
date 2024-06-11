@@ -101,16 +101,24 @@ BOARD_InitI2cPins:
 void BOARD_InitI2cPins(void) {                             /*!< Function assigned for the core: Cortex-M33[cm33] */
     IOMUXC_SetPinMux(IOMUXC_PTA12_LPI2C1_SCL, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA12_LPI2C1_SCL,
-                        IOMUXC_PCR_ODE_MASK); // nc
+                        IOMUXC_PCR_ODE_MASK |
+                        IOMUXC_PCR_PE_MASK |
+                        IOMUXC_PCR_PS_MASK); // nc
     IOMUXC_SetPinMux(IOMUXC_PTA13_LPI2C1_SDA, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA13_LPI2C1_SDA,
-                        IOMUXC_PCR_ODE_MASK); // nc
+                        IOMUXC_PCR_ODE_MASK |
+                        IOMUXC_PCR_PE_MASK |
+                        IOMUXC_PCR_PS_MASK); // nc
     IOMUXC_SetPinMux(IOMUXC_PTA8_LPI2C0_SCL, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA8_LPI2C0_SCL,
-                        IOMUXC_PCR_ODE_MASK); // nc
+                        IOMUXC_PCR_ODE_MASK |
+                        IOMUXC_PCR_PE_MASK |
+                        IOMUXC_PCR_PS_MASK); // nc
     IOMUXC_SetPinMux(IOMUXC_PTA9_LPI2C0_SDA, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA9_LPI2C0_SDA,
-                        IOMUXC_PCR_ODE_MASK); // nc
+                        IOMUXC_PCR_ODE_MASK |
+                        IOMUXC_PCR_PE_MASK |
+                        IOMUXC_PCR_PS_MASK); // nc
 }
 
 /*
