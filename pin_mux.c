@@ -111,8 +111,15 @@ void BOARD_InitI2cPins(void) {                             /*!< Function assigne
     IOMUXC_SetPinMux(IOMUXC_PTA9_LPI2C0_SDA, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA9_LPI2C0_SDA,
                         IOMUXC_PCR_ODE_MASK);
-}
 
+    /* Secure Element */
+    IOMUXC_SetPinMux(IOMUXC_PTB4_LPI2C2_SCL, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTB4_LPI2C2_SCL,
+                        IOMUXC_PCR_ODE_MASK);
+    IOMUXC_SetPinMux(IOMUXC_PTB5_LPI2C2_SDA, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTB5_LPI2C2_SDA,
+                        IOMUXC_PCR_ODE_MASK);
+}
 
 /*
  * TEXT BELOW IS USED AS SETTING FOR TOOLS *************************************
