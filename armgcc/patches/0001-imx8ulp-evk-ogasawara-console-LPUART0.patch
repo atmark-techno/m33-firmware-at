@@ -1,0 +1,42 @@
+From 8d28ca0aee919edf35493c9026ff98f28e3b585f Mon Sep 17 00:00:00 2001
+From: Kojiro Yamada <kojiro.yamada@atmark-techno.com>
+Date: Wed, 12 Jun 2024 11:38:45 +0900
+Subject: [PATCH] =?UTF-8?q?imx8ulp-evk:=20ogasawara=E7=94=A8=E3=81=AB?=
+ =?UTF-8?q?=E6=94=B9=E9=80=A0(console=E3=82=92LPUART0=E3=81=AB=E3=81=97?=
+ =?UTF-8?q?=E3=81=9F)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ boards/evkmimx8ulp/board.h | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/boards/evkmimx8ulp/board.h b/boards/evkmimx8ulp/board.h
+index cde64d316..a6afec24d 100644
+--- a/boards/evkmimx8ulp/board.h
++++ b/boards/evkmimx8ulp/board.h
+@@ -44,14 +44,14 @@
+ /* The UART to use for debug messages. */
+ #define BOARD_DEBUG_UART_TYPE     kSerialPort_Uart
+ #define BOARD_DEBUG_UART_BAUDRATE 115200u
+-#define BOARD_DEBUG_UART_BASEADDR LPUART1_BASE
+-#define BOARD_DEBUG_UART_INSTANCE 1U
++#define BOARD_DEBUG_UART_BASEADDR LPUART0_BASE
++#define BOARD_DEBUG_UART_INSTANCE 0U
+ #define BOARD_DEBUG_UART_CLK_FREQ CLOCK_GetLpuartClkFreq(BOARD_DEBUG_UART_INSTANCE)
+-#define BOARD_DEBUG_UART_IP_NAME  kCLOCK_Lpuart1
++#define BOARD_DEBUG_UART_IP_NAME  kCLOCK_Lpuart0
+ #define BOARD_DEBUG_UART_CLKSRC   kCLOCK_Pcc1BusIpSrcSysOscDiv2
+-#define BOARD_DEBUG_UART_RESET    kRESET_Lpuart1
+-#define BOARD_UART_IRQ            LPUART1_IRQn
+-#define BOARD_UART_IRQ_HANDLER    LPUART1_IRQHandler
++#define BOARD_DEBUG_UART_RESET    kRESET_Lpuart0
++#define BOARD_UART_IRQ            LPUART0_IRQn
++#define BOARD_UART_IRQ_HANDLER    LPUART0_IRQHandler
+ 
+ /* Board accelerator sensor configuration */
+ #define BOARD_ACCEL_I2C_BASEADDR   LPI2C0
+-- 
+2.43.0.windows.1
+
