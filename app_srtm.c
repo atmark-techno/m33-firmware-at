@@ -452,6 +452,10 @@ void APP_WakeupACore(void)
         {
             PRINTF("failed to set PMIC_LSW2 voltage to 1.8 [V]\r\n");
         }
+        if (UPOWER_ChngPmicVoltage(PMIC_LSW4, 1100*1000))
+        {
+            PRINTF("failed to set PMIC_LSW4 voltage to 1.1 [V]\r\n");
+        }
 
         /*
          * For case: when RTD is the ower of LPAV and APD enter PD/DPD, Mcore don't enter lp mode, but wakes up
@@ -2111,6 +2115,25 @@ int32_t MU0_A_IRQHandler(void)
         else
         {
             PRINTF("failed to set PMIC_LSW2 voltage to 0 [uV]\r\n");
+        }
+
+        status = UPOWER_ChngPmicVoltage(PMIC_LSW4, 0);
+        if (status == 0)
+        {
+            int vol;
+            status = UPOWER_GetPmicVoltage(PMIC_LSW4, &vol);
+            if (status == 0)
+            {
+                PRINTF("PMIC_LSW4 is %d [uV]\r\n", vol);
+            }
+            else
+            {
+                PRINTF("failed to get PMIC_LSW4 voltage\r\n");
+            }
+        }
+        else
+        {
+            PRINTF("failed to set PMIC_LSW4 voltage to 0 [uV]\r\n");
         }
 
         MU_ClearStatusFlags(MU0_MUA, (uint32_t)kMU_OtherSideEnterPowerDownInterruptFlag);
