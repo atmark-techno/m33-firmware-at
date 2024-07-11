@@ -1,9 +1,6 @@
 #!/bin/sh
 set -x
 workdir="$(dirname $(readlink -f $0))"
-patch_dir="$workdir/patches"
-cd /mcux-sdk/core
-for pat in "$patch_dir"/*; do patch -p 1 -N -i "$pat" || exit; done
 
 cd "$workdir" || exit 1
 if [ -d "CMakeFiles" ];then rm -rf CMakeFiles; fi

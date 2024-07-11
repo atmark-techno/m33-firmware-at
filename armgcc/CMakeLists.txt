@@ -65,10 +65,10 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../FreeRTOSConfig.h"
 "${ProjDirPath}/../pin_mux.c"
 "${ProjDirPath}/../pin_mux.h"
-"${SdkRootDirPath}/core/boards/evkmimx8ulp/board.c"
-"${SdkRootDirPath}/core/boards/evkmimx8ulp/board.h"
-"${SdkRootDirPath}/core/boards/evkmimx8ulp/clock_config.c"
-"${SdkRootDirPath}/core/boards/evkmimx8ulp/clock_config.h"
+"${ProjDirPath}/../boards/a900/board.c"
+"${ProjDirPath}/../boards/a900/board.h"
+"${ProjDirPath}/../boards/a900/clock_config.c"
+"${ProjDirPath}/../boards/a900/clock_config.h"
 "${ProjDirPath}/../empty_rsc_table.c"
 "${ProjDirPath}/../app_srtm.c"
 "${ProjDirPath}/../app_srtm.h"
@@ -101,7 +101,7 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 target_include_directories(${MCUX_SDK_PROJECT_NAME} PRIVATE
     ${ProjDirPath}/..
     ${SdkRootDirPath}/examples/evkmimx8ulp
-    ${SdkRootDirPath}/core/boards/evkmimx8ulp
+    ${ProjDirPath}/../boards/a900
     ${ProjDirPath}/../srtm/channels
     ${ProjDirPath}/../srtm/services
 )
