@@ -59,15 +59,17 @@ enum
     APP_INPUT_IT6161_INT = 2U,
     APP_INPUT_PTB5       = 3U,
     APP_INPUT_TOUCH_INT  = 3U,
-    APP_IO_NUM           = 4U
+    APP_INPUT_PTC4       = 4U,
+    APP_INPUT_PTC6       = 5U,
+    APP_IO_NUM           = 6U
 };
 
 /* Define macros for input gpios that setup by linux that running on A Core(CA35) */
 #define APP_INPUT_GPIO_CONTROL_BY_ACORE_START APP_INPUT_PTA19
-#define APP_INPUT_GPIO_CONTROL_BY_ACORE_END   APP_INPUT_PTB5
+#define APP_INPUT_GPIO_CONTROL_BY_ACORE_END   APP_INPUT_PTC6
 
 #define APP_INPUT_GPIO_START APP_INPUT_RTD_BTN1
-#define APP_INPUT_GPIO_END   APP_INPUT_PTB5
+#define APP_INPUT_GPIO_END   APP_INPUT_PTC6
 
 #define APP_GPIO_START APP_INPUT_RTD_BTN1
 
@@ -157,6 +159,8 @@ enum
 #define APP_PIN_PTB4       (0x0104U)          /* PTB4 */
 #define APP_PIN_RTD_BTN1   (0x010DU)          /* PTB13 */
 #define APP_PIN_RTD_BTN2   (0x010EU)          /* PTB14 */
+#define APP_PIN_PTC4       (0x0204U)          /* PTC4 */
+#define APP_PIN_PTC6       (0x0206U)          /* PTC6 */
 
 /*
  * BOARD Relative Settings:

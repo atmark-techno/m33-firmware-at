@@ -886,6 +886,26 @@ void GPIOB_INT1_IRQHandler(void)
     APP_HandleGPIOHander(1U);
 }
 
+void GPIOC_INT0_IRQHandler(void)
+{
+    /* If application has handler */
+    if (irqHandler)
+    {
+        irqHandler(GPIOC_INT0_IRQn, irqHandlerParam);
+    }
+    APP_HandleGPIOHander(2U);
+}
+
+void GPIOC_INT1_IRQHandler(void)
+{
+    /* If application has handler */
+    if (irqHandler)
+    {
+        irqHandler(GPIOC_INT1_IRQn, irqHandlerParam);
+    }
+    APP_HandleGPIOHander(2U);
+}
+
 static void rtcAlarmEventTimer_Callback(TimerHandle_t xTimer)
 {
     uint32_t status = MU_GetCoreStatusFlags(MU0_MUA);
@@ -982,7 +1002,7 @@ void BBNSM_IRQHandler(void)
     }
 }
 
-static uint16_t ioIdTable[APP_IO_NUM] = {APP_PIN_RTD_BTN1, APP_PIN_RTD_BTN2, APP_PIN_PTA19, APP_PIN_PTB5};
+static uint16_t ioIdTable[APP_IO_NUM] = {APP_PIN_RTD_BTN1, APP_PIN_RTD_BTN2, APP_PIN_PTA19, APP_PIN_PTB5, APP_PIN_PTC4, APP_PIN_PTC6};
 
 #define PIN_FUNC_ID_SIZE (5)
 static uint32_t pinFuncId[APP_IO_NUM][PIN_FUNC_ID_SIZE] = {
@@ -990,6 +1010,8 @@ static uint32_t pinFuncId[APP_IO_NUM][PIN_FUNC_ID_SIZE] = {
     {IOMUXC_PTB14_PTB14},
     {IOMUXC_PTA19_PTA19},
     {IOMUXC_PTB5_PTB5},
+    {IOMUXC_PTC4_PTC4},
+    {IOMUXC_PTC6_PTC6},
 };
 
 static uint32_t inputMask[APP_IO_NUM] = {
@@ -997,11 +1019,15 @@ static uint32_t inputMask[APP_IO_NUM] = {
     IOMUXC_PCR_IBE_MASK,
     IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
     IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
+    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
+    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
 };
 
 static uint32_t outputMask[APP_IO_NUM] = {
     IOMUXC_PCR_IBE_MASK,
     IOMUXC_PCR_IBE_MASK,
+    IOMUXC_PCR_OBE_MASK,
+    IOMUXC_PCR_OBE_MASK,
     IOMUXC_PCR_OBE_MASK,
     IOMUXC_PCR_OBE_MASK,
 };
@@ -1038,7 +1064,7 @@ static srtm_status_t APP_IO_ConfOutput(uint16_t ioId, srtm_io_value_t ioValue)
     uint8_t gpioIdx = APP_GPIO_IDX(ioId);
     uint8_t pinIdx  = APP_PIN_IDX(ioId);
 
-    assert(gpioIdx < 2U); /* We only support GPIOA and GPIOB */
+    assert(gpioIdx < 3U); /* We only support GPIOA, GPIOB and GPIOC */
     assert(pinIdx < 32U);
 
     APP_IO_SetPinConfig(ioId, false);
@@ -1069,7 +1095,7 @@ static srtm_status_t APP_IO_GetInput(srtm_service_t service,
     uint8_t gpioIdx = APP_GPIO_IDX(ioId);
     uint8_t pinIdx  = APP_PIN_IDX(ioId);
 
-    assert(gpioIdx < 2U); /* We only support GPIOA and GPIOB */
+    assert(gpioIdx < 3U); /* We only support GPIOA, GPIOB and GPIOC */
     assert(pinIdx < 32U);
     assert(pIoValue);
 
@@ -1086,7 +1112,7 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
     uint8_t wuuIdx  = APP_IO_GetWUUPin(ioId);
     wuu_external_wakeup_pin_config_t config;
 
-    assert(gpioIdx < 2U);                  /* Only support GPIOA, GPIOB */
+    assert(gpioIdx < 3U);                  /* Only support GPIOA, GPIOB and GPIOC */
     assert(pinIdx < 32U);
     assert(wuuIdx <= ARRAY_SIZE(wuuPins)); /* When wuuIdx == ARRAY_SIZE(wuuPins),
                                               it means there's no WUU pin for ioId. */
@@ -1781,6 +1807,8 @@ void APP_SRTM_PreCopyCallback()
         DisableIRQ(GPIOA_INT1_IRQn);
         DisableIRQ(GPIOB_INT0_IRQn);
         DisableIRQ(GPIOB_INT1_IRQn);
+        DisableIRQ(GPIOC_INT0_IRQn);
+        DisableIRQ(GPIOC_INT1_IRQn);
         DisableIRQ(WUU0_IRQn);
 
         /* Poweron LPAV domain, ddr exit retention */
@@ -1791,6 +1819,8 @@ void APP_SRTM_PreCopyCallback()
         EnableIRQ(GPIOA_INT1_IRQn);
         EnableIRQ(GPIOB_INT0_IRQn);
         EnableIRQ(GPIOB_INT1_IRQn);
+        EnableIRQ(GPIOC_INT0_IRQn);
+        EnableIRQ(GPIOC_INT1_IRQn);
         EnableIRQ(BBNSM_IRQn);
         EnableIRQ(WUU0_IRQn);
     }
@@ -1806,6 +1836,8 @@ void APP_SRTM_PostCopyCallback()
         DisableIRQ(GPIOA_INT1_IRQn);
         DisableIRQ(GPIOB_INT0_IRQn);
         DisableIRQ(GPIOB_INT1_IRQn);
+        DisableIRQ(GPIOC_INT0_IRQn);
+        DisableIRQ(GPIOC_INT1_IRQn);
         DisableIRQ(WUU0_IRQn);
 
         /* Poweroff LPAV domain, put ddr into retention */
@@ -1825,6 +1857,8 @@ void APP_SRTM_PostCopyCallback()
         EnableIRQ(GPIOA_INT1_IRQn);
         EnableIRQ(GPIOB_INT0_IRQn);
         EnableIRQ(GPIOB_INT1_IRQn);
+        EnableIRQ(GPIOC_INT0_IRQn);
+        EnableIRQ(GPIOC_INT1_IRQn);
         EnableIRQ(BBNSM_IRQn);
         EnableIRQ(WUU0_IRQn);
     }
@@ -2012,6 +2046,8 @@ static void APP_SRTM_InitIoKeyService(void)
     suspendContext.io.data[APP_INPUT_RTD_BTN2].ioId = APP_PIN_RTD_BTN2;
     suspendContext.io.data[APP_INPUT_PTA19].ioId    = APP_PIN_PTA19;
     suspendContext.io.data[APP_INPUT_PTB5].ioId     = APP_PIN_PTB5;
+    suspendContext.io.data[APP_INPUT_PTC4].ioId     = APP_PIN_PTC4;
+    suspendContext.io.data[APP_INPUT_PTC6].ioId     = APP_PIN_PTC6;
 
     APP_SRTM_InitIoKeyDevice();
 
@@ -2020,6 +2056,8 @@ static void APP_SRTM_InitIoKeyService(void)
     NVIC_SetPriority(GPIOA_INT1_IRQn, APP_GPIO_IRQ_PRIO);
     NVIC_SetPriority(GPIOB_INT0_IRQn, APP_GPIO_IRQ_PRIO);
     NVIC_SetPriority(GPIOB_INT1_IRQn, APP_GPIO_IRQ_PRIO);
+    NVIC_SetPriority(GPIOC_INT0_IRQn, APP_GPIO_IRQ_PRIO);
+    NVIC_SetPriority(GPIOC_INT1_IRQn, APP_GPIO_IRQ_PRIO);
     /* Setup WUU priority of interrupt */
     NVIC_SetPriority(WUU0_IRQn, APP_WUU_IRQ_PRIO);
 
@@ -2027,10 +2065,14 @@ static void APP_SRTM_InitIoKeyService(void)
     EnableIRQ(GPIOA_INT1_IRQn);
     EnableIRQ(GPIOB_INT0_IRQn);
     EnableIRQ(GPIOB_INT1_IRQn);
+    EnableIRQ(GPIOC_INT0_IRQn);
+    EnableIRQ(GPIOC_INT1_IRQn);
 
     ioService = SRTM_IoService_Create();
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTA19, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTB5, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC4, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC6, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
     SRTM_Dispatcher_RegisterService(disp, ioService);
 
     keypadService = SRTM_KeypadService_Create();
