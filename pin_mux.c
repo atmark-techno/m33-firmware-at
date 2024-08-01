@@ -100,13 +100,13 @@ BOARD_InitI2cPins:
  *
  * END ****************************************************************************************************************/
 void BOARD_InitI2cPins(void) {                             /*!< Function assigned for the core: Cortex-M33[cm33] */
-    IOMUXC_SetPinMux(IOMUXC_PTA12_LPI2C1_SCL, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA12_LPI2C1_SCL,
+    IOMUXC_SetPinMux(IOMUXC_PTA4_LPI2C1_SCL, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA4_LPI2C1_SCL,
                         IOMUXC_PCR_ODE_MASK |
                         IOMUXC_PCR_PE_MASK |
                         IOMUXC_PCR_PS_MASK); // nc
-    IOMUXC_SetPinMux(IOMUXC_PTA13_LPI2C1_SDA, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA13_LPI2C1_SDA,
+    IOMUXC_SetPinMux(IOMUXC_PTA5_LPI2C1_SDA, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA5_LPI2C1_SDA,
                         IOMUXC_PCR_ODE_MASK |
                         IOMUXC_PCR_PE_MASK |
                         IOMUXC_PCR_PS_MASK); // nc
