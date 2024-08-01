@@ -56,8 +56,6 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../remoteproc.h"
 "${ProjDirPath}/../rpmsg_config.h"
 "${ProjDirPath}/../srtm_config.h"
-"${ProjDirPath}/../fsl_lpi2c_freertos.c"
-"${ProjDirPath}/../fsl_lpi2c_freertos.h"
 "${ProjDirPath}/../power_mode_switch.c"
 "${ProjDirPath}/../power_mode_switch.h"
 "${ProjDirPath}/../lpm.c"
