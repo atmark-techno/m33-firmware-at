@@ -95,6 +95,7 @@ void BOARD_InitPmicModePins(void);                         /*!< Function assigne
 void BOARD_InitLsm6dsoPins(void);                          /*!< Function assigned for the core: Cortex-M33[cm33] */
 
 void BOARD_InitRegulatorPins(void);
+void BOARD_InitGpioPins(void);
 
 #if defined(__cplusplus)
 }
