@@ -341,6 +341,14 @@ void BOARD_InitRegulatorPins(void) {
 }
 
 void BOARD_InitGpioPins(void) {
+    IOMUXC_SetPinMux(IOMUXC_PTA2_PTA2, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA2_PTA2,
+                        IOMUXC_PCR_PE_MASK);
+
+    IOMUXC_SetPinMux(IOMUXC_PTA3_PTA3, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA3_PTA3,
+                        IOMUXC_PCR_PE_MASK);
+
     IOMUXC_SetPinMux(IOMUXC_PTC0_PTC0, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTC0_PTC0,
                         IOMUXC_PCR_PE_MASK);
@@ -363,6 +371,18 @@ void BOARD_InitGpioPins(void) {
 
     IOMUXC_SetPinMux(IOMUXC_PTC6_PTC6, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTC6_PTC6,
+                        IOMUXC_PCR_PE_MASK);
+
+    IOMUXC_SetPinMux(IOMUXC_PTC7_PTC7, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTC7_PTC7,
+                        IOMUXC_PCR_PE_MASK);
+
+    IOMUXC_SetPinMux(IOMUXC_PTC8_PTC8, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTC8_PTC8,
+                        IOMUXC_PCR_PE_MASK);
+
+    IOMUXC_SetPinMux(IOMUXC_PTC9_PTC9, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTC9_PTC9,
                         IOMUXC_PCR_PE_MASK);
 }
 

@@ -55,25 +55,30 @@ enum
 {
     APP_INPUT_RTD_BTN1   = 0U,
     APP_INPUT_RTD_BTN2   = 1U,
-    APP_INPUT_PTA19      = 2U,
-    APP_INPUT_IT6161_INT = 2U,
-    APP_INPUT_PTB5       = 3U,
-    APP_INPUT_TOUCH_INT  = 3U,
-    APP_INPUT_PTC0       = 4U,
-    APP_INPUT_PTC1       = 5U,
-    APP_INPUT_PTC2       = 6U,
-    APP_INPUT_PTC3       = 7U,
-    APP_INPUT_PTC4       = 8U,
-    APP_INPUT_PTC6       = 9U,
-    APP_IO_NUM           = 10U
+    APP_INPUT_PTA2       = 2U,
+    APP_INPUT_PTA3       = 3U,
+    APP_INPUT_PTA19      = 4U,
+    APP_INPUT_IT6161_INT = 4U,
+    APP_INPUT_PTB5       = 5U,
+    APP_INPUT_TOUCH_INT  = 5U,
+    APP_INPUT_PTC0       = 6U,
+    APP_INPUT_PTC1       = 7U,
+    APP_INPUT_PTC2       = 8U,
+    APP_INPUT_PTC3       = 9U,
+    APP_INPUT_PTC4       = 10U,
+    APP_INPUT_PTC6       = 11U,
+    APP_INPUT_PTC7       = 12U,
+    APP_INPUT_PTC8       = 13U,
+    APP_INPUT_PTC9       = 14U,
+    APP_IO_NUM           = 15U
 };
 
 /* Define macros for input gpios that setup by linux that running on A Core(CA35) */
 #define APP_INPUT_GPIO_CONTROL_BY_ACORE_START APP_INPUT_PTA19
-#define APP_INPUT_GPIO_CONTROL_BY_ACORE_END   APP_INPUT_PTC6
+#define APP_INPUT_GPIO_CONTROL_BY_ACORE_END   APP_INPUT_PTC9
 
 #define APP_INPUT_GPIO_START APP_INPUT_RTD_BTN1
-#define APP_INPUT_GPIO_END   APP_INPUT_PTC6
+#define APP_INPUT_GPIO_END   APP_INPUT_PTC9
 
 #define APP_GPIO_START APP_INPUT_RTD_BTN1
 
@@ -157,12 +162,15 @@ enum
 #define APP_GPIO_IDX(ioId) ((uint8_t)(((uint16_t)ioId) >> 8U))
 #define APP_PIN_IDX(ioId)  ((uint8_t)ioId)
 #define APP_GPIO_INT_SEL   (kRGPIO_InterruptOutput2)
-#define APP_PIN_PTA19      (0x0013U)          /* PTA19 use for it6161(mipi to hdmi converter ic) interrupt */
+#define APP_PIN_PTA2       (0x0002U)          /* PTA2 */
+#define APP_PIN_PTA3       (0x0003U)          /* PTA3 */
+#define APP_PIN_PTA19      (0x0013U)          /* PTA19 */
 #define APP_PIN_IT6161_INT (APP_PIN_PTA19)
 #define APP_PIN_PTB5       (0x0105U)          /* PTB5, use for touch interrupt */
 #define APP_PIN_TOUCH_INT  (APP_PIN_PTB5)
 #define APP_PIN_PTB4       (0x0104U)          /* PTB4 */
-#define APP_PIN_RTD_BTN1   (0x010DU)          /* PTB13 */
+#define APP_PIN_PTB13      (0x010DU)          /* PTB13 */
+#define APP_PIN_RTD_BTN1   (APP_PIN_PTB13)    /* PTB13 */
 #define APP_PIN_RTD_BTN2   (0x010EU)          /* PTB14 */
 #define APP_PIN_PTC0       (0x0200U)          /* PTC0 */
 #define APP_PIN_PTC1       (0x0201U)          /* PTC1 */
@@ -170,6 +178,9 @@ enum
 #define APP_PIN_PTC3       (0x0203U)          /* PTC3 */
 #define APP_PIN_PTC4       (0x0204U)          /* PTC4 */
 #define APP_PIN_PTC6       (0x0206U)          /* PTC6 */
+#define APP_PIN_PTC7       (0x0207U)          /* PTC7 */
+#define APP_PIN_PTC8       (0x0208U)          /* PTC8 */
+#define APP_PIN_PTC9       (0x0209U)          /* PTC9 */
 
 /*
  * BOARD Relative Settings:
