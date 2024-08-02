@@ -369,6 +369,10 @@ void BOARD_InitGpioPins(void) {
     IOMUXC_SetPinConfig(IOMUXC_PTC4_PTC4,
                         IOMUXC_PCR_PE_MASK);
 
+    IOMUXC_SetPinMux(IOMUXC_PTC5_PTC5, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTC5_PTC5,
+                        IOMUXC_PCR_PE_MASK);
+
     IOMUXC_SetPinMux(IOMUXC_PTC6_PTC6, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTC6_PTC6,
                         IOMUXC_PCR_PE_MASK);

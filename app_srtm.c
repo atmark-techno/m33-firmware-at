@@ -1036,6 +1036,7 @@ static uint16_t ioIdTable[APP_IO_NUM] = {
     APP_PIN_PTC2,
     APP_PIN_PTC3,
     APP_PIN_PTC4,
+    APP_PIN_PTC5,
     APP_PIN_PTC6,
     APP_PIN_PTC7,
     APP_PIN_PTC8,
@@ -1055,6 +1056,7 @@ static uint32_t pinFuncId[APP_IO_NUM][PIN_FUNC_ID_SIZE] = {
     {IOMUXC_PTC2_PTC2},
     {IOMUXC_PTC3_PTC3},
     {IOMUXC_PTC4_PTC4},
+    {IOMUXC_PTC5_PTC5},
     {IOMUXC_PTC6_PTC6},
     {IOMUXC_PTC7_PTC7},
     {IOMUXC_PTC8_PTC8},
@@ -1077,11 +1079,13 @@ static uint32_t inputMask[APP_IO_NUM] = {
     IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
     IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
     IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
+    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
 };
 
 static uint32_t outputMask[APP_IO_NUM] = {
     IOMUXC_PCR_IBE_MASK,
     IOMUXC_PCR_IBE_MASK,
+    IOMUXC_PCR_OBE_MASK,
     IOMUXC_PCR_OBE_MASK,
     IOMUXC_PCR_OBE_MASK,
     IOMUXC_PCR_OBE_MASK,
@@ -2160,6 +2164,7 @@ static void APP_SRTM_InitIoKeyService(void)
     suspendContext.io.data[APP_INPUT_PTC2].ioId     = APP_PIN_PTC2;
     suspendContext.io.data[APP_INPUT_PTC3].ioId     = APP_PIN_PTC3;
     suspendContext.io.data[APP_INPUT_PTC4].ioId     = APP_PIN_PTC4;
+    suspendContext.io.data[APP_INPUT_PTC5].ioId     = APP_PIN_PTC5;
     suspendContext.io.data[APP_INPUT_PTC6].ioId     = APP_PIN_PTC6;
     suspendContext.io.data[APP_INPUT_PTC7].ioId     = APP_PIN_PTC7;
     suspendContext.io.data[APP_INPUT_PTC8].ioId     = APP_PIN_PTC8;
@@ -2194,6 +2199,7 @@ static void APP_SRTM_InitIoKeyService(void)
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC2, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC3, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC4, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC5, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC6, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC7, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC8, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);

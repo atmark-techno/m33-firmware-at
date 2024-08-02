@@ -66,11 +66,12 @@ enum
     APP_INPUT_PTC2       = 8U,
     APP_INPUT_PTC3       = 9U,
     APP_INPUT_PTC4       = 10U,
-    APP_INPUT_PTC6       = 11U,
-    APP_INPUT_PTC7       = 12U,
-    APP_INPUT_PTC8       = 13U,
-    APP_INPUT_PTC9       = 14U,
-    APP_IO_NUM           = 15U
+    APP_INPUT_PTC5       = 11U,
+    APP_INPUT_PTC6       = 12U,
+    APP_INPUT_PTC7       = 13U,
+    APP_INPUT_PTC8       = 14U,
+    APP_INPUT_PTC9       = 15U,
+    APP_IO_NUM           = 16U
 };
 
 /* Define macros for input gpios that setup by linux that running on A Core(CA35) */
@@ -177,6 +178,7 @@ enum
 #define APP_PIN_PTC2       (0x0202U)          /* PTC2 */
 #define APP_PIN_PTC3       (0x0203U)          /* PTC3 */
 #define APP_PIN_PTC4       (0x0204U)          /* PTC4 */
+#define APP_PIN_PTC5       (0x0205U)          /* PTC5 */
 #define APP_PIN_PTC6       (0x0206U)          /* PTC6 */
 #define APP_PIN_PTC7       (0x0207U)          /* PTC7 */
 #define APP_PIN_PTC8       (0x0208U)          /* PTC8 */
