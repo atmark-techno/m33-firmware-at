@@ -88,6 +88,8 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../srtm/services/srtm_pwm_service.c"
 "${ProjDirPath}/../srtm/services/srtm_pwm_adapter.h"
 "${ProjDirPath}/../srtm/services/srtm_pwm_adapter.c"
+"${ProjDirPath}/../srtm/services/srtm_adc_service.h"
+"${ProjDirPath}/../srtm/services/srtm_adc_service.c"
 "${ProjDirPath}/../srtm/services/srtm_rtc_service.h"
 "${ProjDirPath}/../srtm/services/srtm_rtc_service.c"
 "${ProjDirPath}/../srtm/services/srtm_rtc_adapter.h"

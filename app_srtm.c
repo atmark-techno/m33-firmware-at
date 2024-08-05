@@ -26,6 +26,7 @@
 #include "srtm_lfcl_service.h"
 #include "srtm_rtc_service.h"
 #include "srtm_rtc_adapter.h"
+#include "srtm_adc_service.h"
 
 #include "app_srtm.h"
 #include "board.h"
@@ -38,6 +39,8 @@
 #include "rsc_table.h"
 #include "fsl_bbnsm.h"
 #include "fsl_sentinel.h"
+#include "fsl_lpadc.h"
+#include "fsl_reset.h"
 
 /*******************************************************************************
  * Definitions
@@ -136,6 +139,10 @@ static srtm_status_t APP_SRTM_I2C_SwitchChannel(srtm_i2c_adapter_t adapter,
 
 static srtm_status_t APP_IO_ConfIEvent(
     srtm_service_t service, srtm_peercore_t core, uint16_t ioId, srtm_io_event_t event, bool wakeup);
+
+static srtm_status_t APP_SRTM_ADC_Get(struct adc_handle *handle,
+                                      size_t idx,
+                                      uint16_t *value);
 
 /*******************************************************************************
  * Variables
@@ -242,6 +249,7 @@ static srtm_peercore_t core;
 static srtm_sai_adapter_t saiAdapter;
 static srtm_service_t audioService;
 static srtm_service_t pwmService;
+static srtm_service_t adcService;
 static srtm_service_t rtcService;
 static srtm_rtc_adapter_t rtcAdapter;
 static srtm_service_t i2cService;
@@ -285,6 +293,20 @@ lpm_ad_power_mode_e AD_WillEnterMode = AD_UNKOWN;
 /* pwmHandles must strictly follow TPM instances. If you don't provide service for some TPM instance,
  * set the corresponding handle to NULL. */
 static hal_pwm_handle_t pwmHandles[2] = {(hal_pwm_handle_t)pwmHandle0, NULL};
+
+static struct adc_handle adcHandles[] = {
+    {.chan = 5,
+     .side = kLPADC_SampleChannelSingleEndSideB,
+     .scale = kLPADC_SamplePartScale,
+     .average = kLPADC_HardwareAverageCount4,
+     .cmdid = 1,
+    },
+};
+static struct _srtm_adc_adapter adcAdapter = {
+    .get = APP_SRTM_ADC_Get,
+    .handles = adcHandles,
+    .handles_count = sizeof(adcHandles)/sizeof(*adcHandles),
+};
 
 static struct _i2c_bus platform_i2c_buses[] = {
     {.bus_id         = 0,
@@ -1372,6 +1394,11 @@ static void APP_SRTM_Linkup(void)
     chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
     SRTM_PeerCore_AddChannel(core, chan);
 
+    /* Create and add SRTM ADC channel to peer core */
+    rpmsgConfig.epName = APP_SRTM_ADC_CHANNEL_NAME;
+    chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
+    SRTM_PeerCore_AddChannel(core, chan);
+
     /* Create and add SRTM PWM channel to peer core */
     rpmsgConfig.epName = APP_SRTM_PWM_CHANNEL_NAME;
     chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
@@ -1939,6 +1966,43 @@ static void APP_SRTM_InitPwmService(void)
     SRTM_Dispatcher_RegisterService(disp, pwmService);
 }
 
+static void APP_SRTM_InitAdcDevice(void)
+{
+    size_t i;
+
+    CLOCK_SetIpSrc(kCLOCK_Adc1, kCLOCK_Pcc1BusIpSrcCm33Bus);
+    RESET_PeripheralReset(kRESET_Adc1);
+
+    lpadc_config_t config;
+    LPADC_GetDefaultConfig(&config);
+    config.enableAnalogPreliminary = true;
+    LPADC_Init(ADC1, &config);
+
+    for (i = 0; i < adcAdapter.handles_count; i++) {
+        lpadc_conv_command_config_t commandConfig;
+        LPADC_GetDefaultConvCommandConfig(&commandConfig);
+        commandConfig.channelNumber = adcAdapter.handles[i].chan;
+        commandConfig.sampleChannelMode = adcAdapter.handles[i].side;
+        commandConfig.sampleScaleMode = adcAdapter.handles[i].scale;
+        commandConfig.hardwareAverageMode = adcAdapter.handles[i].average;
+        LPADC_SetConvCommandConfig(ADC1, adcAdapter.handles[i].cmdid, &commandConfig);
+
+        lpadc_conv_trigger_config_t triggerConfig;
+        LPADC_GetDefaultConvTriggerConfig(&triggerConfig);
+        triggerConfig.targetCommandId = adcAdapter.handles[i].cmdid;
+        triggerConfig.enableHardwareTrigger = false;
+        LPADC_SetConvTriggerConfig(ADC1, i, &triggerConfig);
+    }
+}
+
+static void APP_SRTM_InitAdcService(void)
+{
+    APP_SRTM_InitAdcDevice();
+    /* Create and register adc service */
+    adcService = SRTM_AdcService_Create(&adcAdapter);
+    SRTM_Dispatcher_RegisterService(disp, adcService);
+}
+
 static void APP_SRTM_InitI2CDevice(void)
 {
     lpi2c_master_config_t masterConfig;
@@ -2364,6 +2428,7 @@ static void APP_SRTM_InitServices(void)
     APP_SRTM_InitAudioService();
     APP_SRTM_InitIoKeyService();
     APP_SRTM_InitPwmService();
+    APP_SRTM_InitAdcService();
     APP_SRTM_InitRtcService();
     APP_SRTM_InitLfclService();
 }
@@ -2663,6 +2728,7 @@ void APP_SRTM_Resume(bool resume)
      */
     /* APP_SRTM_InitIoKeyDevice(); */
     APP_SRTM_InitPwmDevice();
+    APP_SRTM_InitAdcDevice();
     HAL_RtcInit(rtcHandle, 0);
     if (resume)
     {
@@ -2747,6 +2813,19 @@ uint8_t APP_Write_I2C_Register(uint8_t busID, uint16_t slaveAddr, uint8_t regInd
     write_content[1] = value;
     SRTM_I2C_RequestBusWrite(i2cService, busID, slaveAddr, write_content, 2, 1);
     return value;
+}
+
+static srtm_status_t APP_SRTM_ADC_Get(struct adc_handle *handle,
+                                      size_t idx,
+                                      uint16_t *value)
+{
+    lpadc_conv_result_t resultConfig;
+
+    LPADC_DoSoftwareTrigger(ADC1, 1 << idx);
+    LPADC_GetConvResultBlocking(ADC1, &resultConfig);
+    *value = resultConfig.convValue >> 3U;
+
+    return kStatus_Success;
 }
 
 void APP_SRTM_HandlePeerReboot(void)

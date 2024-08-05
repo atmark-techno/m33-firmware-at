@@ -107,6 +107,7 @@ enum
 #define APP_SRTM_KEYPAD_CHANNEL_NAME "rpmsg-keypad-channel"
 #define APP_SRTM_IO_CHANNEL_NAME     "rpmsg-io-channel"
 #define APP_SRTM_PWM_CHANNEL_NAME    "rpmsg-pwm-channel"
+#define APP_SRTM_ADC_CHANNEL_NAME    "rpmsg-adc-channel"
 #define APP_SRTM_RTC_CHANNEL_NAME    "rpmsg-rtc-channel"
 #define APP_SRTM_LFCL_CHANNEL_NAME   "rpmsg-life-cycle-channel"
 #define APP_SRTM_SENSOR_CHANNEL_NAME "rpmsg-sensor-channel"
