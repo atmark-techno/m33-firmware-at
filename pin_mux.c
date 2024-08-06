@@ -330,10 +330,6 @@ void BOARD_InitLsm6dsoPins(void) {                         /*!< Function assigne
 }
 
 void BOARD_InitRegulatorPins(void) {
-    IOMUXC_SetPinMux(IOMUXC_PTB6_PTB6, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTB6_PTB6,
-                        IOMUXC_PCR_OBE_MASK); // PTB6 : VDD_3V3_EN 4.7k pull up EXT_1V8, 100k pull down
-
     IOMUXC_SetPinMux(IOMUXC_PTB12_PTB12, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTB12_PTB12,
                         IOMUXC_PCR_OBE_MASK); // PTB12 : VDD_3V3_EN 4.7k pull up EXT_1V8, 100k pull down
@@ -347,6 +343,10 @@ void BOARD_InitGpioPins(void) {
     IOMUXC_SetPinMux(IOMUXC_PTA3_PTA3, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA3_PTA3,
                         IOMUXC_PCR_PE_MASK);
+
+    IOMUXC_SetPinMux(IOMUXC_PTB6_PTB6, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTB6_PTB6,
+                        0U); // ogasawara preEVA/gateway: pull-up (on-board or in-LTE)
 
     IOMUXC_SetPinMux(IOMUXC_PTC0_PTC0, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTC0_PTC0,
@@ -387,6 +387,10 @@ void BOARD_InitGpioPins(void) {
     IOMUXC_SetPinMux(IOMUXC_PTC9_PTC9, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTC9_PTC9,
                         IOMUXC_PCR_PE_MASK);
+
+    IOMUXC_SetPinMux(IOMUXC_PTC12_PTC12, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTC12_PTC12,
+                        0U); // ogasawara preEVA: nc, ogasawara gateway: pull-down (on-board)
 }
 
 /***********************************************************************************************************************

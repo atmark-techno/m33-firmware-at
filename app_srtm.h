@@ -61,25 +61,27 @@ enum
     APP_INPUT_IT6161_INT = 4U,
     APP_INPUT_PTB5       = 5U,
     APP_INPUT_TOUCH_INT  = 5U,
-    APP_INPUT_PTC0       = 6U,
-    APP_INPUT_PTC1       = 7U,
-    APP_INPUT_PTC2       = 8U,
-    APP_INPUT_PTC3       = 9U,
-    APP_INPUT_PTC4       = 10U,
-    APP_INPUT_PTC5       = 11U,
-    APP_INPUT_PTC6       = 12U,
-    APP_INPUT_PTC7       = 13U,
-    APP_INPUT_PTC8       = 14U,
-    APP_INPUT_PTC9       = 15U,
-    APP_IO_NUM           = 16U
+    APP_INPUT_PTB6       = 6U,
+    APP_INPUT_PTC0       = 7U,
+    APP_INPUT_PTC1       = 8U,
+    APP_INPUT_PTC2       = 9U,
+    APP_INPUT_PTC3       = 10U,
+    APP_INPUT_PTC4       = 11U,
+    APP_INPUT_PTC5       = 12U,
+    APP_INPUT_PTC6       = 13U,
+    APP_INPUT_PTC7       = 14U,
+    APP_INPUT_PTC8       = 15U,
+    APP_INPUT_PTC9       = 16U,
+    APP_INPUT_PTC12      = 17U,
+    APP_IO_NUM           = 18U
 };
 
 /* Define macros for input gpios that setup by linux that running on A Core(CA35) */
 #define APP_INPUT_GPIO_CONTROL_BY_ACORE_START APP_INPUT_PTA19
-#define APP_INPUT_GPIO_CONTROL_BY_ACORE_END   APP_INPUT_PTC9
+#define APP_INPUT_GPIO_CONTROL_BY_ACORE_END   APP_INPUT_PTC12
 
 #define APP_INPUT_GPIO_START APP_INPUT_RTD_BTN1
-#define APP_INPUT_GPIO_END   APP_INPUT_PTC9
+#define APP_INPUT_GPIO_END   APP_INPUT_PTC12
 
 #define APP_GPIO_START APP_INPUT_RTD_BTN1
 
@@ -169,6 +171,7 @@ enum
 #define APP_PIN_IT6161_INT (APP_PIN_PTA19)
 #define APP_PIN_PTB5       (0x0105U)          /* PTB5, use for touch interrupt */
 #define APP_PIN_TOUCH_INT  (APP_PIN_PTB5)
+#define APP_PIN_PTB6       (0x0106U)          /* PTB6 */
 #define APP_PIN_PTB4       (0x0104U)          /* PTB4 */
 #define APP_PIN_PTB13      (0x010DU)          /* PTB13 */
 #define APP_PIN_RTD_BTN1   (APP_PIN_PTB13)    /* PTB13 */
@@ -183,6 +186,7 @@ enum
 #define APP_PIN_PTC7       (0x0207U)          /* PTC7 */
 #define APP_PIN_PTC8       (0x0208U)          /* PTC8 */
 #define APP_PIN_PTC9       (0x0209U)          /* PTC9 */
+#define APP_PIN_PTC12      (0x020CU)          /* PTC12 */
 
 /*
  * BOARD Relative Settings:

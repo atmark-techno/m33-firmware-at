@@ -1031,6 +1031,7 @@ static uint16_t ioIdTable[APP_IO_NUM] = {
     APP_PIN_PTA3,
     APP_PIN_PTA19,
     APP_PIN_PTB5,
+    APP_PIN_PTB6,
     APP_PIN_PTC0,
     APP_PIN_PTC1,
     APP_PIN_PTC2,
@@ -1041,6 +1042,7 @@ static uint16_t ioIdTable[APP_IO_NUM] = {
     APP_PIN_PTC7,
     APP_PIN_PTC8,
     APP_PIN_PTC9,
+    APP_PIN_PTC12,
 };
 
 #define PIN_FUNC_ID_SIZE (5)
@@ -1051,6 +1053,7 @@ static uint32_t pinFuncId[APP_IO_NUM][PIN_FUNC_ID_SIZE] = {
     {IOMUXC_PTA3_PTA3},
     {IOMUXC_PTA19_PTA19},
     {IOMUXC_PTB5_PTB5},
+    {IOMUXC_PTB6_PTB6},
     {IOMUXC_PTC0_PTC0},
     {IOMUXC_PTC1_PTC1},
     {IOMUXC_PTC2_PTC2},
@@ -1061,6 +1064,7 @@ static uint32_t pinFuncId[APP_IO_NUM][PIN_FUNC_ID_SIZE] = {
     {IOMUXC_PTC7_PTC7},
     {IOMUXC_PTC8_PTC8},
     {IOMUXC_PTC9_PTC9},
+    {IOMUXC_PTC12_PTC12},
 };
 
 static uint32_t inputMask[APP_IO_NUM] = {
@@ -1080,11 +1084,15 @@ static uint32_t inputMask[APP_IO_NUM] = {
     IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
     IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
     IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
+    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
+    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
 };
 
 static uint32_t outputMask[APP_IO_NUM] = {
     IOMUXC_PCR_IBE_MASK,
     IOMUXC_PCR_IBE_MASK,
+    IOMUXC_PCR_OBE_MASK,
+    IOMUXC_PCR_OBE_MASK,
     IOMUXC_PCR_OBE_MASK,
     IOMUXC_PCR_OBE_MASK,
     IOMUXC_PCR_OBE_MASK,
@@ -2159,6 +2167,7 @@ static void APP_SRTM_InitIoKeyService(void)
     suspendContext.io.data[APP_INPUT_PTA3].ioId     = APP_PIN_PTA3;
     suspendContext.io.data[APP_INPUT_PTA19].ioId    = APP_PIN_PTA19;
     suspendContext.io.data[APP_INPUT_PTB5].ioId     = APP_PIN_PTB5;
+    suspendContext.io.data[APP_INPUT_PTB6].ioId     = APP_PIN_PTB6;
     suspendContext.io.data[APP_INPUT_PTC0].ioId     = APP_PIN_PTC0;
     suspendContext.io.data[APP_INPUT_PTC1].ioId     = APP_PIN_PTC1;
     suspendContext.io.data[APP_INPUT_PTC2].ioId     = APP_PIN_PTC2;
@@ -2169,6 +2178,7 @@ static void APP_SRTM_InitIoKeyService(void)
     suspendContext.io.data[APP_INPUT_PTC7].ioId     = APP_PIN_PTC7;
     suspendContext.io.data[APP_INPUT_PTC8].ioId     = APP_PIN_PTC8;
     suspendContext.io.data[APP_INPUT_PTC9].ioId     = APP_PIN_PTC9;
+    suspendContext.io.data[APP_INPUT_PTC12].ioId     = APP_PIN_PTC12;
 
     APP_SRTM_InitIoKeyDevice();
 
@@ -2194,6 +2204,7 @@ static void APP_SRTM_InitIoKeyService(void)
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTA3, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTA19, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTB5, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTB6, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC0, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC1, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC2, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
@@ -2204,6 +2215,7 @@ static void APP_SRTM_InitIoKeyService(void)
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC7, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC8, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC9, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC12, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
     SRTM_Dispatcher_RegisterService(disp, ioService);
 
     keypadService = SRTM_KeypadService_Create();
