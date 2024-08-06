@@ -344,6 +344,14 @@ void BOARD_InitGpioPins(void) {
     IOMUXC_SetPinConfig(IOMUXC_PTA3_PTA3,
                         IOMUXC_PCR_PE_MASK);
 
+    IOMUXC_SetPinMux(IOMUXC_PTB4_PTB4, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTB4_PTB4,
+                        IOMUXC_PCR_PE_MASK);
+
+    IOMUXC_SetPinMux(IOMUXC_PTB5_PTB5, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTB5_PTB5,
+                        IOMUXC_PCR_PE_MASK);
+
     IOMUXC_SetPinMux(IOMUXC_PTB6_PTB6, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTB6_PTB6,
                         0U); // ogasawara preEVA/gateway: pull-up (on-board or in-LTE)
