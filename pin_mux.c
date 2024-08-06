@@ -225,8 +225,7 @@ BOARD_InitHdmiIntPins:
 void BOARD_InitHdmiIntPins(void) {                         /*!< Function assigned for the core: Cortex-M33[cm33] */
     IOMUXC_SetPinMux(IOMUXC_PTA19_PTA19, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA19_PTA19,
-                        IOMUXC_PCR_PE_MASK |
-                        IOMUXC_PCR_PS_MASK); // nc
+                        0U); // ogasawara preEVA: nc, ogasawara gateway: usb2422 reset_n (pull-down)
 }
 
 
