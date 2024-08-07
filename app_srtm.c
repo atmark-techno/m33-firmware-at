@@ -137,7 +137,7 @@ static srtm_status_t APP_SRTM_I2C_SwitchChannel(srtm_i2c_adapter_t adapter,
                                                 uint16_t slaveAddr,
                                                 srtm_i2c_switch_channel channel);
 
-static srtm_status_t APP_IO_ConfIEvent(
+static srtm_status_t APP_IO_InputInit(
     srtm_service_t service, srtm_peercore_t core, uint16_t ioId, srtm_io_event_t event, bool wakeup);
 
 static srtm_status_t APP_SRTM_ADC_Get(struct adc_handle *handle,
@@ -796,7 +796,7 @@ static void APP_HandleGPIOHander(uint8_t gpioIdx)
         RGPIO_ClearPinsInterruptFlags(gpio, APP_GPIO_INT_SEL, 1U << APP_PIN_IDX(APP_PIN_IT6161_INT));
         /* Ignore the interrrupt of gpio(set interrupt trigger type of gpio after A35 send command to set interrupt
          * trigger type) */
-        APP_IO_ConfIEvent(NULL, NULL, APP_PIN_IT6161_INT, SRTM_IoEventNone, false);
+        APP_IO_InputInit(NULL, NULL, APP_PIN_IT6161_INT, SRTM_IoEventNone, false);
         if ((AD_CurrentMode == AD_PD || (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL)) &&
             suspendContext.io.data[APP_INPUT_IT6161_INT].wakeup)
         {
@@ -812,7 +812,7 @@ static void APP_HandleGPIOHander(uint8_t gpioIdx)
         RGPIO_ClearPinsInterruptFlags(gpio, APP_GPIO_INT_SEL, 1U << APP_PIN_IDX(APP_PIN_TOUCH_INT));
         /* Ignore the interrrupt of gpio(set interrupt trigger type of gpio after A35 send command to set interrupt
          * trigger type) */
-        APP_IO_ConfIEvent(NULL, NULL, APP_PIN_TOUCH_INT, SRTM_IoEventNone, false);
+        APP_IO_InputInit(NULL, NULL, APP_PIN_TOUCH_INT, SRTM_IoEventNone, false);
         if ((AD_CurrentMode == AD_PD || (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL)) &&
             suspendContext.io.data[APP_INPUT_TOUCH_INT].wakeup)
         {
@@ -1154,7 +1154,7 @@ static srtm_status_t APP_IO_ConfOutput(uint16_t ioId, srtm_io_value_t ioValue)
     return SRTM_Status_Success;
 }
 
-static srtm_status_t APP_IO_SetOutput(srtm_service_t service,
+static srtm_status_t APP_IO_OutputInit(srtm_service_t service,
                                       srtm_peercore_t core,
                                       uint16_t ioId,
                                       srtm_io_value_t ioValue)
@@ -1168,7 +1168,7 @@ static srtm_status_t APP_IO_SetOutput(srtm_service_t service,
     return APP_IO_ConfOutput(ioId, ioValue);
 }
 
-static srtm_status_t APP_IO_GetInput(srtm_service_t service,
+static srtm_status_t APP_IO_InputGet(srtm_service_t service,
                                      srtm_peercore_t core,
                                      uint16_t ioId,
                                      srtm_io_value_t *pIoValue)
@@ -1253,7 +1253,7 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
     return SRTM_Status_Success;
 }
 
-static srtm_status_t APP_IO_ConfIEvent(
+static srtm_status_t APP_IO_InputInit(
     srtm_service_t service, srtm_peercore_t core, uint16_t ioId, srtm_io_event_t event, bool wakeup)
 {
     uint8_t inputIdx = APP_IO_GetIoIndex(ioId);
@@ -1266,7 +1266,7 @@ static srtm_status_t APP_IO_ConfIEvent(
     return APP_IO_ConfInput(inputIdx, event, wakeup);
 }
 
-static srtm_status_t APP_IO_ConfKEvent(
+static srtm_status_t APP_Keypad_ConfKEvent(
     srtm_service_t service, srtm_peercore_t core, uint8_t keyIdx, srtm_keypad_event_t event, bool wakeup)
 {
     uint8_t inputIdx = APP_Keypad_GetInputIndex(keyIdx);
@@ -1646,7 +1646,7 @@ static void APP_SRTM_GpioReset(void)
         }
         else
         {
-            APP_IO_ConfIEvent(NULL, NULL, suspendContext.io.data[i].ioId, SRTM_IoEventNone, false);
+            APP_IO_InputInit(NULL, NULL, suspendContext.io.data[i].ioId, SRTM_IoEventNone, false);
         }
     }
 
@@ -2204,29 +2204,29 @@ static void APP_SRTM_InitIoKeyService(void)
     EnableIRQ(GPIOC_INT0_IRQn);
     EnableIRQ(GPIOC_INT1_IRQn);
 
-    ioService = SRTM_IoService_Create();
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTA2, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTA3, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTA19, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTB4, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTB5, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTB6, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC0, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC1, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC2, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC3, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC4, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC5, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC6, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC7, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC8, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC9, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC12, APP_IO_SetOutput, APP_IO_GetInput, APP_IO_ConfIEvent, NULL);
+    ioService = SRTM_IoService_Create(APP_IO_InputInit, APP_IO_OutputInit, APP_IO_InputGet);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTA2, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTA3, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTA19, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTB4, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTB5, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTB6, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC0, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC1, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC2, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC3, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC4, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC5, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC6, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC7, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC8, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC9, NULL);
+    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC12, NULL);
     SRTM_Dispatcher_RegisterService(disp, ioService);
 
     keypadService = SRTM_KeypadService_Create();
-    SRTM_KeypadService_RegisterKey(keypadService, APP_KEYPAD_INDEX_VOL_PLUS, APP_IO_ConfKEvent, NULL);
-    SRTM_KeypadService_RegisterKey(keypadService, APP_KEYPAD_INDEX_VOL_MINUS, APP_IO_ConfKEvent, NULL);
+    SRTM_KeypadService_RegisterKey(keypadService, APP_KEYPAD_INDEX_VOL_PLUS, APP_Keypad_ConfKEvent, NULL);
+    SRTM_KeypadService_RegisterKey(keypadService, APP_KEYPAD_INDEX_VOL_MINUS, APP_Keypad_ConfKEvent, NULL);
     SRTM_Dispatcher_RegisterService(disp, keypadService);
 }
 

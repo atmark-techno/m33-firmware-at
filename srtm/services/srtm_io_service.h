@@ -50,7 +50,7 @@ typedef enum _srtm_io_event
 /**
  * @brief SRTM IO service set output value function type.
  */
-typedef srtm_status_t (*srtm_io_service_set_output_t)(srtm_service_t service,
+typedef srtm_status_t (*srtm_io_service_output_init_t)(srtm_service_t service,
                                                       srtm_peercore_t core,
                                                       uint16_t ioId,
                                                       srtm_io_value_t ioValue);
@@ -58,7 +58,7 @@ typedef srtm_status_t (*srtm_io_service_set_output_t)(srtm_service_t service,
 /**
  * @brief SRTM IO service get input value function type.
  */
-typedef srtm_status_t (*srtm_io_service_get_input_t)(srtm_service_t service,
+typedef srtm_status_t (*srtm_io_service_input_get_t)(srtm_service_t service,
                                                      srtm_peercore_t core,
                                                      uint16_t ioId,
                                                      srtm_io_value_t *pIoValue);
@@ -66,7 +66,7 @@ typedef srtm_status_t (*srtm_io_service_get_input_t)(srtm_service_t service,
 /**
  * @brief SRTM IO service configure input event function type.
  */
-typedef srtm_status_t (*srtm_io_service_conf_input_t)(
+typedef srtm_status_t (*srtm_io_service_input_init_t)(
     srtm_service_t service, srtm_peercore_t core, uint16_t ioId, srtm_io_event_t event, bool wakeup);
 
 /*******************************************************************************
@@ -81,7 +81,9 @@ extern "C" {
  *
  * @return SRTM service handle on success and NULL on failure.
  */
-srtm_service_t SRTM_IoService_Create(void);
+srtm_service_t SRTM_IoService_Create(srtm_io_service_input_init_t inputInit,
+                                     srtm_io_service_output_init_t outputInit,
+                                     srtm_io_service_input_get_t inputGet);
 
 /*!
  * @brief Destroy IO service.
@@ -113,9 +115,6 @@ void SRTM_IoService_Reset(srtm_service_t service, srtm_peercore_t core);
  */
 srtm_status_t SRTM_IoService_RegisterPin(srtm_service_t service,
                                          uint16_t ioId,
-                                         srtm_io_service_set_output_t setOutput,
-                                         srtm_io_service_get_input_t getInput,
-                                         srtm_io_service_conf_input_t confIEvent,
                                          void *param);
 
 /*!
