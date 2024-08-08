@@ -7,6 +7,9 @@
  */
 
 #include "FreeRTOS.h"
+#include "rpmsg_lite.h"
+#include "rpmsg_queue.h"
+#include "rpmsg_ns.h"
 #include "task.h"
 #include "semphr.h"
 #include "timers.h"
@@ -27,13 +30,21 @@
 #include "fsl_wuu.h"
 
 #include "fsl_iomuxc.h"
-#include "fsl_lpuart.h"
+#include "fsl_lpuart_freertos.h"
 #include "fsl_reset.h"
 /*******************************************************************************
  * Struct Definitions
  ******************************************************************************/
+#define RPMSG_LITE_LINK_ID            (RL_PLATFORM_IMX8ULP_M33_A35_USER_LINK_ID)
+#define RPMSG_LITE_SHMEM_BASE         (VDEV1_VRING_BASE)
+#define RPMSG_LITE_NS_ANNOUNCE_STRING "rpmsg-virtual-tty-channel"
+#define RPMSG_LITE_MASTER_IS_LINUX
+
 #define APP_DEBUG_UART_BAUDRATE       (115200U)             /* Debug console baud rate. */
 #define APP_DEBUG_UART_DEFAULT_CLKSRC kCLOCK_IpSrcSircAsync /* SCG SIRC clock. */
+#ifndef LOCAL_EPT_ADDR
+#define LOCAL_EPT_ADDR (30)
+#endif
 
 /* LPTMR0 is WUU internal module 0. */
 #define WUU_MODULE_SYSTICK WUU_MODULE_LPTMR0
@@ -50,6 +61,18 @@ typedef enum _app_wakeup_source
     kAPP_WakeupSourceLptmr, /*!< Wakeup by LPTMR.        */
     kAPP_WakeupSourcePin    /*!< Wakeup by external pin. */
 } app_wakeup_source_t;
+
+/* RS485 on CON3 */
+#define RS485_LPUART               LPUART0
+#define RS485_LPUART_BAUDRATE      (115200U)
+#define RS485_LPUART_CLK_FREQ      CLOCK_GetIpFreq(kCLOCK_Lpuart0)
+#if !(defined(RL_ALLOW_CUSTOM_SHMEM_CONFIG) && (RL_ALLOW_CUSTOM_SHMEM_CONFIG == 1))
+#define RS485_LPUART_BUFFER_LENGTH (RL_BUFFER_PAYLOAD_SIZE)
+#else
+#define RS485_LPUART_BUFFER_LENGTH (RL_BUFFER_PAYLOAD_SIZE(0))
+#endif
+#define RS485_EVENT_INIT_DONE      (1)
+
 
 /*******************************************************************************
  * Function Prototypes
@@ -170,6 +193,34 @@ mode_combi_t mode_combi_array_for_dual_or_lp_boot[] = {
     {LPM_PowerModeDeepPowerDown, AD_DPD, MODE_COMBI_YES},
 };
 // clang-format on
+
+/* RS485 on CON3 */
+static lpuart_rtos_handle_t s_rs485LpuartRtosHandle;
+static lpuart_handle_t s_rs485LpuartHandle;
+
+static uint8_t s_rs485BackgroundBuffer[4096];
+static lpuart_rtos_config_t s_rs485LpuartConfig = {
+    .baudrate    = RS485_LPUART_BAUDRATE,
+    .parity      = kLPUART_ParityDisabled,
+    .stopbits    = kLPUART_OneStopBit,
+    .buffer      = s_rs485BackgroundBuffer,
+    .buffer_size = sizeof(s_rs485BackgroundBuffer),
+    /* .enableRxRTS = true, */
+    /* .enableTxCTS = true, */
+    .base        = RS485_LPUART,
+};
+
+/* rpmsg */
+static struct rpmsg_lite_instance *volatile s_rpmsgInstance;
+static struct rpmsg_lite_endpoint *volatile s_rpmsgEndpoint;
+static volatile rpmsg_queue_handle s_rpmsgQueueHandle;
+static volatile uint32_t s_rpmsgRemoteAddr;
+static volatile bool s_rs485Inited;
+
+static TaskHandle_t s_rs485InitTaskHandle;
+static TaskHandle_t s_rs485rxTaskHandle;
+static TaskHandle_t s_rs485txTaskHandle;
+
 
 /*******************************************************************************
  * Function Code
@@ -860,6 +911,74 @@ static void APP_ClearWakeupConfig(lpm_rtd_power_mode_e targetMode)
     }
 }
 
+static void Rs485InitTask(void *pvParameters);
+static void Rs485RxTask(void *pvParameters);
+static void Rs485TxTask(void *pvParameters);
+static void APP_CreateTask(void)
+{
+    if (s_rs485InitTaskHandle == NULL)
+        xTaskCreate(Rs485InitTask, "RS485 Init Task", 256U, NULL, tskIDLE_PRIORITY + 1U, &s_rs485InitTaskHandle);
+
+    if (s_rs485rxTaskHandle == NULL)
+        xTaskCreate(Rs485RxTask, "RS485 Rx Task", 256U, NULL, tskIDLE_PRIORITY + 1, &s_rs485rxTaskHandle);
+
+    if (s_rs485txTaskHandle == NULL)
+        xTaskCreate(Rs485TxTask, "RS485 Tx Task", 256U, NULL, tskIDLE_PRIORITY + 1, &s_rs485txTaskHandle);
+}
+
+static void APP_DestroyTask(void)
+{
+    if (s_rs485txTaskHandle)
+    {
+        vTaskDelete(s_rs485txTaskHandle);
+        s_rs485txTaskHandle = NULL;
+    }
+
+    if (s_rs485rxTaskHandle)
+    {
+        vTaskDelete(s_rs485rxTaskHandle);
+        s_rs485rxTaskHandle = NULL;
+    }
+
+    s_rs485Inited = false;
+
+    if (s_rs485InitTaskHandle)
+    {
+        vTaskDelete(s_rs485InitTaskHandle);
+        s_rs485InitTaskHandle = NULL;
+    }
+
+    if (s_rpmsgEndpoint)
+    {
+        rpmsg_lite_destroy_ept(s_rpmsgInstance, s_rpmsgEndpoint);
+	s_rpmsgEndpoint = NULL;
+    }
+
+    if (s_rpmsgQueueHandle)
+    {
+        rpmsg_queue_destroy(s_rpmsgInstance, s_rpmsgQueueHandle);
+	s_rpmsgQueueHandle = NULL;
+    }
+
+    if (s_rpmsgInstance)
+    {
+        rpmsg_lite_deinit(s_rpmsgInstance);
+        s_rpmsgInstance = NULL;
+    }
+}
+
+static void APP_RpmsgMonitor(struct rpmsg_lite_instance *rpmsgHandle, bool ready, void *rpmsgMonitorParam)
+{
+    if (ready)
+    {
+        APP_CreateTask();
+    }
+    else
+    {
+        APP_DestroyTask();
+    }
+}
+
 /* Power Mode Switch task */
 void PowerModeSwitchTask(void *pvParameters)
 {
@@ -1032,6 +1151,101 @@ void PowerModeSwitchTask(void *pvParameters)
     }
 }
 
+/* RS485 Init Task */
+static void Rs485InitTask(void *pvParameters)
+{
+    void *buffer;
+    uint32_t length;
+    int32_t result;
+
+#ifdef MCMGR_USED
+    uint32_t startupData;
+
+    /* Get the startup data */
+    (void)MCMGR_GetStartupData(kMCMGR_Core1, &startupData);
+
+    s_rpmsgInstance = rpmsg_lite_remote_init((void *)startupData, RPMSG_LITE_LINK_ID, RL_NO_FLAGS);
+
+    /* Signal the other core we are ready */
+    (void)MCMGR_SignalReady(kMCMGR_Core1);
+#else
+    s_rpmsgInstance = rpmsg_lite_remote_init((void *)RPMSG_LITE_SHMEM_BASE, RPMSG_LITE_LINK_ID, RL_NO_FLAGS);
+#endif /* MCMGR_USED */
+
+    rpmsg_lite_wait_for_link_up(s_rpmsgInstance, RL_BLOCK);
+
+    s_rpmsgQueueHandle = rpmsg_queue_create(s_rpmsgInstance);
+    s_rpmsgEndpoint   = rpmsg_lite_create_ept(s_rpmsgInstance, LOCAL_EPT_ADDR, rpmsg_queue_rx_cb, s_rpmsgQueueHandle);
+    (void)rpmsg_ns_announce(s_rpmsgInstance, s_rpmsgEndpoint, RPMSG_LITE_NS_ANNOUNCE_STRING, RL_NS_CREATE);
+
+    /* Get RPMsg rx buffer with message */
+    result = rpmsg_queue_recv_nocopy(s_rpmsgInstance, s_rpmsgQueueHandle, (uint32_t *)&s_rpmsgRemoteAddr, (char **)&buffer, &length, RL_BLOCK);
+    if (result != 0)
+        assert(false);
+
+    /* Release held RPMsg rx buffer */
+    result = rpmsg_queue_nocopy_free(s_rpmsgInstance, buffer);
+    if (result != 0)
+        assert(false);
+
+    s_rs485Inited = true;
+
+    vTaskDelete(NULL);
+}
+
+/* RS485 Rx Task */
+static void Rs485RxTask(void *pvParameters)
+{
+    void *buffer;
+    uint32_t size;
+    int32_t result;
+    size_t length;
+
+    while (!s_rs485Inited);
+
+    vTaskPrioritySet(xTaskGetCurrentTaskHandle(), configMAX_PRIORITIES - 1);
+
+    for (;;)
+    {
+        buffer = rpmsg_lite_alloc_tx_buffer(s_rpmsgInstance, &size, RL_BLOCK);
+        assert(buffer);
+
+        LPUART_RTOS_Receive(&s_rs485LpuartRtosHandle, buffer, RS485_LPUART_BUFFER_LENGTH, &length);
+
+        result = rpmsg_lite_send_nocopy(s_rpmsgInstance, s_rpmsgEndpoint, s_rpmsgRemoteAddr, buffer, length);
+        if (result)
+            assert(false);
+    }
+}
+
+/* RS485 Tx Task */
+static void Rs485TxTask(void *pvParameters)
+{
+    void *buffer;
+    uint32_t length;
+    int32_t result;
+
+    while (!s_rs485Inited);
+
+    vTaskPrioritySet(xTaskGetCurrentTaskHandle(), configMAX_PRIORITIES - 1);
+
+    for (;;)
+    {
+        /* Get RPMsg rx buffer with message */
+        result =
+            rpmsg_queue_recv_nocopy(s_rpmsgInstance, s_rpmsgQueueHandle, (uint32_t *)&s_rpmsgRemoteAddr, (char **)&buffer, &length, RL_BLOCK);
+        if (result != 0)
+            assert(false);
+
+        LPUART_RTOS_Send(&s_rs485LpuartRtosHandle, buffer, length);
+
+        /* Release held RPMsg rx buffer */
+        result = rpmsg_queue_nocopy_free(s_rpmsgInstance, buffer);
+        if (result != 0)
+            assert(false);
+    }
+}
+
 void vApplicationMallocFailedHook(void)
 {
     PRINTF("Malloc Failed!!!\r\n");
@@ -1133,6 +1347,7 @@ int main(void)
     //CLOCK_SetIpSrcDiv(kCLOCK_Lpi2c2, kCLOCK_Pcc2BusIpSrcFusionDspBus, 0U, 0U); // Secure Element
     /* Use Pll1Pfd2Div clock source 12.288MHz. */
     CLOCK_SetIpSrc(kCLOCK_Sai0, kCLOCK_Cm33SaiClkSrcPll1Pfd2Div);
+    CLOCK_SetIpSrc(kCLOCK_Lpuart0, kCLOCK_Pcc1BusIpSrcSysOscDiv2);
 
     CLOCK_EnableClock(kCLOCK_Dma0Ch16);
     CLOCK_EnableClock(kCLOCK_Dma0Ch17);
@@ -1147,8 +1362,12 @@ int main(void)
     RESET_PeripheralReset(kRESET_Lpi2c1);
     //RESET_PeripheralReset(kRESET_Lpi2c2); // Secure Element
     RESET_PeripheralReset(kRESET_Tpm0);
+    RESET_PeripheralReset(kRESET_Lpuart0);
 
     APP_SRTM_Init();
+
+    /* register callback for restart the app task when A35 reset */
+    APP_SRTM_SetRpmsgMonitor(APP_RpmsgMonitor, NULL);
 
     /* If RTD reset is due to DPD exit, should go different flow here */
     if (CMC_RTD->SSRS & CMC_SSRS_WAKEUP_MASK)
@@ -1177,6 +1396,17 @@ int main(void)
 
     xTaskCreate(PowerModeSwitchTask, "Main Task", 512U, NULL, tskIDLE_PRIORITY + 1U, NULL);
     xTaskCreate(WorkingTask, "Working Task", configMINIMAL_STACK_SIZE, (void *)1, tskIDLE_PRIORITY + 2U, NULL);
+
+#ifdef MCMGR_USED
+    /* Initialize MCMGR before calling its API */
+    (void)MCMGR_Init();
+#endif /* MCMGR_USED */
+
+    s_rs485LpuartConfig.srcclk = RS485_LPUART_CLK_FREQ;
+    LPUART_RTOS_Init(&s_rs485LpuartRtosHandle, &s_rs485LpuartHandle, &s_rs485LpuartConfig);
+    LPUART_RTOS_SetRxTimeout(&s_rs485LpuartRtosHandle, 1, 0);
+
+    APP_CreateTask();
 
     /* Start FreeRTOS scheduler. */
     vTaskStartScheduler();

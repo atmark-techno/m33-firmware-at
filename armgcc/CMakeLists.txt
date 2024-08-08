@@ -67,7 +67,6 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../boards/a900/board.h"
 "${ProjDirPath}/../boards/a900/clock_config.c"
 "${ProjDirPath}/../boards/a900/clock_config.h"
-"${ProjDirPath}/../empty_rsc_table.c"
 "${ProjDirPath}/../app_srtm.c"
 "${ProjDirPath}/../app_srtm.h"
 "${ProjDirPath}/../srtm/channels/srtm_rpmsg_endpoint.h"
