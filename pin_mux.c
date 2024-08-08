@@ -64,21 +64,24 @@ BOARD_InitLpuartPins:
  *
  * END ****************************************************************************************************************/
 void BOARD_InitLpuartPins(void) {                          /*!< Function assigned for the core: Cortex-M33[cm33] */
-    IOMUXC_SetPinMux(IOMUXC_PTA18_LPUART0_TX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA18_LPUART0_TX,
+    /*
+     * LPUART1 is the debug console for RTD.
+     */
+    IOMUXC_SetPinMux(IOMUXC_PTA10_LPUART1_TX, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA10_LPUART1_TX,
                         IOMUXC_PCR_PE_MASK |
                         IOMUXC_PCR_PS_MASK);
-    IOMUXC_SetPinMux(IOMUXC_PTA15_LPUART0_RX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA15_LPUART0_RX,
+    IOMUXC_SetPinMux(IOMUXC_PTA11_LPUART1_RX, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA11_LPUART1_RX,
                         IOMUXC_PCR_PE_MASK |
                         IOMUXC_PCR_PS_MASK);
 }
 
 void BOARD_DeinitLpuartPins(void) {
-    IOMUXC_SetPinMux(IOMUXC_PTA18_LPUART0_TX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA18_LPUART0_TX, 0U);
-    IOMUXC_SetPinMux(IOMUXC_PTA15_LPUART0_RX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA15_LPUART0_RX, 0U);
+    IOMUXC_SetPinMux(IOMUXC_PTA10_LPUART1_TX, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA10_LPUART1_TX, 0U);
+    IOMUXC_SetPinMux(IOMUXC_PTA11_LPUART1_RX, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA11_LPUART1_RX, 0U);
 }
 
 /*
