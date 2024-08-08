@@ -51,41 +51,6 @@ typedef enum
 #define APP_MS2TICK(ms)       ((ms + portTICK_PERIOD_MS - 1) / portTICK_PERIOD_MS)
 #define APP_DMA_IRQN(channel) (IRQn_Type)((uint32_t)DMA0_0_IRQn + channel)
 
-enum
-{
-    APP_INPUT_RTD_BTN1   = 0U,
-    APP_INPUT_RTD_BTN2   = 1U,
-    APP_INPUT_PTA2       = 2U,
-    APP_INPUT_PTA3       = 3U,
-    APP_INPUT_PTA19      = 4U,
-    APP_INPUT_IT6161_INT = 4U,
-    APP_INPUT_PTB4       = 5U,
-    APP_INPUT_PTB5       = 6U,
-    APP_INPUT_TOUCH_INT  = 6U,
-    APP_INPUT_PTB6       = 7U,
-    APP_INPUT_PTC0       = 8U,
-    APP_INPUT_PTC1       = 9U,
-    APP_INPUT_PTC2       = 10U,
-    APP_INPUT_PTC3       = 11U,
-    APP_INPUT_PTC4       = 12U,
-    APP_INPUT_PTC5       = 13U,
-    APP_INPUT_PTC6       = 14U,
-    APP_INPUT_PTC7       = 15U,
-    APP_INPUT_PTC8       = 16U,
-    APP_INPUT_PTC9       = 17U,
-    APP_INPUT_PTC12      = 18U,
-    APP_IO_NUM           = 19U
-};
-
-/* Define macros for input gpios that setup by linux that running on A Core(CA35) */
-#define APP_INPUT_GPIO_CONTROL_BY_ACORE_START APP_INPUT_PTA19
-#define APP_INPUT_GPIO_CONTROL_BY_ACORE_END   APP_INPUT_PTC12
-
-#define APP_INPUT_GPIO_START APP_INPUT_RTD_BTN1
-#define APP_INPUT_GPIO_END   APP_INPUT_PTC12
-
-#define APP_GPIO_START APP_INPUT_RTD_BTN1
-
 /* Task priority definition, bigger number stands for higher priority */
 #define APP_SRTM_MONITOR_TASK_PRIO    (4U)
 #define APP_SRTM_DISPATCHER_TASK_PRIO (3U)
@@ -163,31 +128,44 @@ enum
 #define LPTMR1_WUU_WAKEUP_EVENT (kWUU_InternalModuleInterrupt)
 
 /* GPIO */
+#define APP_IO_PINS_PER_CHIP 24U
+#define APP_IO_CHIPS         3U /* Only support GPIOA, GPIOB and GPIOC */
+#define APP_IO_NUM         (APP_IO_CHIPS * APP_IO_PINS_PER_CHIP)
 #define APP_GPIO_IDX(ioId) ((uint8_t)(((uint16_t)ioId) >> 8U))
 #define APP_PIN_IDX(ioId)  ((uint8_t)ioId)
+
+static inline uint16_t APP_IO_GetIndex(uint16_t ioId) {
+	uint8_t gpio_idx = APP_GPIO_IDX(ioId);
+	uint8_t pin_idx = APP_PIN_IDX(ioId);
+
+	if (gpio_idx > APP_IO_CHIPS)
+		return 0xffff;
+	if (pin_idx > APP_IO_PINS_PER_CHIP)
+		return 0xffff;
+
+	return gpio_idx * APP_IO_PINS_PER_CHIP + pin_idx;
+}
+static inline uint16_t APP_IO_GetId(uint8_t inputIdx) {
+    if (inputIdx > APP_IO_NUM)
+        return 0xffff;
+    return ((inputIdx / APP_IO_PINS_PER_CHIP) << 8U) | (inputIdx % APP_IO_PINS_PER_CHIP);
+}
+
 #define APP_GPIO_INT_SEL   (kRGPIO_InterruptOutput2)
-#define APP_PIN_PTA2       (0x0002U)          /* PTA2 */
-#define APP_PIN_PTA3       (0x0003U)          /* PTA3 */
-#define APP_PIN_PTA19      (0x0013U)          /* PTA19 */
+
+/* XXX interrupts etc still hardcoded*/
+#define APP_PIN_PTA19      (0x0013U)          /* PTA19 use for it6161(mipi to hdmi converter ic) interrupt */
 #define APP_PIN_IT6161_INT (APP_PIN_PTA19)
+#define APP_INPUT_IT6161_INT (APP_IO_GetIndex(APP_PIN_IT6161_INT))
 #define APP_PIN_PTB5       (0x0105U)          /* PTB5, use for touch interrupt */
 #define APP_PIN_TOUCH_INT  (APP_PIN_PTB5)
-#define APP_PIN_PTB6       (0x0106U)          /* PTB6 */
+#define APP_INPUT_TOUCH_INT (APP_IO_GetIndex(APP_PIN_TOUCH_INT))
 #define APP_PIN_PTB4       (0x0104U)          /* PTB4 */
-#define APP_PIN_PTB13      (0x010DU)          /* PTB13 */
-#define APP_PIN_RTD_BTN1   (APP_PIN_PTB13)    /* PTB13 */
+#define APP_PIN_RTD_BTN1   (0x010DU)          /* PTB13 */
+#define APP_INPUT_RTD_BTN1 (APP_IO_GetIndex(APP_PIN_RTD_BTN1))
 #define APP_PIN_RTD_BTN2   (0x010EU)          /* PTB14 */
-#define APP_PIN_PTC0       (0x0200U)          /* PTC0 */
-#define APP_PIN_PTC1       (0x0201U)          /* PTC1 */
-#define APP_PIN_PTC2       (0x0202U)          /* PTC2 */
-#define APP_PIN_PTC3       (0x0203U)          /* PTC3 */
-#define APP_PIN_PTC4       (0x0204U)          /* PTC4 */
-#define APP_PIN_PTC5       (0x0205U)          /* PTC5 */
-#define APP_PIN_PTC6       (0x0206U)          /* PTC6 */
-#define APP_PIN_PTC7       (0x0207U)          /* PTC7 */
-#define APP_PIN_PTC8       (0x0208U)          /* PTC8 */
-#define APP_PIN_PTC9       (0x0209U)          /* PTC9 */
-#define APP_PIN_PTC12      (0x020CU)          /* PTC12 */
+#define APP_INPUT_RTD_BTN2 (APP_IO_GetIndex(APP_PIN_RTD_BTN2))
+
 
 /*
  * BOARD Relative Settings:

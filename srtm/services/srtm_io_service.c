@@ -17,7 +17,10 @@
 #include "srtm_channel_struct.h"
 #include "srtm_io_service.h"
 #include "srtm_message.h"
+#include "srtm_message_pool.h"
 #include "srtm_message_struct.h"
+
+#include "app_srtm.h"
 
 #include "fsl_common.h"
 
@@ -38,11 +41,7 @@
 /* IO pin list node */
 typedef struct _srtm_io_pin
 {
-    srtm_list_t node;
-    uint16_t ioId;
-    srtm_channel_t channel;
-    srtm_notification_t notif; /* SRTM notification message for input event */
-    void *param;
+    bool notified;
 } *srtm_io_pin_t;
 
 /* Service handle */
@@ -53,7 +52,9 @@ typedef struct _srtm_io_service
     srtm_io_service_output_init_t outputInit;
     srtm_io_service_input_get_t inputGet;
     srtm_io_service_output_set_t outputSet;
-    srtm_list_t pins; /*!< SRTM IO pins list */
+    int pin_count;
+    srtm_channel_t channel;
+    struct _srtm_io_pin pins[];
 } *srtm_io_service_t;
 
 SRTM_PACKED_BEGIN struct _srtm_io_payload
@@ -100,66 +101,31 @@ enum gpio_rpmsg_header_cmd {
 /*******************************************************************************
  * Code
  ******************************************************************************/
-static void SRTM_IoService_FreePin(srtm_io_pin_t pin)
-{
-    SRTM_Notification_Destroy(pin->notif);
-    SRTM_Heap_Free(pin);
-}
-
 static void SRTM_IoService_RecycleMessage(srtm_message_t msg, void *param)
 {
     uint32_t primask;
     srtm_io_pin_t pin = (srtm_io_pin_t)param;
 
     assert(pin);
-    assert(pin->notif == NULL);
+    assert(pin->notified == true);
 
     primask = DisableGlobalIRQ();
-    /* Return msg to pin */
-    pin->notif = msg;
+    pin->notified = false;
     EnableGlobalIRQ(primask);
+
+    SRTM_MessagePool_Free(msg);
 }
 
-static srtm_io_pin_t SRTM_IoService_FindPin(srtm_io_service_t handle, uint16_t ioId, bool rm, bool notify)
+static srtm_io_pin_t SRTM_IoService_FindPin(srtm_io_service_t handle, uint16_t ioId)
 {
-    srtm_io_pin_t pin = NULL;
-    srtm_list_t *list;
-    srtm_notification_t notif = NULL;
-    uint32_t primask;
-
-    primask = DisableGlobalIRQ();
-    for (list = handle->pins.next; list != &handle->pins; list = list->next)
-    {
-        pin = SRTM_LIST_OBJ(srtm_io_pin_t, node, list);
-        if (pin->ioId == ioId)
-        {
-            if (rm)
-            {
-                SRTM_List_Remove(list);
-            }
-            if (notify)
-            {
-                notif = pin->notif;
-                /* If channel is destoryed, the notif of pin should be recycled */
-                if (pin->channel)
-                {
-                    pin->notif = NULL;
-                }
-            }
-            break;
-        }
+    /* XXX abstraction leak */
+    uint16_t idx = APP_IO_GetIndex(ioId);
+    if (idx >= handle->pin_count) {
+        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR,
+                               "%s: ioId too high %x\r\n", __func__, ioId);
+        return NULL;
     }
-    EnableGlobalIRQ(primask);
-
-    if (notify && notif && pin->channel)
-    {
-        /* If notification message exists, just deliver it. Otherwise it's on the way, no need
-           to deliver again. */
-        notif->channel = pin->channel;
-        SRTM_Dispatcher_DeliverNotification(handle->service.dispatcher, notif);
-    }
-
-    return list == &handle->pins ? NULL : pin;
+    return handle->pins + idx;
 }
 
 /* Both request and notify are called from SRTM dispatcher context */
@@ -197,7 +163,7 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
     else
     {
         ioId = (payload->port_idx << 8) | payload->pin_idx;
-        pin  = SRTM_IoService_FindPin(handle, ioId, false, false);
+        pin  = SRTM_IoService_FindPin(handle, ioId);
         if (!pin)
         {
             SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Pin 0x%x not registered!\r\n", __func__, ioId);
@@ -205,8 +171,8 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
         }
         else
         {
-            /* Record pin's channel for further input event */
-            pin->channel = channel;
+            /* Record channel for further input event */
+            handle->channel = channel;
             switch (command)
             {
                 case GPIO_RPMSG_INPUT_INIT:
@@ -230,7 +196,7 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
                     if (handle->outputInit != NULL)
                     {
                         status = handle->outputInit(service, channel->core, ioId,
-					            payload->output_init.value, payload->output_init.pinctrl);
+                                payload->output_init.value, payload->output_init.pinctrl);
                         retCode =
                             status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCEESS : SRTM_IO_RETURN_CODE_FAIL;
                     }
@@ -301,7 +267,8 @@ static srtm_status_t SRTM_IoService_Notify(srtm_service_t service, srtm_notifica
     return SRTM_Status_ServiceNotFound;
 }
 
-srtm_service_t SRTM_IoService_Create(srtm_io_service_input_init_t inputInit,
+srtm_service_t SRTM_IoService_Create(int pin_count,
+                                     srtm_io_service_input_init_t inputInit,
                                      srtm_io_service_output_init_t outputInit,
                                      srtm_io_service_input_get_t inputGet,
                                      srtm_io_service_output_set_t outputSet)
@@ -310,14 +277,16 @@ srtm_service_t SRTM_IoService_Create(srtm_io_service_input_init_t inputInit,
 
     SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "%s\r\n", __func__);
 
-    handle = (srtm_io_service_t)SRTM_Heap_Malloc(sizeof(struct _srtm_io_service));
+    handle = (srtm_io_service_t)SRTM_Heap_Malloc(
+            sizeof(struct _srtm_io_service) + pin_count * sizeof(struct _srtm_io_pin));
     assert(handle);
 
+    memset(handle->pins, 0, pin_count * sizeof(struct _srtm_io_pin));
+    handle->pin_count = pin_count;
     handle->inputInit = inputInit;
     handle->outputInit = outputInit;
     handle->inputGet = inputGet;
     handle->outputSet = outputSet;
-    SRTM_List_Init(&handle->pins);
 
     SRTM_List_Init(&handle->service.node);
     handle->service.dispatcher = NULL;
@@ -332,8 +301,6 @@ srtm_service_t SRTM_IoService_Create(srtm_io_service_input_init_t inputInit,
 void SRTM_IoService_Destroy(srtm_service_t service)
 {
     srtm_io_service_t handle = (srtm_io_service_t)service;
-    srtm_list_t *list;
-    srtm_io_pin_t pin;
 
     SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "%s\r\n", __func__);
 
@@ -341,102 +308,19 @@ void SRTM_IoService_Destroy(srtm_service_t service)
     /* Service must be unregistered from dispatcher before destroy */
     assert(SRTM_List_IsEmpty(&service->node));
 
-    while (!SRTM_List_IsEmpty(&handle->pins))
-    {
-        list = handle->pins.next;
-        SRTM_List_Remove(list);
-        pin = SRTM_LIST_OBJ(srtm_io_pin_t, node, list);
-        SRTM_IoService_FreePin(pin);
-    }
-
     SRTM_Heap_Free(handle);
 }
 
 void SRTM_IoService_Reset(srtm_service_t service, srtm_peercore_t core)
 {
     srtm_io_service_t handle = (srtm_io_service_t)service;
-    srtm_list_t *list;
-    srtm_io_pin_t pin;
 
     SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "%s\r\n", __func__);
 
     assert(service);
 
     /* Currently assume just one peer core, need to update all pins. */
-    for (list = handle->pins.next; list != &handle->pins; list = list->next)
-    {
-        pin          = SRTM_LIST_OBJ(srtm_io_pin_t, node, list);
-        pin->channel = NULL;
-    }
-}
-
-srtm_status_t SRTM_IoService_RegisterPin(srtm_service_t service,
-                                         uint16_t ioId,
-                                         void *param)
-{
-    srtm_io_service_t handle = (srtm_io_service_t)service;
-    srtm_io_pin_t pin;
-    struct _srtm_io_payload *payload;
-    uint32_t primask;
-
-    assert(service);
-    /* Pin must be registered before service registration. */
-    assert(SRTM_List_IsEmpty(&service->node));
-
-    SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "%s\r\n", __func__);
-
-    pin = SRTM_IoService_FindPin(handle, ioId, false, false);
-    if (pin)
-    {
-        /* ioId already registered */
-        return SRTM_Status_InvalidParameter;
-    }
-
-    pin = (srtm_io_pin_t)SRTM_Heap_Malloc(sizeof(struct _srtm_io_pin));
-    if (pin == NULL)
-    {
-        return SRTM_Status_OutOfMemory;
-    }
-
-    pin->ioId       = ioId;
-    pin->param      = param;
-    pin->notif      = SRTM_Notification_Create(NULL, SRTM_IO_CATEGORY, SRTM_IO_VERSION, SRTM_IO_NTF_INPUT_EVENT, 2U);
-    assert(pin->notif);
-    SRTM_Message_SetFreeFunc(pin->notif, SRTM_IoService_RecycleMessage, pin);
-    payload = (struct _srtm_io_payload *)SRTM_CommMessage_GetPayload(pin->notif);
-    payload->pin_idx = (uint8_t)ioId;
-    payload->port_idx = (uint8_t)(ioId >> 8U);
-
-    primask = DisableGlobalIRQ();
-    SRTM_List_AddTail(&handle->pins, &pin->node);
-    EnableGlobalIRQ(primask);
-
-    return SRTM_Status_Success;
-}
-
-srtm_status_t SRTM_IoService_UnregisterPin(srtm_service_t service, uint16_t ioId)
-{
-    srtm_io_service_t handle = (srtm_io_service_t)service;
-    srtm_io_pin_t pin;
-
-    assert(service);
-    /* Pin must be unregistered when service is not running. */
-    assert(SRTM_List_IsEmpty(&service->node));
-
-    SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "%s\r\n", __func__);
-
-    pin = SRTM_IoService_FindPin(handle, ioId, true, false);
-    if (pin)
-    {
-        SRTM_IoService_FreePin(pin);
-    }
-    else
-    {
-        /* Not found */
-        return SRTM_Status_ListRemoveFailed;
-    }
-
-    return SRTM_Status_Success;
+    handle->channel = NULL;
 }
 
 /* Called in ISR */
@@ -449,12 +333,42 @@ srtm_status_t SRTM_IoService_NotifyInputEvent(srtm_service_t service, uint16_t i
     /* Service must be running in dispatcher when notifying input event */
     assert(!SRTM_List_IsEmpty(&service->node));
 
-    pin = SRTM_IoService_FindPin(handle, ioId, false, true);
+    pin = SRTM_IoService_FindPin(handle, ioId);
     if (!pin)
     {
         /* Pin not registered */
         return SRTM_Status_InvalidParameter;
     }
+
+    uint32_t primask;
+    bool notify = false;
+    primask = DisableGlobalIRQ();
+    if (!pin->notified && handle->channel)
+    {
+            notify = true;
+            pin->notified = true;
+    }
+    EnableGlobalIRQ(primask);
+
+    if (notify)
+    {
+        srtm_notification_t notif = SRTM_Notification_Create(
+                    NULL, SRTM_IO_CATEGORY, SRTM_IO_VERSION,
+                    SRTM_IO_NTF_INPUT_EVENT, 2U);
+        if (!notif) {
+            SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR,
+                            "%s: alloc notification failed.\r\n", __func__);
+            /* can't be raced as we didn't send a notification */
+            pin->notified = false;
+            return SRTM_Status_OutOfMemory;
+        }
+        /* restore pin->notified before free when sent is done */
+        SRTM_Message_SetFreeFunc(notif, SRTM_IoService_RecycleMessage, pin);
+        notif->channel = handle->channel;
+        SRTM_Dispatcher_DeliverNotification(handle->service.dispatcher, notif);
+    }
+
+
 
     return SRTM_Status_Success;
 }

@@ -90,7 +90,8 @@ extern "C" {
  *
  * @return SRTM service handle on success and NULL on failure.
  */
-srtm_service_t SRTM_IoService_Create(srtm_io_service_input_init_t inputInit,
+srtm_service_t SRTM_IoService_Create(int pin_count,
+                                     srtm_io_service_input_init_t inputInit,
                                      srtm_io_service_output_init_t outputInit,
                                      srtm_io_service_input_get_t inputGet,
                                      srtm_io_service_output_set_t outputSet);
@@ -111,30 +112,6 @@ void SRTM_IoService_Destroy(srtm_service_t service);
  * @param core Identify which core is to be reset
  */
 void SRTM_IoService_Reset(srtm_service_t service, srtm_peercore_t core);
-
-/*!
- * @brief Register IO service pin. Only registered pin will be serviced.
- *
- * @param service SRTM IO service handle.
- * @param ioId IO pin identification.
- * @param setOutput IO pin set output value callback.
- * @param getInput IO pin get input value callback.
- * @param confIEvent IO pin configure input event callback.
- * @param param user callback parameter.
- * @return SRTM_Status_Success on success and others on failure.
- */
-srtm_status_t SRTM_IoService_RegisterPin(srtm_service_t service,
-                                         uint16_t ioId,
-                                         void *param);
-
-/*!
- * @brief Unregister IO service pin. The operation cannot work when service is running.
- *
- * @param service SRTM IO service handle.
- * @param ioId IO pin identification.
- * @return SRTM_Status_Success on success and others on failure.
- */
-srtm_status_t SRTM_IoService_UnregisterPin(srtm_service_t service, uint16_t ioId);
 
 /*!
  * @brief Notify Input event to peer core. This function must be called by application after peer core configured

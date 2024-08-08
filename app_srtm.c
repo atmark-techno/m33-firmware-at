@@ -30,6 +30,7 @@
 
 #include "app_srtm.h"
 #include "board.h"
+#include "build_bug.h"
 #include "fsl_mu.h"
 #include "fsl_debug_console.h"
 #include "fsl_rgpio.h"
@@ -49,7 +50,6 @@ void APP_SRTM_WakeupCA35(void);
 
 typedef struct
 {
-    uint16_t ioId;
     TimerHandle_t timer; /* GPIO glitch detect timer */
     srtm_io_event_t event;
     bool wakeup;
@@ -410,36 +410,6 @@ static uint8_t APP_IO_GetWUUPin(uint16_t ioId)
     for (i = 0; i < ARRAY_SIZE(wuuPins); i++)
     {
         if (wuuPins[i] == ioId)
-        {
-            break;
-        }
-    }
-
-    return i;
-}
-
-static uint8_t APP_IO_GetIoIndex(uint16_t ioId)
-{
-    uint8_t i;
-
-    for (i = 0; i < ARRAY_SIZE(suspendContext.io.data); i++)
-    {
-        if (suspendContext.io.data[i].ioId == ioId)
-        {
-            break;
-        }
-    }
-
-    return i;
-}
-
-static uint8_t APP_Keypad_GetInputIndex(uint8_t keyIdx)
-{
-    uint8_t i;
-
-    for (i = 0; i < APP_IO_NUM; i++)
-    {
-        if (suspendContext.io.data[i].index == keyIdx)
         {
             break;
         }
@@ -1026,38 +996,56 @@ void BBNSM_IRQHandler(void)
     }
 }
 
-static uint16_t ioIdTable[APP_IO_NUM] = {
-    APP_PIN_RTD_BTN1,
-    APP_PIN_RTD_BTN2,
-    APP_PIN_PTA2,
-    APP_PIN_PTA3,
-    APP_PIN_PTA19,
-    APP_PIN_PTB4,
-    APP_PIN_PTB5,
-    APP_PIN_PTB6,
-    APP_PIN_PTC0,
-    APP_PIN_PTC1,
-    APP_PIN_PTC2,
-    APP_PIN_PTC3,
-    APP_PIN_PTC4,
-    APP_PIN_PTC5,
-    APP_PIN_PTC6,
-    APP_PIN_PTC7,
-    APP_PIN_PTC8,
-    APP_PIN_PTC9,
-    APP_PIN_PTC12,
-};
-
 #define PIN_FUNC_ID_SIZE (5)
-static uint32_t pinFuncId[APP_IO_NUM][PIN_FUNC_ID_SIZE] = {
-    {IOMUXC_PTB13_PTB13},
-    {IOMUXC_PTB14_PTB14},
+static uint32_t pinFuncId[][PIN_FUNC_ID_SIZE] = {
+    {IOMUXC_PTA0_PTA0},
+    {IOMUXC_PTA1_PTA1},
     {IOMUXC_PTA2_PTA2},
     {IOMUXC_PTA3_PTA3},
+    {IOMUXC_PTA4_PTA4},
+    {IOMUXC_PTA5_PTA5},
+    {IOMUXC_PTA6_PTA6},
+    {IOMUXC_PTA7_PTA7},
+    {IOMUXC_PTA8_PTA8},
+    {IOMUXC_PTA9_PTA9},
+    {IOMUXC_PTA10_PTA10},
+    {IOMUXC_PTA11_PTA11},
+    {IOMUXC_PTA12_PTA12},
+    {IOMUXC_PTA13_PTA13},
+    {IOMUXC_PTA14_PTA14},
+    {IOMUXC_PTA15_PTA15},
+    {IOMUXC_PTA16_PTA16},
+    {IOMUXC_PTA17_PTA17},
+    {IOMUXC_PTA18_PTA18},
     {IOMUXC_PTA19_PTA19},
+    {IOMUXC_PTA20_PTA20},
+    {IOMUXC_PTA21_PTA21},
+    {IOMUXC_PTA22_PTA22},
+    {IOMUXC_PTA23_PTA23},
+    {IOMUXC_PTB0_PTB0},
+    {IOMUXC_PTB1_PTB1},
+    {IOMUXC_PTB2_PTB2},
+    {IOMUXC_PTB3_PTB3},
     {IOMUXC_PTB4_PTB4},
     {IOMUXC_PTB5_PTB5},
     {IOMUXC_PTB6_PTB6},
+    {IOMUXC_PTB7_PTB7},
+    {IOMUXC_PTB8_PTB8},
+    {IOMUXC_PTB9_PTB9},
+    {IOMUXC_PTB10_PTB10},
+    {IOMUXC_PTB11_PTB11},
+    {IOMUXC_PTB12_PTB12},
+    {IOMUXC_PTB13_PTB13},
+    {IOMUXC_PTB14_PTB14},
+    {IOMUXC_PTB15_PTB15},
+    {0}, /* no PTB after 15 */
+    {0},
+    {0},
+    {0},
+    {0},
+    {0},
+    {0},
+    {0},
     {IOMUXC_PTC0_PTC0},
     {IOMUXC_PTC1_PTC1},
     {IOMUXC_PTC2_PTC2},
@@ -1068,22 +1056,21 @@ static uint32_t pinFuncId[APP_IO_NUM][PIN_FUNC_ID_SIZE] = {
     {IOMUXC_PTC7_PTC7},
     {IOMUXC_PTC8_PTC8},
     {IOMUXC_PTC9_PTC9},
+    {IOMUXC_PTC10_PTC10},
+    {IOMUXC_PTC11_PTC11},
     {IOMUXC_PTC12_PTC12},
+    {IOMUXC_PTC13_PTC13},
+    {IOMUXC_PTC14_PTC14},
+    {IOMUXC_PTC15_PTC15},
+    {IOMUXC_PTC16_PTC16},
+    {IOMUXC_PTC17_PTC17},
+    {IOMUXC_PTC18_PTC18},
+    {IOMUXC_PTC19_PTC19},
+    {IOMUXC_PTC20_PTC20},
+    {IOMUXC_PTC21_PTC21},
+    {IOMUXC_PTC22_PTC22},
+    {IOMUXC_PTC23_PTC23},
 };
-
-static int getPinFuncIdIndex(uint16_t ioId)
-{
-    int index = 0;
-
-    for (index = APP_GPIO_START; index < APP_IO_NUM; index++)
-    {
-        if (ioId == ioIdTable[index])
-            break;
-    }
-    assert(index != APP_IO_NUM);
-
-    return index;
-}
 
 /*
  * @brief Set pad control register
@@ -1091,9 +1078,13 @@ static int getPinFuncIdIndex(uint16_t ioId)
  */
 static void APP_IO_SetPinConfig(uint16_t ioId, uint32_t pinctrl)
 {
-    int index = 0;
+    int index = APP_IO_GetIndex(ioId);
 
-    index = getPinFuncIdIndex(ioId);
+    /* check table is sound... */
+    BUILD_BUG_ON(ARRAY_SIZE(pinFuncId) != APP_IO_NUM);
+
+    assert(index < APP_IO_NUM);
+
     IOMUXC_SetPinMux(pinFuncId[index][0], pinFuncId[index][1], pinFuncId[index][2],
                      pinFuncId[index][3], pinFuncId[index][4], 0U);
     IOMUXC_SetPinConfig(pinFuncId[index][0], pinFuncId[index][1], pinFuncId[index][2],
@@ -1119,7 +1110,7 @@ static srtm_status_t APP_IO_OutputInit(srtm_service_t service,
                                       srtm_io_value_t ioValue,
                                       uint32_t pinctrl)
 {
-    uint8_t index = APP_IO_GetIoIndex(ioId);
+    uint8_t index = APP_IO_GetIndex(ioId);
 
     assert(index < APP_IO_NUM);
 
@@ -1155,27 +1146,26 @@ static srtm_status_t APP_IO_OutputSet(srtm_service_t service,
                                       uint16_t ioId,
                                       srtm_io_value_t ioValue)
 {
-    uint8_t index = APP_IO_GetIoIndex(ioId);
+    uint8_t index = APP_IO_GetIndex(ioId);
 
     assert(index < APP_IO_NUM);
 
     suspendContext.io.data[index].value = (uint8_t)ioValue;
-
-    APP_IO_SetPinConfig(ioId, IOMUXC_PCR_OBE_MASK);
 
     return APP_IO_SetOutput(ioId, ioValue);
 }
 
 static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, bool wakeup, uint32_t pinctrl)
 {
-    uint16_t ioId   = suspendContext.io.data[inputIdx].ioId;
+    uint16_t ioId   = APP_IO_GetId(inputIdx);
     uint8_t gpioIdx = APP_GPIO_IDX(ioId);
     uint8_t pinIdx  = APP_PIN_IDX(ioId);
     uint8_t wuuIdx  = APP_IO_GetWUUPin(ioId);
+
     wuu_external_wakeup_pin_config_t config;
 
-    assert(gpioIdx < 3U);                  /* Only support GPIOA, GPIOB and GPIOC */
-    assert(pinIdx < 32U);
+    assert(gpioIdx < APP_IO_CHIPS);                  /* Only support GPIOA, GPIOB and GPIOC */
+    assert(pinIdx < APP_IO_PINS_PER_CHIP);
     assert(wuuIdx <= ARRAY_SIZE(wuuPins)); /* When wuuIdx == ARRAY_SIZE(wuuPins),
                                               it means there's no WUU pin for ioId. */
     config.event = kWUU_ExternalPinInterrupt;
@@ -1242,7 +1232,7 @@ static srtm_status_t APP_IO_InputInit(
     srtm_service_t service, srtm_peercore_t core, uint16_t ioId, srtm_io_event_t event,
     bool wakeup, uint32_t pinctrl)
 {
-    uint8_t inputIdx = APP_IO_GetIoIndex(ioId);
+    uint8_t inputIdx = APP_IO_GetIndex(ioId);
 
     assert(inputIdx < APP_IO_NUM);
 
@@ -1255,7 +1245,7 @@ static srtm_status_t APP_IO_InputInit(
 static srtm_status_t APP_Keypad_ConfKEvent(
     srtm_service_t service, srtm_peercore_t core, uint8_t keyIdx, srtm_keypad_event_t event, bool wakeup)
 {
-    uint8_t inputIdx = APP_Keypad_GetInputIndex(keyIdx);
+    uint8_t inputIdx = APP_IO_GetIndex(keyIdx);
 
     assert(inputIdx < APP_IO_NUM);
 
@@ -1621,7 +1611,8 @@ static void APP_SRTM_GpioReset(void)
     int32_t i;
 
     /* First disable all GPIO interrupts configured by CA35 */
-    for (i = APP_INPUT_GPIO_CONTROL_BY_ACORE_START; i <= APP_INPUT_GPIO_CONTROL_BY_ACORE_END; i++)
+    /* XXX actually reset A35 pins */
+    for (i = 0; i < 0; i++)
     {
         if (suspendContext.io.data[i].timer)
         {
@@ -1635,10 +1626,12 @@ static void APP_SRTM_GpioReset(void)
         }
         else
         {
-            APP_IO_InputInit(NULL, NULL, suspendContext.io.data[i].ioId, SRTM_IoEventNone,
+            APP_IO_InputInit(NULL, NULL, APP_IO_GetId(i), SRTM_IoEventNone,
                              false, IO_PINCTRL_UNSET);
         }
     }
+
+    /* TODO reset interrupts registration */
 
     /* Output pin value doesn't change. */
 
@@ -2136,9 +2129,11 @@ static void APP_SRTM_InitIoKeyDevice(void)
     };
 
     /* Init input configuration */
-    for (i = APP_INPUT_GPIO_START; i <= APP_INPUT_GPIO_END; i++)
+    /* XXX actually init as appropriate */
+    for (i = 0; i < 0; i++)
     {
-        RGPIO_PinInit(gpios[APP_GPIO_IDX(suspendContext.io.data[i].ioId)], APP_PIN_IDX(suspendContext.io.data[i].ioId),
+        uint16_t ioId = APP_IO_GetId(i);
+        RGPIO_PinInit(gpios[APP_GPIO_IDX(ioId)], APP_PIN_IDX(ioId),
                       &gpioConfig);
         if (!suspendContext.io.data[i].overridden)
         {
@@ -2154,27 +2149,6 @@ static void APP_SRTM_InitIoKeyService(void)
     /* Keypad */
     suspendContext.io.data[APP_INPUT_RTD_BTN1].index = APP_KEYPAD_INDEX_VOL_PLUS;  /* use RTD BUTTON1 as vol+ button */
     suspendContext.io.data[APP_INPUT_RTD_BTN2].index = APP_KEYPAD_INDEX_VOL_MINUS; /* use RTD BUTTON2 as vol- button */
-
-    /* GPIO ID */
-    suspendContext.io.data[APP_INPUT_RTD_BTN1].ioId = APP_PIN_RTD_BTN1;
-    suspendContext.io.data[APP_INPUT_RTD_BTN2].ioId = APP_PIN_RTD_BTN2;
-    suspendContext.io.data[APP_INPUT_PTA2].ioId     = APP_PIN_PTA2;
-    suspendContext.io.data[APP_INPUT_PTA3].ioId     = APP_PIN_PTA3;
-    suspendContext.io.data[APP_INPUT_PTA19].ioId    = APP_PIN_PTA19;
-    suspendContext.io.data[APP_INPUT_PTB4].ioId     = APP_PIN_PTB4;
-    suspendContext.io.data[APP_INPUT_PTB5].ioId     = APP_PIN_PTB5;
-    suspendContext.io.data[APP_INPUT_PTB6].ioId     = APP_PIN_PTB6;
-    suspendContext.io.data[APP_INPUT_PTC0].ioId     = APP_PIN_PTC0;
-    suspendContext.io.data[APP_INPUT_PTC1].ioId     = APP_PIN_PTC1;
-    suspendContext.io.data[APP_INPUT_PTC2].ioId     = APP_PIN_PTC2;
-    suspendContext.io.data[APP_INPUT_PTC3].ioId     = APP_PIN_PTC3;
-    suspendContext.io.data[APP_INPUT_PTC4].ioId     = APP_PIN_PTC4;
-    suspendContext.io.data[APP_INPUT_PTC5].ioId     = APP_PIN_PTC5;
-    suspendContext.io.data[APP_INPUT_PTC6].ioId     = APP_PIN_PTC6;
-    suspendContext.io.data[APP_INPUT_PTC7].ioId     = APP_PIN_PTC7;
-    suspendContext.io.data[APP_INPUT_PTC8].ioId     = APP_PIN_PTC8;
-    suspendContext.io.data[APP_INPUT_PTC9].ioId     = APP_PIN_PTC9;
-    suspendContext.io.data[APP_INPUT_PTC12].ioId     = APP_PIN_PTC12;
 
     APP_SRTM_InitIoKeyDevice();
 
@@ -2195,25 +2169,9 @@ static void APP_SRTM_InitIoKeyService(void)
     EnableIRQ(GPIOC_INT0_IRQn);
     EnableIRQ(GPIOC_INT1_IRQn);
 
-    ioService = SRTM_IoService_Create(APP_IO_InputInit, APP_IO_OutputInit,
+    ioService = SRTM_IoService_Create(APP_IO_NUM,
+                                      APP_IO_InputInit, APP_IO_OutputInit,
                                       APP_IO_InputGet, APP_IO_OutputSet);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTA2, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTA3, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTA19, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTB4, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTB5, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTB6, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC0, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC1, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC2, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC3, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC4, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC5, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC6, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC7, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC8, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC9, NULL);
-    SRTM_IoService_RegisterPin(ioService, APP_PIN_PTC12, NULL);
     SRTM_Dispatcher_RegisterService(disp, ioService);
 
     keypadService = SRTM_KeypadService_Create();
@@ -2970,7 +2928,7 @@ static void APP_SRTM_DoSetWakeupPin(srtm_dispatcher_t dispatcher, void *param1, 
 {
     uint16_t ioId    = (uint32_t)param1;
     uint16_t event   = (uint32_t)param2;
-    uint8_t inputIdx = APP_IO_GetIoIndex(ioId);
+    uint8_t inputIdx = APP_IO_GetIndex(ioId);
     bool wakeup      = (bool)(event >> 8);
     uint8_t pinMode  = (uint8_t)event;
 
