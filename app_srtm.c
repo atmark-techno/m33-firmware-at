@@ -138,7 +138,8 @@ static srtm_status_t APP_SRTM_I2C_SwitchChannel(srtm_i2c_adapter_t adapter,
                                                 srtm_i2c_switch_channel channel);
 
 static srtm_status_t APP_IO_InputInit(
-    srtm_service_t service, srtm_peercore_t core, uint16_t ioId, srtm_io_event_t event, bool wakeup);
+    srtm_service_t service, srtm_peercore_t core, uint16_t ioId, srtm_io_event_t event,
+    bool wakeup, uint32_t pinctrl);
 
 static srtm_status_t APP_SRTM_ADC_Get(struct adc_handle *handle,
                                       size_t idx,
@@ -331,6 +332,7 @@ static struct _srtm_i2c_adapter i2c_adapter = {.read          = APP_SRTM_I2C_Rea
                                                }};
 
 static RGPIO_Type *const gpios[] = RGPIO_BASE_PTRS;
+#define IO_PINCTRL_UNSET 0xffffffffU
 
 static app_suspend_ctx_t suspendContext;
 
@@ -796,7 +798,7 @@ static void APP_HandleGPIOHander(uint8_t gpioIdx)
         RGPIO_ClearPinsInterruptFlags(gpio, APP_GPIO_INT_SEL, 1U << APP_PIN_IDX(APP_PIN_IT6161_INT));
         /* Ignore the interrrupt of gpio(set interrupt trigger type of gpio after A35 send command to set interrupt
          * trigger type) */
-        APP_IO_InputInit(NULL, NULL, APP_PIN_IT6161_INT, SRTM_IoEventNone, false);
+        APP_IO_InputInit(NULL, NULL, APP_PIN_IT6161_INT, SRTM_IoEventNone, false, IO_PINCTRL_UNSET);
         if ((AD_CurrentMode == AD_PD || (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL)) &&
             suspendContext.io.data[APP_INPUT_IT6161_INT].wakeup)
         {
@@ -812,7 +814,7 @@ static void APP_HandleGPIOHander(uint8_t gpioIdx)
         RGPIO_ClearPinsInterruptFlags(gpio, APP_GPIO_INT_SEL, 1U << APP_PIN_IDX(APP_PIN_TOUCH_INT));
         /* Ignore the interrrupt of gpio(set interrupt trigger type of gpio after A35 send command to set interrupt
          * trigger type) */
-        APP_IO_InputInit(NULL, NULL, APP_PIN_TOUCH_INT, SRTM_IoEventNone, false);
+        APP_IO_InputInit(NULL, NULL, APP_PIN_TOUCH_INT, SRTM_IoEventNone, false, IO_PINCTRL_UNSET);
         if ((AD_CurrentMode == AD_PD || (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL)) &&
             suspendContext.io.data[APP_INPUT_TOUCH_INT].wakeup)
         {
@@ -1069,50 +1071,6 @@ static uint32_t pinFuncId[APP_IO_NUM][PIN_FUNC_ID_SIZE] = {
     {IOMUXC_PTC12_PTC12},
 };
 
-static uint32_t inputMask[APP_IO_NUM] = {
-    IOMUXC_PCR_IBE_MASK,
-    IOMUXC_PCR_IBE_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-    IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK,
-};
-
-static uint32_t outputMask[APP_IO_NUM] = {
-    IOMUXC_PCR_IBE_MASK,
-    IOMUXC_PCR_IBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-    IOMUXC_PCR_OBE_MASK,
-};
-
 static int getPinFuncIdIndex(uint16_t ioId)
 {
     int index = 0;
@@ -1131,16 +1089,18 @@ static int getPinFuncIdIndex(uint16_t ioId)
  * @brief Set pad control register
  * @param asInput    use gpio as input, unless use as output
  */
-static void APP_IO_SetPinConfig(uint16_t ioId, bool asInput)
+static void APP_IO_SetPinConfig(uint16_t ioId, uint32_t pinctrl)
 {
     int index = 0;
 
     index = getPinFuncIdIndex(ioId);
-    IOMUXC_SetPinConfig(pinFuncId[index][0], pinFuncId[index][1], pinFuncId[index][2], pinFuncId[index][3],
-                        pinFuncId[index][4], asInput ? (inputMask[index]) : (outputMask[index]));
+    IOMUXC_SetPinMux(pinFuncId[index][0], pinFuncId[index][1], pinFuncId[index][2],
+                     pinFuncId[index][3], pinFuncId[index][4], 0U);
+    IOMUXC_SetPinConfig(pinFuncId[index][0], pinFuncId[index][1], pinFuncId[index][2],
+                        pinFuncId[index][3], pinFuncId[index][4], pinctrl);
 }
 
-static srtm_status_t APP_IO_ConfOutput(uint16_t ioId, srtm_io_value_t ioValue)
+static srtm_status_t APP_IO_SetOutput(uint16_t ioId, srtm_io_value_t ioValue)
 {
     uint8_t gpioIdx = APP_GPIO_IDX(ioId);
     uint8_t pinIdx  = APP_PIN_IDX(ioId);
@@ -1148,7 +1108,6 @@ static srtm_status_t APP_IO_ConfOutput(uint16_t ioId, srtm_io_value_t ioValue)
     assert(gpioIdx < 3U); /* We only support GPIOA, GPIOB and GPIOC */
     assert(pinIdx < 32U);
 
-    APP_IO_SetPinConfig(ioId, false);
     RGPIO_PinWrite(gpios[gpioIdx], pinIdx, (uint8_t)ioValue);
 
     return SRTM_Status_Success;
@@ -1157,7 +1116,8 @@ static srtm_status_t APP_IO_ConfOutput(uint16_t ioId, srtm_io_value_t ioValue)
 static srtm_status_t APP_IO_OutputInit(srtm_service_t service,
                                       srtm_peercore_t core,
                                       uint16_t ioId,
-                                      srtm_io_value_t ioValue)
+                                      srtm_io_value_t ioValue,
+                                      uint32_t pinctrl)
 {
     uint8_t index = APP_IO_GetIoIndex(ioId);
 
@@ -1165,7 +1125,12 @@ static srtm_status_t APP_IO_OutputInit(srtm_service_t service,
 
     suspendContext.io.data[index].value = (uint8_t)ioValue;
 
-    return APP_IO_ConfOutput(ioId, ioValue);
+    /* safe value if unset */
+    if (pinctrl == IO_PINCTRL_UNSET)
+        pinctrl = IOMUXC_PCR_OBE_MASK;
+    APP_IO_SetPinConfig(ioId, pinctrl);
+
+    return APP_IO_SetOutput(ioId, ioValue);
 }
 
 static srtm_status_t APP_IO_InputGet(srtm_service_t service,
@@ -1185,7 +1150,23 @@ static srtm_status_t APP_IO_InputGet(srtm_service_t service,
     return SRTM_Status_Success;
 }
 
-static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, bool wakeup)
+static srtm_status_t APP_IO_OutputSet(srtm_service_t service,
+                                      srtm_peercore_t core,
+                                      uint16_t ioId,
+                                      srtm_io_value_t ioValue)
+{
+    uint8_t index = APP_IO_GetIoIndex(ioId);
+
+    assert(index < APP_IO_NUM);
+
+    suspendContext.io.data[index].value = (uint8_t)ioValue;
+
+    APP_IO_SetPinConfig(ioId, IOMUXC_PCR_OBE_MASK);
+
+    return APP_IO_SetOutput(ioId, ioValue);
+}
+
+static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, bool wakeup, uint32_t pinctrl)
 {
     uint16_t ioId   = suspendContext.io.data[inputIdx].ioId;
     uint8_t gpioIdx = APP_GPIO_IDX(ioId);
@@ -1200,7 +1181,11 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
     config.event = kWUU_ExternalPinInterrupt;
     config.mode  = kWUU_ExternalPinActiveAlways;
 
-    APP_IO_SetPinConfig(ioId, true);
+    /* safe value if unset */
+    if (pinctrl == IO_PINCTRL_UNSET)
+        pinctrl = IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK;
+
+    APP_IO_SetPinConfig(ioId, pinctrl);
     switch (event)
     {
         case SRTM_IoEventRisingEdge:
@@ -1254,7 +1239,8 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
 }
 
 static srtm_status_t APP_IO_InputInit(
-    srtm_service_t service, srtm_peercore_t core, uint16_t ioId, srtm_io_event_t event, bool wakeup)
+    srtm_service_t service, srtm_peercore_t core, uint16_t ioId, srtm_io_event_t event,
+    bool wakeup, uint32_t pinctrl)
 {
     uint8_t inputIdx = APP_IO_GetIoIndex(ioId);
 
@@ -1263,7 +1249,7 @@ static srtm_status_t APP_IO_InputInit(
     suspendContext.io.data[inputIdx].event  = event;
     suspendContext.io.data[inputIdx].wakeup = wakeup;
 
-    return APP_IO_ConfInput(inputIdx, event, wakeup);
+    return APP_IO_ConfInput(inputIdx, event, wakeup, pinctrl);
 }
 
 static srtm_status_t APP_Keypad_ConfKEvent(
@@ -1276,7 +1262,8 @@ static srtm_status_t APP_Keypad_ConfKEvent(
     suspendContext.io.data[inputIdx].event  = APP_Keypad_GetIoEvent(keyIdx, event);
     suspendContext.io.data[inputIdx].wakeup = wakeup;
 
-    return APP_IO_ConfInput(inputIdx, suspendContext.io.data[inputIdx].event, wakeup);
+    /* XXX no way to configure this, not used on armadillo */
+    return APP_IO_ConfInput(inputIdx, suspendContext.io.data[inputIdx].event, wakeup, IO_PINCTRL_UNSET);
 }
 
 static void APP_SRTM_DoWakeup(void *param)
@@ -1362,7 +1349,8 @@ static void APP_VolPlusTimerCallback(TimerHandle_t xTimer)
     }
 
     /* Restore pin detection interrupt */
-    APP_IO_ConfInput(APP_INPUT_RTD_BTN1, suspendContext.io.data[APP_INPUT_RTD_BTN1].event, false);
+    APP_IO_ConfInput(APP_INPUT_RTD_BTN1, suspendContext.io.data[APP_INPUT_RTD_BTN1].event,
+                     false, IOMUXC_PCR_IBE_MASK);
 }
 
 static void APP_VolMinusTimerCallback(TimerHandle_t xTimer)
@@ -1383,7 +1371,8 @@ static void APP_VolMinusTimerCallback(TimerHandle_t xTimer)
     }
 
     /* Restore pin detection interrupt */
-    APP_IO_ConfInput(APP_INPUT_RTD_BTN2, suspendContext.io.data[APP_INPUT_RTD_BTN2].event, false);
+    APP_IO_ConfInput(APP_INPUT_RTD_BTN2, suspendContext.io.data[APP_INPUT_RTD_BTN2].event,
+                     false, IOMUXC_PCR_IBE_MASK);
 }
 
 static void APP_It6161IntPinTimerCallback(TimerHandle_t xTimer)
@@ -1646,7 +1635,8 @@ static void APP_SRTM_GpioReset(void)
         }
         else
         {
-            APP_IO_InputInit(NULL, NULL, suspendContext.io.data[i].ioId, SRTM_IoEventNone, false);
+            APP_IO_InputInit(NULL, NULL, suspendContext.io.data[i].ioId, SRTM_IoEventNone,
+                             false, IO_PINCTRL_UNSET);
         }
     }
 
@@ -2152,7 +2142,8 @@ static void APP_SRTM_InitIoKeyDevice(void)
                       &gpioConfig);
         if (!suspendContext.io.data[i].overridden)
         {
-            APP_IO_ConfInput(i, suspendContext.io.data[i].event, suspendContext.io.data[i].wakeup);
+            APP_IO_ConfInput(i, suspendContext.io.data[i].event,
+                             suspendContext.io.data[i].wakeup, IO_PINCTRL_UNSET);
         }
     }
 }
@@ -2204,7 +2195,8 @@ static void APP_SRTM_InitIoKeyService(void)
     EnableIRQ(GPIOC_INT0_IRQn);
     EnableIRQ(GPIOC_INT1_IRQn);
 
-    ioService = SRTM_IoService_Create(APP_IO_InputInit, APP_IO_OutputInit, APP_IO_InputGet);
+    ioService = SRTM_IoService_Create(APP_IO_InputInit, APP_IO_OutputInit,
+                                      APP_IO_InputGet, APP_IO_OutputSet);
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTA2, NULL);
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTA3, NULL);
     SRTM_IoService_RegisterPin(ioService, APP_PIN_PTA19, NULL);
@@ -2987,12 +2979,13 @@ static void APP_SRTM_DoSetWakeupPin(srtm_dispatcher_t dispatcher, void *param1, 
     {
         if (wuuPinModeEvents[pinMode] != SRTM_IoEventNone)
         {
-            APP_IO_ConfInput(inputIdx, wuuPinModeEvents[pinMode], wakeup);
+            APP_IO_ConfInput(inputIdx, wuuPinModeEvents[pinMode], wakeup, IO_PINCTRL_UNSET);
         }
         else
         {
             /* Restore CA35 settings */
-            APP_IO_ConfInput(inputIdx, suspendContext.io.data[inputIdx].event, suspendContext.io.data[inputIdx].wakeup);
+            APP_IO_ConfInput(inputIdx, suspendContext.io.data[inputIdx].event,
+                             suspendContext.io.data[inputIdx].wakeup, IO_PINCTRL_UNSET);
         }
     }
 }

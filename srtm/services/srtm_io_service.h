@@ -53,7 +53,8 @@ typedef enum _srtm_io_event
 typedef srtm_status_t (*srtm_io_service_output_init_t)(srtm_service_t service,
                                                       srtm_peercore_t core,
                                                       uint16_t ioId,
-                                                      srtm_io_value_t ioValue);
+                                                      srtm_io_value_t ioValue,
+                                                      uint32_t pinctrl);
 
 /**
  * @brief SRTM IO service get input value function type.
@@ -62,12 +63,20 @@ typedef srtm_status_t (*srtm_io_service_input_get_t)(srtm_service_t service,
                                                      srtm_peercore_t core,
                                                      uint16_t ioId,
                                                      srtm_io_value_t *pIoValue);
+/**
+ * @brief SRTM IO service set value function type.
+ */
+typedef srtm_status_t (*srtm_io_service_output_set_t)(srtm_service_t service,
+                                                     srtm_peercore_t core,
+                                                     uint16_t ioId,
+                                                     srtm_io_value_t ioValue);
 
 /**
  * @brief SRTM IO service configure input event function type.
  */
 typedef srtm_status_t (*srtm_io_service_input_init_t)(
-    srtm_service_t service, srtm_peercore_t core, uint16_t ioId, srtm_io_event_t event, bool wakeup);
+    srtm_service_t service, srtm_peercore_t core, uint16_t ioId, srtm_io_event_t event,
+    bool wakeup, uint32_t pinctrl);
 
 /*******************************************************************************
  * API
@@ -83,7 +92,8 @@ extern "C" {
  */
 srtm_service_t SRTM_IoService_Create(srtm_io_service_input_init_t inputInit,
                                      srtm_io_service_output_init_t outputInit,
-                                     srtm_io_service_input_get_t inputGet);
+                                     srtm_io_service_input_get_t inputGet,
+                                     srtm_io_service_output_set_t outputSet);
 
 /*!
  * @brief Destroy IO service.

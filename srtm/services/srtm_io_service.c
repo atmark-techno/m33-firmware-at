@@ -27,7 +27,7 @@
 /* Protocol definition */
 #define SRTM_IO_CATEGORY (0x5U)
 
-#define SRTM_IO_VERSION (0x0100U)
+#define SRTM_IO_VERSION (0x0200U)
 
 #define SRTM_IO_RETURN_CODE_SUCEESS     (0x0U)
 #define SRTM_IO_RETURN_CODE_FAIL        (0x1U)
@@ -52,6 +52,7 @@ typedef struct _srtm_io_service
     srtm_io_service_input_init_t inputInit;
     srtm_io_service_output_init_t outputInit;
     srtm_io_service_input_get_t inputGet;
+    srtm_io_service_output_set_t outputSet;
     srtm_list_t pins; /*!< SRTM IO pins list */
 } *srtm_io_service_t;
 
@@ -60,18 +61,23 @@ SRTM_PACKED_BEGIN struct _srtm_io_payload
     uint8_t pin_idx;
     uint8_t port_idx;
     union {
-        struct {
+        SRTM_PACKED_BEGIN struct {
             uint8_t event;
             uint8_t wakeup;
-        } input_init;
-        struct {
+            uint32_t pinctrl;
+        } SRTM_PACKED_END input_init;
+        SRTM_PACKED_BEGIN struct {
             uint8_t value;
-        } output_init;
+            uint32_t pinctrl;
+        } SRTM_PACKED_END output_init;
         /* no arg for input_get */
-        struct {
+        SRTM_PACKED_BEGIN struct {
+            uint8_t value;
+        } SRTM_PACKED_END output_set;
+        SRTM_PACKED_BEGIN struct {
             uint8_t retcode;
             uint8_t value; /* only valid for input_get */
-        } reply;
+        } SRTM_PACKED_END reply;
     };
 } SRTM_PACKED_END;
 
@@ -181,10 +187,11 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
     len     = SRTM_CommMessage_GetPayloadLen(request);
 
     status = SRTM_Service_CheckVersion(service, request, SRTM_IO_VERSION);
-    if ((status != SRTM_Status_Success) || (payload == NULL) || (len < 2U))
+    if ((status != SRTM_Status_Success) || (payload == NULL) || (len != sizeof(*payload)))
     {
         /* Either version mismatch or empty payload is not supported */
-        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: format error, len %d!\r\n", __func__, len);
+        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: format error, len %d (want %d)!\r\n",
+                           __func__, len, sizeof(*payload));
         retCode = SRTM_IO_RETURN_CODE_UNSUPPORTED;
     }
     else
@@ -203,33 +210,34 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
             switch (command)
             {
                 case GPIO_RPMSG_INPUT_INIT:
-                    if ((len >= 4U) && (handle->inputInit != NULL))
+                    if (handle->inputInit != NULL)
                     {
                         status = handle->inputInit(service, channel->core, ioId,
                                                  payload->input_init.event,
-                                                 payload->input_init.wakeup);
+                                                 payload->input_init.wakeup,
+                                                 payload->input_init.pinctrl);
                         retCode =
                             status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCEESS : SRTM_IO_RETURN_CODE_FAIL;
                     }
                     else
                     {
                         SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
-                                           "%s: Command ConfInputEvent not allowed or len %d error!\r\n", __func__,
-                                           len);
+                                           "%s: Command input init not allowed!\r\n", __func__);
                         retCode = SRTM_IO_RETURN_CODE_FAIL;
                     }
                     break;
                 case GPIO_RPMSG_OUTPUT_INIT:
-                    if ((len >= 3U) && (handle->outputInit != NULL))
+                    if (handle->outputInit != NULL)
                     {
-                        status = handle->outputInit(service, channel->core, ioId, payload->output_init.value);
+                        status = handle->outputInit(service, channel->core, ioId,
+					            payload->output_init.value, payload->output_init.pinctrl);
                         retCode =
                             status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCEESS : SRTM_IO_RETURN_CODE_FAIL;
                     }
                     else
                     {
                         SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
-                                           "%s: Command SetOutput not allowed or len %d error!\r\n", __func__, len);
+                                           "%s: Command output init not allowed!\r\n", __func__);
                         retCode = SRTM_IO_RETURN_CODE_FAIL;
                     }
                     break;
@@ -242,8 +250,22 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
                     }
                     else
                     {
-                        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Command %d function not registered!\r\n",
-                                           __func__, GPIO_RPMSG_INPUT_GET);
+                        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Command input get function not registered!\r\n",
+                                           __func__);
+                        retCode = SRTM_IO_RETURN_CODE_FAIL;
+                    }
+                    break;
+                case GPIO_RPMSG_OUTPUT_SET:
+                    if (handle->outputSet != NULL)
+                    {
+                        status = handle->outputSet(service, channel->core, ioId, payload->output_set.value);
+                        retCode =
+                            status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCEESS : SRTM_IO_RETURN_CODE_FAIL;
+                    }
+                    else
+                    {
+                        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
+                                           "%s: Command ouput set not allowed!\r\n", __func__);
                         retCode = SRTM_IO_RETURN_CODE_FAIL;
                     }
                     break;
@@ -281,7 +303,8 @@ static srtm_status_t SRTM_IoService_Notify(srtm_service_t service, srtm_notifica
 
 srtm_service_t SRTM_IoService_Create(srtm_io_service_input_init_t inputInit,
                                      srtm_io_service_output_init_t outputInit,
-                                     srtm_io_service_input_get_t inputGet)
+                                     srtm_io_service_input_get_t inputGet,
+                                     srtm_io_service_output_set_t outputSet)
 {
     srtm_io_service_t handle;
 
@@ -290,9 +313,10 @@ srtm_service_t SRTM_IoService_Create(srtm_io_service_input_init_t inputInit,
     handle = (srtm_io_service_t)SRTM_Heap_Malloc(sizeof(struct _srtm_io_service));
     assert(handle);
 
+    handle->inputInit = inputInit;
     handle->outputInit = outputInit;
     handle->inputGet = inputGet;
-    handle->inputInit = inputInit;
+    handle->outputSet = outputSet;
     SRTM_List_Init(&handle->pins);
 
     SRTM_List_Init(&handle->service.node);

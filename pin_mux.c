@@ -44,7 +44,6 @@ void BOARD_InitBootPins(void)
     BOARD_InitPmicModePins();
     BOARD_InitLsm6dsoPins();
     BOARD_InitRegulatorPins();
-    BOARD_InitGpioPins();
 }
 
 /*
@@ -336,72 +335,6 @@ void BOARD_InitRegulatorPins(void) {
     IOMUXC_SetPinMux(IOMUXC_PTB12_PTB12, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTB12_PTB12,
                         IOMUXC_PCR_OBE_MASK); // PTB12 : VDD_3V3_EN 4.7k pull up EXT_1V8, 100k pull down
-}
-
-void BOARD_InitGpioPins(void) {
-    IOMUXC_SetPinMux(IOMUXC_PTA2_PTA2, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA2_PTA2,
-                        IOMUXC_PCR_PE_MASK);
-
-    IOMUXC_SetPinMux(IOMUXC_PTA3_PTA3, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA3_PTA3,
-                        IOMUXC_PCR_PE_MASK);
-
-    IOMUXC_SetPinMux(IOMUXC_PTB4_PTB4, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTB4_PTB4,
-                        IOMUXC_PCR_PE_MASK);
-
-    IOMUXC_SetPinMux(IOMUXC_PTB5_PTB5, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTB5_PTB5,
-                        IOMUXC_PCR_PE_MASK);
-
-    IOMUXC_SetPinMux(IOMUXC_PTB6_PTB6, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTB6_PTB6,
-                        0U); // ogasawara preEVA/gateway: pull-up (on-board or in-LTE)
-
-    IOMUXC_SetPinMux(IOMUXC_PTC0_PTC0, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTC0_PTC0,
-                        IOMUXC_PCR_PE_MASK);
-
-    IOMUXC_SetPinMux(IOMUXC_PTC1_PTC1, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTC1_PTC1,
-                        IOMUXC_PCR_PE_MASK);
-
-    IOMUXC_SetPinMux(IOMUXC_PTC2_PTC2, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTC2_PTC2,
-                        IOMUXC_PCR_PE_MASK);
-
-    IOMUXC_SetPinMux(IOMUXC_PTC3_PTC3, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTC3_PTC3,
-                        IOMUXC_PCR_PE_MASK);
-
-    IOMUXC_SetPinMux(IOMUXC_PTC4_PTC4, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTC4_PTC4,
-                        IOMUXC_PCR_PE_MASK);
-
-    IOMUXC_SetPinMux(IOMUXC_PTC5_PTC5, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTC5_PTC5,
-                        IOMUXC_PCR_PE_MASK);
-
-    IOMUXC_SetPinMux(IOMUXC_PTC6_PTC6, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTC6_PTC6,
-                        IOMUXC_PCR_PE_MASK);
-
-    IOMUXC_SetPinMux(IOMUXC_PTC7_PTC7, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTC7_PTC7,
-                        IOMUXC_PCR_PE_MASK);
-
-    IOMUXC_SetPinMux(IOMUXC_PTC8_PTC8, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTC8_PTC8,
-                        IOMUXC_PCR_PE_MASK);
-
-    IOMUXC_SetPinMux(IOMUXC_PTC9_PTC9, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTC9_PTC9,
-                        IOMUXC_PCR_PE_MASK);
-
-    IOMUXC_SetPinMux(IOMUXC_PTC12_PTC12, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTC12_PTC12,
-                        0U); // ogasawara preEVA: nc, ogasawara gateway: pull-down (on-board)
 }
 
 /***********************************************************************************************************************
