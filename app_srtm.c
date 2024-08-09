@@ -1924,7 +1924,10 @@ static srtm_status_t APP_SRTM_LfclEventHandler(
             AD_WillEnterMode = AD_DPD;
             /* Relase A Core */
             MU_BootOtherCore(MU0_MUA, (mu_core_boot_mode_t)0);
-            PRINTF("\r\nAD will enter Deep Power Down Mode\r\n");
+            PRINTF("\r\nAD shutdown\r\n");
+            /* Probably also stops RTC/alarm unless enabled with BBNSM_BBNSM_CTRL_RTC_EN/BBNSM_BBNSM_CTRL_TA_EN
+             * We use external RTC so this is ok */
+            BBNSM->BBNSM_CTRL = BBNSM_BBNSM_CTRL_DP_EN(1)|BBNSM_BBNSM_CTRL_TOSP(1); /* 0x03000000 */
             break;
         case SRTM_Lfcl_Event_SuspendReq: /* Notify M Core that Application Domain will enter Power Down Mode */
             /* Save context(such as: MU0_MUA[RCR]) */
