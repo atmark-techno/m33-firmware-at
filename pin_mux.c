@@ -42,7 +42,6 @@ void BOARD_InitBootPins(void)
     BOARD_InitTouchIntPins();
     BOARD_InitButtonPins();
     BOARD_InitPmicModePins();
-    BOARD_InitLsm6dsoPins();
     BOARD_InitRegulatorPins();
 }
 
@@ -308,28 +307,6 @@ void BOARD_InitPmicModePins(void) {                        /*!< Function assigne
     IOMUXC_SetPinConfig(IOMUXC_PTB9_PMIC0_MODE0, 0U); // pull-down on the board
 }
 
-
-/*
- * TEXT BELOW IS USED AS SETTING FOR TOOLS *************************************
-BOARD_InitLsm6dsoPins:
-- options: {callFromInitBoot: 'true', coreID: cm33}
-- pin_list:
-  - {pin_num: AD13, peripheral: GPIOB, signal: 'ptb, 4', pin_signal: PTB4, PS: UP, PE: ENABLED}
- * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS ***********
- */
-
-/* FUNCTION ************************************************************************************************************
- *
- * Function Name : BOARD_InitLsm6dsoPins
- * Description   : Configures pin routing and optionally pin electrical features.
- *
- * END ****************************************************************************************************************/
-void BOARD_InitLsm6dsoPins(void) {                         /*!< Function assigned for the core: Cortex-M33[cm33] */
-    IOMUXC_SetPinMux(IOMUXC_PTB4_PTB4, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTB4_PTB4,
-                        IOMUXC_PCR_PE_MASK |
-                        IOMUXC_PCR_PS_MASK); // PTB4 : LPI2C2_SCL 4.7k pull up BUCK1_1V8
-}
 
 void BOARD_InitRegulatorPins(void) {
     IOMUXC_SetPinMux(IOMUXC_PTB12_PTB12, 0U);

@@ -55,7 +55,6 @@ typedef StaticSemaphore_t srtm_mutex_buf_t;
 #define SRTM_LFCL_SERVICE_DEBUG_OFF   (0)
 #define SRTM_PWM_SERVICE_DEBUG_OFF    (0)
 #define SRTM_RTC_SERVICE_DEBUG_OFF    (0)
-#define SRTM_SENSOR_SERVICE_DEBUG_OFF (0)
 #define SRTM_AUDIO_SERVICE_DEBUG_OFF  (0)
 #define SRTM_PMIC_SERVICE_DEBUG_OFF   (0)
 
