@@ -63,21 +63,21 @@ void BOARD_InitLpuartPins(void) {                          /*!< Function assigne
     /*
      * LPUART1 is the debug console for RTD.
      */
-    IOMUXC_SetPinMux(IOMUXC_PTA10_LPUART1_TX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA10_LPUART1_TX,
+    IOMUXC_SetPinMux(IOMUXC_PTA22_LPUART1_TX, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA22_LPUART1_TX,
                         IOMUXC_PCR_PE_MASK |
                         IOMUXC_PCR_PS_MASK);
-    IOMUXC_SetPinMux(IOMUXC_PTA11_LPUART1_RX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA11_LPUART1_RX,
+    IOMUXC_SetPinMux(IOMUXC_PTA23_LPUART1_RX, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA23_LPUART1_RX,
                         IOMUXC_PCR_PE_MASK |
                         IOMUXC_PCR_PS_MASK);
 }
 
 void BOARD_DeinitLpuartPins(void) {
-    IOMUXC_SetPinMux(IOMUXC_PTA10_LPUART1_TX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA10_LPUART1_TX, 0U);
-    IOMUXC_SetPinMux(IOMUXC_PTA11_LPUART1_RX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA11_LPUART1_RX, 0U);
+    IOMUXC_SetPinMux(IOMUXC_PTA22_LPUART1_TX, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA22_LPUART1_TX, 0U);
+    IOMUXC_SetPinMux(IOMUXC_PTA23_LPUART1_RX, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA23_LPUART1_RX, 0U);
 }
 
 /*
