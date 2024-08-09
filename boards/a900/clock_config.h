@@ -47,6 +47,14 @@
 #define CM33_SLOW_MAX_FREQ_ND     (FREQ_20_MHZ)
 #define CM33_SLOW_MAX_FREQ_UD     (FREQ_12_5_MHZ)
 
+/*! @brief buck2 pmic voltage. */
+/* 1.1 V */
+#define PMIC_BUCK2_VOLTAGE_1_1V (1100 * 1000)
+/* 1.0 V */
+#define PMIC_BUCK2_VOLTAGE_1_0V (1000 * 1000)
+/* 0.9 V */
+#define PMIC_BUCK2_VOLTAGE_0_9V (900 * 1000)
+
 typedef struct
 {
     cgc_rtd_sys_clk_src_t clk_src;
