@@ -40,7 +40,6 @@ void BOARD_InitBootPins(void)
     BOARD_InitTpmPins();
     BOARD_InitHdmiIntPins();
     BOARD_InitTouchIntPins();
-    BOARD_InitButtonPins();
     BOARD_InitPmicModePins();
     BOARD_InitRegulatorPins();
 }
@@ -250,34 +249,6 @@ void BOARD_InitTouchIntPins(void) {                        /*!< Function assigne
     IOMUXC_SetPinConfig(IOMUXC_PTB5_PTB5,
                         IOMUXC_PCR_PE_MASK |
                         IOMUXC_PCR_PS_MASK); // PTB5: LPI2C2_SDA 4.7k pull up BUCK1_1V8
-}
-
-
-/*
- * TEXT BELOW IS USED AS SETTING FOR TOOLS *************************************
-BOARD_InitButtonPins:
-- options: {callFromInitBoot: 'true', coreID: cm33}
-- pin_list:
-  - {pin_num: AH16, peripheral: GPIOB, signal: 'ptb, 14', pin_signal: PTB14, IBE: ENABLED, PS: UP, PE: ENABLED}
-  - {pin_num: AF16, peripheral: GPIOB, signal: 'ptb, 13', pin_signal: PTB13, IBE: ENABLED}
- * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS ***********
- */
-
-/* FUNCTION ************************************************************************************************************
- *
- * Function Name : BOARD_InitButtonPins
- * Description   : Configures pin routing and optionally pin electrical features.
- *
- * END ****************************************************************************************************************/
-void BOARD_InitButtonPins(void) {                          /*!< Function assigned for the core: Cortex-M33[cm33] */
-    IOMUXC_SetPinMux(IOMUXC_PTB14_PTB14, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTB14_PTB14,
-                        IOMUXC_PCR_IBE_MASK |
-                        IOMUXC_PCR_PE_MASK |
-                        IOMUXC_PCR_PS_MASK); // nc
-    IOMUXC_SetPinMux(IOMUXC_PTB13_PTB13, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTB13_PTB13,
-                        IOMUXC_PCR_IBE_MASK); // PTB13 : RTC_INT_B 100k pull up VDD_1V8
 }
 
 

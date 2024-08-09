@@ -78,7 +78,6 @@ typedef enum
 
 #define APP_SRTM_I2C_CHANNEL_NAME    "rpmsg-i2c-channel"
 #define APP_SRTM_AUDIO_CHANNEL_NAME  "rpmsg-audio-channel"
-#define APP_SRTM_KEYPAD_CHANNEL_NAME "rpmsg-keypad-channel"
 #define APP_SRTM_IO_CHANNEL_NAME     "rpmsg-io-channel"
 #define APP_SRTM_PWM_CHANNEL_NAME    "rpmsg-pwm-channel"
 #define APP_SRTM_ADC_CHANNEL_NAME    "rpmsg-adc-channel"
@@ -99,10 +98,6 @@ typedef enum
 /* Audio service */
 #define APP_SAI_TX_DMA_CHANNEL (16U)
 #define APP_SAI_RX_DMA_CHANNEL (17U)
-
-/* Keypad index */
-#define APP_KEYPAD_INDEX_VOL_MINUS (114U)
-#define APP_KEYPAD_INDEX_VOL_PLUS  (115U)
 
 /* WUU module index */
 #define WUU_MODULE_LPTMR0 (0U)
@@ -150,11 +145,6 @@ static inline uint16_t APP_IO_GetId(uint8_t inputIdx) {
 #define APP_PIN_TOUCH_INT  (APP_PIN_PTB5)
 #define APP_INPUT_TOUCH_INT (APP_IO_GetIndex(APP_PIN_TOUCH_INT))
 #define APP_PIN_PTB4       (0x0104U)          /* PTB4 */
-#define APP_PIN_RTD_BTN1   (0x010DU)          /* PTB13 */
-#define APP_INPUT_RTD_BTN1 (APP_IO_GetIndex(APP_PIN_RTD_BTN1))
-#define APP_PIN_RTD_BTN2   (0x010EU)          /* PTB14 */
-#define APP_INPUT_RTD_BTN2 (APP_IO_GetIndex(APP_PIN_RTD_BTN2))
-
 
 extern int32_t RPMsg_MU0_A_IRQHandler(void);
 

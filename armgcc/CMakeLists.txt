@@ -80,8 +80,6 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../srtm/services/srtm_i2c_service.c"
 "${ProjDirPath}/../srtm/services/srtm_io_service.h"
 "${ProjDirPath}/../srtm/services/srtm_io_service.c"
-"${ProjDirPath}/../srtm/services/srtm_keypad_service.h"
-"${ProjDirPath}/../srtm/services/srtm_keypad_service.c"
 "${ProjDirPath}/../srtm/services/srtm_pwm_service.h"
 "${ProjDirPath}/../srtm/services/srtm_pwm_service.c"
 "${ProjDirPath}/../srtm/services/srtm_pwm_adapter.h"

@@ -20,7 +20,6 @@
 
 #include "srtm_sai_edma_adapter.h"
 #include "srtm_io_service.h"
-#include "srtm_keypad_service.h"
 #include "srtm_lfcl_service.h"
 #include "srtm_rtc_service.h"
 #include "srtm_rtc_adapter.h"
@@ -193,19 +192,6 @@ static const uint16_t wuuPins[] = {
     0x010FU, /* WUU_P27 PTB15 */
 };
 
-static const srtm_io_event_t rtdBtn1KeyEvents[] = {
-    SRTM_IoEventNone,        /* SRTM_KeypadEventNone */
-    SRTM_IoEventRisingEdge,  /* SRTM_KeypadEventPress */
-    SRTM_IoEventFallingEdge, /* SRTM_KeypadEventRelease */
-    SRTM_IoEventEitherEdge   /* SRTM_KeypadEventPressOrRelease */
-};
-
-static const srtm_io_event_t rtdBtn2KeyEvents[] = {
-    SRTM_IoEventNone,        /* SRTM_KeypadEventNone */
-    SRTM_IoEventRisingEdge,  /* SRTM_KeypadEventPress */
-    SRTM_IoEventFallingEdge, /* SRTM_KeypadEventRelease */
-    SRTM_IoEventEitherEdge   /* SRTM_KeypadEventPressOrRelease */
-};
 
 static const srtm_io_event_t wuuPinModeEvents[] = {
     SRTM_IoEventNone,        /* kWUU_ExternalPinDisable */
@@ -224,7 +210,6 @@ static srtm_service_t rtcService;
 static srtm_rtc_adapter_t rtcAdapter;
 static srtm_service_t i2cService;
 static srtm_service_t ioService;
-static srtm_service_t keypadService;
 static SemaphoreHandle_t monSig;
 static struct rpmsg_lite_instance *rpmsgHandle;
 static app_rpmsg_monitor_t rpmsgMonitor;
@@ -374,22 +359,6 @@ static uint8_t APP_IO_GetWUUPin(uint16_t ioId)
     }
 
     return i;
-}
-
-static srtm_io_event_t APP_Keypad_GetIoEvent(uint8_t keyIdx, srtm_keypad_event_t event)
-{
-    switch (keyIdx)
-    {
-        case APP_KEYPAD_INDEX_VOL_PLUS:
-            return rtdBtn1KeyEvents[event]; /* Map vol+ to RTD button1 */
-        case APP_KEYPAD_INDEX_VOL_MINUS:
-            return rtdBtn2KeyEvents[event]; /* Map vol- to RTD button2 */
-        default:
-            assert(false);
-            break;
-    }
-
-    return SRTM_IoEventNone;
 }
 
 void APP_WakeupACore(void)
@@ -680,38 +649,6 @@ static void APP_HandleGPIOHander(uint8_t gpioIdx)
         xTimerStartFromISR(suspendContext.io.data[APP_INPUT_TOUCH_INT].timer, &reschedule);
     }
 
-    if (APP_GPIO_IDX(APP_PIN_RTD_BTN1) == gpioIdx &&
-        (1U << APP_PIN_IDX(APP_PIN_RTD_BTN1)) & RGPIO_GetPinsInterruptFlags(gpio, APP_GPIO_INT_SEL))
-    {
-        RGPIO_ClearPinsInterruptFlags(gpio, APP_GPIO_INT_SEL, (1U << APP_PIN_IDX(APP_PIN_RTD_BTN1)));
-        RGPIO_SetPinInterruptConfig(gpio, APP_PIN_IDX(APP_PIN_RTD_BTN1), APP_GPIO_INT_SEL,
-                                    kRGPIO_InterruptOrDMADisabled);
-        suspendContext.io.data[APP_INPUT_RTD_BTN1].value = RGPIO_PinRead(gpio, APP_PIN_IDX(APP_PIN_RTD_BTN1));
-        if ((AD_CurrentMode == AD_PD || (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL)) &&
-            suspendContext.io.data[APP_INPUT_RTD_BTN1].wakeup)
-        {
-            /* Wakeup A Core(CA35) when A Core is in Power Down Mode */
-            APP_WakeupACore();
-        }
-        xTimerStartFromISR(suspendContext.io.data[APP_INPUT_RTD_BTN1].timer, &reschedule);
-    }
-
-    if (APP_GPIO_IDX(APP_PIN_RTD_BTN2) == gpioIdx &&
-        (1U << APP_PIN_IDX(APP_PIN_RTD_BTN2)) & RGPIO_GetPinsInterruptFlags(gpio, APP_GPIO_INT_SEL))
-    {
-        RGPIO_ClearPinsInterruptFlags(gpio, APP_GPIO_INT_SEL, (1U << APP_PIN_IDX(APP_PIN_RTD_BTN2)));
-        RGPIO_SetPinInterruptConfig(gpio, APP_PIN_IDX(APP_PIN_RTD_BTN2), APP_GPIO_INT_SEL,
-                                    kRGPIO_InterruptOrDMADisabled);
-        suspendContext.io.data[APP_INPUT_RTD_BTN2].value = RGPIO_PinRead(gpio, APP_PIN_IDX(APP_PIN_RTD_BTN2));
-        if ((AD_CurrentMode == AD_PD || (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL)) &&
-            suspendContext.io.data[APP_INPUT_RTD_BTN2].wakeup)
-        {
-            /* Wakeup A Core(CA35) when A Core is in Power Down Mode */
-            APP_WakeupACore();
-        }
-        xTimerStartFromISR(suspendContext.io.data[APP_INPUT_RTD_BTN2].timer, &reschedule);
-    }
-
     if (reschedule)
     {
         portYIELD_FROM_ISR(reschedule);
@@ -858,9 +795,6 @@ void BBNSM_IRQHandler(void)
         }
         /* Clear BBNSM button off interrupt */
         BBNSM_ClearStatusFlags(BBNSM, kBBNSM_PWR_OFF_InterruptFlag);
-        if (keypadService && srtmState == APP_SRTM_StateLinkedUp) /* keypad service is created and linux is ready */
-        {
-        }
     }
     else if (status & kBBNSM_PWR_ON_InterruptFlag)
     {
@@ -1120,20 +1054,6 @@ static srtm_status_t APP_IO_InputInit(
     return APP_IO_ConfInput(inputIdx, event, wakeup, pinctrl);
 }
 
-static srtm_status_t APP_Keypad_ConfKEvent(
-    srtm_service_t service, srtm_peercore_t core, uint8_t keyIdx, srtm_keypad_event_t event, bool wakeup)
-{
-    uint8_t inputIdx = APP_IO_GetIndex(keyIdx);
-
-    assert(inputIdx < APP_IO_NUM);
-
-    suspendContext.io.data[inputIdx].event  = APP_Keypad_GetIoEvent(keyIdx, event);
-    suspendContext.io.data[inputIdx].wakeup = wakeup;
-
-    /* XXX no way to configure this, not used on armadillo */
-    return APP_IO_ConfInput(inputIdx, suspendContext.io.data[inputIdx].event, wakeup, IO_PINCTRL_UNSET);
-}
-
 static void APP_SRTM_DoWakeup(void *param)
 {
     APP_WakeupACore();
@@ -1199,50 +1119,6 @@ static void APP_LinkupTimerCallback(TimerHandle_t xTimer)
     }
 }
 
-static void APP_VolPlusTimerCallback(TimerHandle_t xTimer)
-{
-    uint8_t gpioIdx = APP_GPIO_IDX(APP_PIN_RTD_BTN1);
-    uint8_t pinIdx  = APP_PIN_IDX(APP_PIN_RTD_BTN1);
-    srtm_keypad_value_t value;
-
-    if (RGPIO_PinRead(gpios[gpioIdx], pinIdx) == suspendContext.io.data[APP_INPUT_RTD_BTN1].value)
-    {
-        value = suspendContext.io.data[APP_INPUT_RTD_BTN1].value ? SRTM_KeypadValueReleased : SRTM_KeypadValuePressed;
-        /* No glitch, a valid user operation */
-        if (AD_CurrentMode == AD_ACT)
-        {
-            /* When A Core(CA35) is running, notify the event to A Core(CA35). */
-            SRTM_KeypadService_NotifyKeypadEvent(keypadService, APP_KEYPAD_INDEX_VOL_PLUS, value);
-        }
-    }
-
-    /* Restore pin detection interrupt */
-    APP_IO_ConfInput(APP_INPUT_RTD_BTN1, suspendContext.io.data[APP_INPUT_RTD_BTN1].event,
-                     false, IOMUXC_PCR_IBE_MASK);
-}
-
-static void APP_VolMinusTimerCallback(TimerHandle_t xTimer)
-{
-    uint8_t gpioIdx = APP_GPIO_IDX(APP_PIN_RTD_BTN2);
-    uint8_t pinIdx  = APP_PIN_IDX(APP_PIN_RTD_BTN2);
-    srtm_keypad_value_t value;
-
-    if (RGPIO_PinRead(gpios[gpioIdx], pinIdx) == suspendContext.io.data[APP_INPUT_RTD_BTN2].value)
-    {
-        value = suspendContext.io.data[APP_INPUT_RTD_BTN2].value ? SRTM_KeypadValueReleased : SRTM_KeypadValuePressed;
-        /* No glitch, a valid user operation */
-        if (AD_CurrentMode == AD_ACT)
-        {
-            /* When A Core(CA35) is running, notify the event to A Core(CA35). */
-            SRTM_KeypadService_NotifyKeypadEvent(keypadService, APP_KEYPAD_INDEX_VOL_MINUS, value);
-        }
-    }
-
-    /* Restore pin detection interrupt */
-    APP_IO_ConfInput(APP_INPUT_RTD_BTN2, suspendContext.io.data[APP_INPUT_RTD_BTN2].event,
-                     false, IOMUXC_PCR_IBE_MASK);
-}
-
 static void APP_It6161IntPinTimerCallback(TimerHandle_t xTimer)
 {
     /* When A Core(CA35) is running, notify the event to A Core(CA35). */
@@ -1299,11 +1175,6 @@ static void APP_SRTM_Linkup(void)
     SRTM_PeerCore_AddChannel(core, chan);
     assert((audioService != NULL) && (saiAdapter != NULL));
     SRTM_AudioService_BindChannel(audioService, saiAdapter, chan);
-
-    /* Create and add SRTM Keypad channel to peer core */
-    rpmsgConfig.epName = APP_SRTM_KEYPAD_CHANNEL_NAME;
-    chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
-    SRTM_PeerCore_AddChannel(core, chan);
 
     /* Create and add SRTM IO channel to peer core */
     rpmsgConfig.epName = APP_SRTM_IO_CHANNEL_NAME;
@@ -1387,7 +1258,6 @@ static void APP_SRTM_GpioReset(void)
 
     /* Then reset IO service */
     SRTM_IoService_Reset(ioService, core);
-    SRTM_KeypadService_Reset(keypadService, core);
 }
 
 static void APP_SRTM_ResetServices(void)
@@ -1836,10 +1706,6 @@ static void APP_SRTM_InitIoKeyDevice(void)
 static void APP_SRTM_InitIoKeyService(void)
 {
     /* Init IO structure used in the application. */
-    /* Keypad */
-    suspendContext.io.data[APP_INPUT_RTD_BTN1].index = APP_KEYPAD_INDEX_VOL_PLUS;  /* use RTD BUTTON1 as vol+ button */
-    suspendContext.io.data[APP_INPUT_RTD_BTN2].index = APP_KEYPAD_INDEX_VOL_MINUS; /* use RTD BUTTON2 as vol- button */
-
     APP_SRTM_InitIoKeyDevice();
 
     /* Enable interrupt for GPIO. */
@@ -1863,11 +1729,6 @@ static void APP_SRTM_InitIoKeyService(void)
                                       APP_IO_InputInit, APP_IO_OutputInit,
                                       APP_IO_InputGet, APP_IO_OutputSet);
     SRTM_Dispatcher_RegisterService(disp, ioService);
-
-    keypadService = SRTM_KeypadService_Create();
-    SRTM_KeypadService_RegisterKey(keypadService, APP_KEYPAD_INDEX_VOL_PLUS, APP_Keypad_ConfKEvent, NULL);
-    SRTM_KeypadService_RegisterKey(keypadService, APP_KEYPAD_INDEX_VOL_MINUS, APP_Keypad_ConfKEvent, NULL);
-    SRTM_Dispatcher_RegisterService(disp, keypadService);
 }
 
 static void APP_SRTM_A35ResetHandler(void)
@@ -2399,13 +2260,6 @@ void APP_SRTM_Init(void)
     linkupTimer =
         xTimerCreate("Linkup", APP_MS2TICK(APP_LINKUP_TIMER_PERIOD_MS), pdFALSE, NULL, APP_LinkupTimerCallback);
     assert(linkupTimer);
-
-    suspendContext.io.data[APP_INPUT_RTD_BTN1].timer =
-        xTimerCreate("Vol+", APP_MS2TICK(50), pdFALSE, NULL, APP_VolPlusTimerCallback);
-    assert(suspendContext.io.data[APP_INPUT_RTD_BTN1].timer);
-    suspendContext.io.data[APP_INPUT_RTD_BTN2].timer =
-        xTimerCreate("Vol-", APP_MS2TICK(50), pdFALSE, NULL, APP_VolMinusTimerCallback);
-    assert(suspendContext.io.data[APP_INPUT_RTD_BTN2].timer);
 
     suspendContext.io.data[APP_INPUT_IT6161_INT].timer =
         xTimerCreate("It6161Int", APP_MS2TICK(50), pdFALSE, NULL, APP_It6161IntPinTimerCallback);

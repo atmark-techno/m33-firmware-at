@@ -710,15 +710,6 @@ static void APP_IRQDispatcher(IRQn_Type irq, void *param)
         case WUU0_IRQn:
             APP_WUU0_IRQHandler();
             break;
-        case GPIOB_INT0_IRQn:
-            if ((1U << APP_PIN_IDX(APP_PIN_RTD_BTN2)) &
-                RGPIO_GetPinsInterruptFlags(BOARD_SW8_GPIO, kRGPIO_InterruptOutput2))
-            {
-                /* Flag will be cleared by app_srtm.c */
-                xSemaphoreGiveFromISR(s_wakeupSig, NULL);
-                portYIELD_FROM_ISR(pdTRUE);
-            }
-            break;
         default:
             break;
     }
@@ -839,11 +830,6 @@ static void APP_SetWakeupConfig(lpm_rtd_power_mode_e targetMode)
             PCC1->PCC_LPTMR1 &= ~PCC1_PCC_LPTMR1_SSADO_MASK;
             PCC1->PCC_LPTMR1 |= PCC1_PCC_LPTMR1_SSADO(1);
         }
-        else
-        {
-            /* Set PORT and WUU wakeup pin. */
-            APP_SRTM_SetWakeupPin(APP_PIN_RTD_BTN2, (uint16_t)WUU_WAKEUP_PIN_TYPE | 0x100);
-        }
     }
     else
     {
@@ -862,18 +848,13 @@ static void APP_SetWakeupConfig(lpm_rtd_power_mode_e targetMode)
                 PCC1->PCC_RGPIOB |= PCC1_PCC_RGPIOB_SSADO(1);
                 event |= 0x100; /* enable wakeup flag */
             }
-            APP_SRTM_SetWakeupPin(APP_PIN_RTD_BTN2, event);
         }
     }
 }
 
 static void APP_ClearWakeupConfig(lpm_rtd_power_mode_e targetMode)
 {
-    if (kAPP_WakeupSourcePin == s_wakeupSource)
-    {
-        APP_SRTM_SetWakeupPin(APP_PIN_RTD_BTN2, (uint16_t)kWUU_ExternalPinDisable);
-    }
-    else if ((LPM_PowerModePowerDown == targetMode) || (LPM_PowerModeDeepPowerDown == targetMode))
+    if ((LPM_PowerModePowerDown == targetMode) || (LPM_PowerModeDeepPowerDown == targetMode))
     {
         APP_SRTM_ClrWakeupModule(WUU_MODULE_LPTMR1, LPTMR1_WUU_WAKEUP_EVENT);
     }
