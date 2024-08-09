@@ -39,7 +39,6 @@ void BOARD_InitBootPins(void)
     //BOARD_InitI2sPins();
     BOARD_InitTpmPins();
     BOARD_InitHdmiIntPins();
-    BOARD_InitTouchIntPins();
     BOARD_InitPmicModePins();
     BOARD_InitRegulatorPins();
 }
@@ -226,29 +225,6 @@ void BOARD_InitHdmiIntPins(void) {                         /*!< Function assigne
     IOMUXC_SetPinMux(IOMUXC_PTA19_PTA19, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA19_PTA19,
                         0U); // ogasawara preEVA: nc, ogasawara gateway: usb2422 reset_n (pull-down)
-}
-
-
-/*
- * TEXT BELOW IS USED AS SETTING FOR TOOLS *************************************
-BOARD_InitTouchIntPins:
-- options: {callFromInitBoot: 'true', coreID: cm33}
-- pin_list:
-  - {pin_num: AF12, peripheral: GPIOB, signal: 'ptb, 5', pin_signal: PTB5, PS: UP, PE: ENABLED}
- * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS ***********
- */
-
-/* FUNCTION ************************************************************************************************************
- *
- * Function Name : BOARD_InitTouchIntPins
- * Description   : Configures pin routing and optionally pin electrical features.
- *
- * END ****************************************************************************************************************/
-void BOARD_InitTouchIntPins(void) {                        /*!< Function assigned for the core: Cortex-M33[cm33] */
-    IOMUXC_SetPinMux(IOMUXC_PTB5_PTB5, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTB5_PTB5,
-                        IOMUXC_PCR_PE_MASK |
-                        IOMUXC_PCR_PS_MASK); // PTB5: LPI2C2_SDA 4.7k pull up BUCK1_1V8
 }
 
 

@@ -633,22 +633,6 @@ static void APP_HandleGPIOHander(uint8_t gpioIdx)
         xTimerStartFromISR(suspendContext.io.data[APP_INPUT_IT6161_INT].timer, &reschedule);
     }
 
-    if (APP_GPIO_IDX(APP_PIN_TOUCH_INT) == gpioIdx &&
-        (1U << APP_PIN_IDX(APP_PIN_TOUCH_INT)) & RGPIO_GetPinsInterruptFlags(gpio, APP_GPIO_INT_SEL))
-    {
-        RGPIO_ClearPinsInterruptFlags(gpio, APP_GPIO_INT_SEL, 1U << APP_PIN_IDX(APP_PIN_TOUCH_INT));
-        /* Ignore the interrrupt of gpio(set interrupt trigger type of gpio after A35 send command to set interrupt
-         * trigger type) */
-        APP_IO_InputInit(NULL, NULL, APP_PIN_TOUCH_INT, SRTM_IoEventNone, false, IO_PINCTRL_UNSET);
-        if ((AD_CurrentMode == AD_PD || (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL)) &&
-            suspendContext.io.data[APP_INPUT_TOUCH_INT].wakeup)
-        {
-            /* Wakeup A Core(CA35) when A Core is in Power Down Mode */
-            APP_WakeupACore();
-        }
-        xTimerStartFromISR(suspendContext.io.data[APP_INPUT_TOUCH_INT].timer, &reschedule);
-    }
-
     if (reschedule)
     {
         portYIELD_FROM_ISR(reschedule);
@@ -1125,15 +1109,6 @@ static void APP_It6161IntPinTimerCallback(TimerHandle_t xTimer)
     if (AD_CurrentMode == AD_ACT)
     {
         SRTM_IoService_NotifyInputEvent(ioService, APP_PIN_IT6161_INT);
-    }
-}
-
-static void APP_TouchIntPinTimerCallback(TimerHandle_t xTimer)
-{
-    if (AD_CurrentMode == AD_ACT)
-    {
-        /* When A Core(CA35) is running, notify the event to A Core(CA35). */
-        SRTM_IoService_NotifyInputEvent(ioService, APP_PIN_TOUCH_INT);
     }
 }
 
@@ -2264,9 +2239,6 @@ void APP_SRTM_Init(void)
     suspendContext.io.data[APP_INPUT_IT6161_INT].timer =
         xTimerCreate("It6161Int", APP_MS2TICK(50), pdFALSE, NULL, APP_It6161IntPinTimerCallback);
     assert(suspendContext.io.data[APP_INPUT_IT6161_INT].timer);
-    suspendContext.io.data[APP_INPUT_TOUCH_INT].timer =
-        xTimerCreate("TouchInt", APP_MS2TICK(5), pdFALSE, NULL, APP_TouchIntPinTimerCallback);
-    assert(suspendContext.io.data[APP_INPUT_TOUCH_INT].timer);
 
     /* Create SRTM dispatcher */
     disp = SRTM_Dispatcher_Create();

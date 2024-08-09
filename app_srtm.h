@@ -141,9 +141,6 @@ static inline uint16_t APP_IO_GetId(uint8_t inputIdx) {
 #define APP_PIN_PTA19      (0x0013U)          /* PTA19 use for it6161(mipi to hdmi converter ic) interrupt */
 #define APP_PIN_IT6161_INT (APP_PIN_PTA19)
 #define APP_INPUT_IT6161_INT (APP_IO_GetIndex(APP_PIN_IT6161_INT))
-#define APP_PIN_PTB5       (0x0105U)          /* PTB5, use for touch interrupt */
-#define APP_PIN_TOUCH_INT  (APP_PIN_PTB5)
-#define APP_INPUT_TOUCH_INT (APP_IO_GetIndex(APP_PIN_TOUCH_INT))
 #define APP_PIN_PTB4       (0x0104U)          /* PTB4 */
 
 extern int32_t RPMsg_MU0_A_IRQHandler(void);
