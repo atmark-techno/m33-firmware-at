@@ -254,13 +254,13 @@ static ps_rtd_pmic_reg_data_cfgs_t rtd_pmic_reg_cfgs_dsl = {
             .i2c_addr   = 0x15, /* BUCK2OUT_DVS0 of PCA9460 */
             .i2c_data   = 0x0C, /* 0.75 */
         },
-    /* RTD Active: set BUCK2OUT_DVS0 to 1.0V */
+    /* RTD Active: set BUCK2OUT_DVS0 to 1.05V */
     [1] =
         {
             .tag        = PMIC_REG_VALID_TAG,
             .power_mode = ACT_RTD_PWR_MODE,
             .i2c_addr   = 0x15,
-            .i2c_data   = 0x20,
+            .i2c_data   = 0x24,
         },
 };
 
@@ -282,13 +282,13 @@ ps_rtd_pmic_reg_data_cfgs_t rtd_pmic_reg_cfgs_pd = {
             .i2c_data   = 0x0,  /* LSW1_EN[1:0] = 00b(OFF) */
         },
 
-    /* RTD Active: BUCK2OUT_DVS0 to 1.0 V  */
+    /* RTD Active: BUCK2OUT_DVS0 to 1.05 V  */
     [2] =
         {
             .tag        = PMIC_REG_VALID_TAG,
             .power_mode = ACT_RTD_PWR_MODE,
             .i2c_addr   = 0x15, /* BUCK2OUT_DVS0 of PCA9460 */
-            .i2c_data   = 0x20, /* 1.0 V */
+            .i2c_data   = 0x24, /* 1.05 V */
         },
     /* RTD Active: on LSW1 */
     [3] =
@@ -318,13 +318,13 @@ ps_rtd_pmic_reg_data_cfgs_t rtd_pmic_reg_cfgs_dpd = {
             .i2c_addr   = 0x40, /* LSW1_CTRL of PCA9460 */
             .i2c_data   = 0x0,  /* LSW1_EN[1:0] = 00b(OFF) */
         },
-    /* RTD Active: BUCK2OUT_DVS0 to 1.0 V  */
+    /* RTD Active: BUCK2OUT_DVS0 to 1.05 V  */
     [2] =
         {
             .tag        = PMIC_REG_VALID_TAG,
             .power_mode = ACT_RTD_PWR_MODE,
             .i2c_addr   = 0x15, /* BUCK2OUT_DVS0 of PCA9460 */
-            .i2c_data   = 0x20, /* 1.0 V */
+            .i2c_data   = 0x24, /* 1.05 V */
         },
     /* RTD Active: on LSW1 */
     [3] =

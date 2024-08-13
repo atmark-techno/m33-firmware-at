@@ -1114,6 +1114,17 @@ int main(void)
     BOARD_BootClockRUN();
     BOARD_InitDebugConsole();
 
+    /* The default 1.0V settings in normal mode might go below 1.0,
+     * so set them to 1.05V early on */
+    if (UPOWER_ChngPmicVoltage(PMIC_BUCK2, 1050*1000))
+    {
+        PRINTF("failed to set PMIC_BUCK2 voltage to 1.05 [V]\r\n");
+    }
+    if (UPOWER_ChngPmicVoltage(PMIC_BUCK3, 1050*1000))
+    {
+        PRINTF("failed to set PMIC_BUCK3 voltage to 1.05 [V]\r\n");
+    }
+
     UPOWER_PowerOnMemPart(0U, (uint32_t)kUPOWER_MP1_DMA0);
 
     CLOCK_SetIpSrcDiv(kCLOCK_Tpm0, kCLOCK_Pcc1BusIpSrcCm33Bus, 1U, 0U);
