@@ -90,7 +90,7 @@ typedef enum
 #define LPI2C0_BAUDRATE              (400000)
 #define I2C_SOURCE_CLOCK_FREQ_LPI2C0 CLOCK_GetIpFreq(kCLOCK_Lpi2c0)
 
-#define LPI2C1_BAUDRATE              (400000)
+#define LPI2C1_BAUDRATE              (100000)
 #define I2C_SOURCE_CLOCK_FREQ_LPI2C1 CLOCK_GetIpFreq(kCLOCK_Lpi2c1)
 
 #define I2C_SWITCH_NONE 1

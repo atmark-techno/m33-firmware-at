@@ -209,10 +209,6 @@ void BOARD_InitI2sPins(void) {                             /*!< Function assigne
     IOMUXC_SetPinConfig(IOMUXC_PTA1_I2S0_RX_FS,
                         IOMUXC_PCR_DSE_MASK); // PTA1 : BT0 CFG1, 100k pull down
     IOMUXC_SetPinMux(IOMUXC_PTA2_I2S0_RXD0, 0U); // nc
-    IOMUXC_SetPinMux(IOMUXC_PTA4_I2S0_MCLK, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA4_I2S0_MCLK,
-                        IOMUXC_PCR_OBE_MASK |
-                        IOMUXC_PCR_DSE_MASK); // PTA4 : LPI2C1_SCL, 4.7k pull up VDD_3V3
     IOMUXC_SetPinMux(IOMUXC_PTA7_I2S0_TXD0, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA7_I2S0_TXD0,
                         IOMUXC_PCR_DSE_MASK); // PTA7 : BT0_CFG7, 100k pull down
