@@ -1,3 +1,5 @@
 #!/bin/sh
-rm -rf debug release flash_debug flash_release CMakeFiles
-rm -rf Makefile cmake_install.cmake CMakeCache.txt
+workdir="$(dirname $(readlink -f $0))"
+rm -rf "$workdir"/debug "$workdir"/release "$workdir"/flash_debug "$workdir"/flash_release "$workdir"/CMakeFiles
+rm -rf "$workdir"/Makefile "$workdir"/cmake_install.cmake "$workdir"/CMakeCache.txt
+rm -rf "$workdir"/../m33-firmware-at.bin
