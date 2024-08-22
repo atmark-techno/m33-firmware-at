@@ -36,7 +36,8 @@ typedef enum _srtm_io_value
     SRTM_IoValueHigh,
 } srtm_io_value_t;
 
-/*! @brief SRTM IO service input event */
+/*! @brief SRTM IO service input event
+ * must match linux gpio_input_trigger_type */
 typedef enum _srtm_io_event
 {
     SRTM_IoEventNone = 0U, /* Ignore the event */

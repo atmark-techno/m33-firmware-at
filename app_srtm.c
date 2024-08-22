@@ -616,28 +616,29 @@ void WUU0_IRQHandler(void)
 
 static void APP_HandleGPIOHander(uint8_t gpioIdx)
 {
-    BaseType_t reschedule = pdFALSE;
     RGPIO_Type *gpio      = gpios[gpioIdx];
+    uint32_t flags        = RGPIO_GetPinsInterruptFlags(gpio, APP_GPIO_INT_SEL);
+    uint16_t ioId, ioIdx;
+    uint8_t i, idx;
 
-    if (APP_GPIO_IDX(APP_PIN_IT6161_INT) == gpioIdx &&
-        (1U << APP_PIN_IDX(APP_PIN_IT6161_INT)) & RGPIO_GetPinsInterruptFlags(gpio, APP_GPIO_INT_SEL))
-    {
-        RGPIO_ClearPinsInterruptFlags(gpio, APP_GPIO_INT_SEL, 1U << APP_PIN_IDX(APP_PIN_IT6161_INT));
-        /* Ignore the interrrupt of gpio(set interrupt trigger type of gpio after A35 send command to set interrupt
-         * trigger type) */
-        APP_IO_InputInit(NULL, NULL, APP_PIN_IT6161_INT, SRTM_IoEventNone, false, IO_PINCTRL_UNSET);
+    for (i = 0; i < APP_IO_PINS_PER_CHIP; i++) {
+        idx = 1U << i;
+        if (! (flags & idx))
+            continue;
+        ioId = APP_IO_ID(gpioIdx, i);
+        ioIdx = APP_IO_IDX(gpioIdx, i);
         if ((AD_CurrentMode == AD_PD || (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL)) &&
-            suspendContext.io.data[APP_INPUT_IT6161_INT].wakeup)
+            suspendContext.io.data[ioIdx].wakeup)
         {
             /* Wakeup A Core(CA35) when A Core is in Power Down Mode */
             APP_WakeupACore();
         }
-        xTimerStartFromISR(suspendContext.io.data[APP_INPUT_IT6161_INT].timer, &reschedule);
-    }
-
-    if (reschedule)
-    {
-        portYIELD_FROM_ISR(reschedule);
+        SRTM_IoService_NotifyInputEvent(ioService, ioId);
+        // disable further irq for pin, linux will re-enable after processing
+        // (this is necessary e.g. for level interrupts to not spam)
+        RGPIO_SetPinInterruptConfig(gpio, i, APP_GPIO_INT_SEL, kRGPIO_InterruptOrDMADisabled);
+        // clear isr
+        RGPIO_ClearPinsInterruptFlags(gpio, APP_GPIO_INT_SEL, idx);
     }
 }
 
@@ -1102,15 +1103,6 @@ static void APP_LinkupTimerCallback(TimerHandle_t xTimer)
     if (proc)
     {
         SRTM_Dispatcher_PostProc(disp, proc);
-    }
-}
-
-static void APP_It6161IntPinTimerCallback(TimerHandle_t xTimer)
-{
-    /* When A Core(CA35) is running, notify the event to A Core(CA35). */
-    if (AD_CurrentMode == AD_ACT)
-    {
-        SRTM_IoService_NotifyInputEvent(ioService, APP_PIN_IT6161_INT);
     }
 }
 
@@ -2241,10 +2233,6 @@ void APP_SRTM_Init(void)
     linkupTimer =
         xTimerCreate("Linkup", APP_MS2TICK(APP_LINKUP_TIMER_PERIOD_MS), pdFALSE, NULL, APP_LinkupTimerCallback);
     assert(linkupTimer);
-
-    suspendContext.io.data[APP_INPUT_IT6161_INT].timer =
-        xTimerCreate("It6161Int", APP_MS2TICK(50), pdFALSE, NULL, APP_It6161IntPinTimerCallback);
-    assert(suspendContext.io.data[APP_INPUT_IT6161_INT].timer);
 
     /* Create SRTM dispatcher */
     disp = SRTM_Dispatcher_Create();

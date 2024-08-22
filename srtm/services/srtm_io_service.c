@@ -364,6 +364,10 @@ srtm_status_t SRTM_IoService_NotifyInputEvent(srtm_service_t service, uint16_t i
         }
         /* restore pin->notified before free when sent is done */
         SRTM_Message_SetFreeFunc(notif, SRTM_IoService_RecycleMessage, pin);
+        struct _srtm_io_payload *payload;
+        payload = (struct _srtm_io_payload*)SRTM_CommMessage_GetPayload(notif);
+        payload->pin_idx = (uint8_t)ioId;
+        payload->port_idx = (uint8_t)(ioId >> 8U);
         notif->channel = handle->channel;
         SRTM_Dispatcher_DeliverNotification(handle->service.dispatcher, notif);
     }

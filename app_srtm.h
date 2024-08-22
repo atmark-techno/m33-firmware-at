@@ -117,6 +117,8 @@ typedef enum
 #define APP_IO_NUM         (APP_IO_CHIPS * APP_IO_PINS_PER_CHIP)
 #define APP_GPIO_IDX(ioId) ((uint8_t)(((uint16_t)ioId) >> 8U))
 #define APP_PIN_IDX(ioId)  ((uint8_t)ioId)
+#define APP_IO_ID(gpio, pin) ((uint16_t)(((uint8_t)gpio << 8U) | (uint8_t)pin))
+#define APP_IO_IDX(gpio, pin) ((uint16_t)((uint8_t)gpio * APP_IO_PINS_PER_CHIP + (uint8_t)pin))
 
 static inline uint16_t APP_IO_GetIndex(uint16_t ioId) {
 	uint8_t gpio_idx = APP_GPIO_IDX(ioId);
