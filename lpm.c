@@ -354,9 +354,6 @@ static uint32_t s_pcc0ContextIndex = 0;
 static uint32_t s_pcc1Context[0x14];
 static uint32_t s_pcc1ContextIndex = 0;
 
-static uint32_t s_flexspi0Context[0x72];
-static uint32_t s_flexspi0ContextIndex = 0;
-
 static uint32_t s_simsecContext[0x9];
 static uint32_t s_simsecContextIndex = 0;
 
@@ -633,16 +630,6 @@ AT_QUICKACCESS_SECTION_CODE(void LPM_RestoreRegister(
     }
 }
 
-AT_QUICKACCESS_SECTION_CODE(void LPM_SaveFlexspi0(void))
-{
-    s_flexspi0ContextIndex = 0;
-    LPM_SaveRegister(s_flexspi0Context, &s_flexspi0ContextIndex, FLEXSPI0_BASE, 0x0, 0x0,
-                     0xFFFFFFF0); /* Skip MDIS and SWRESET */
-    LPM_SaveRegister(s_flexspi0Context, &s_flexspi0ContextIndex, FLEXSPI0_BASE, 0x4, 0xC4, 0xFFFFFFFF);
-    LPM_SaveRegister(s_flexspi0Context, &s_flexspi0ContextIndex, FLEXSPI0_BASE, 0x200, 0x2FC,
-                     0xFFFFFFFF); /* LUT table */
-}
-
 void LPM_ModuleStateSave(void)
 {
     /* IOMUXC0 */
@@ -683,17 +670,6 @@ void LPM_ModuleStateSave(void)
     LPM_SaveRegister(s_pcc1Context, &s_pcc1ContextIndex, PCC1_BASE, 0xA0, 0xA0, 0xFFFFFFFF);
     LPM_SaveRegister(s_pcc1Context, &s_pcc1ContextIndex, PCC1_BASE, 0xB4, 0xBC, 0xFFFFFFFF);
 
-    /* FlexSPI0(save settings of flexspi0 to TCM/SSRAM when running XiP) */
-    /*
-     * Dual boot type/low power boot type: M33 BOOTROM will initialize flexspi0;
-     * Single boot type: M33 BOOTROM don't initialize flexspi0.
-     * So M33 can access and save registers of flexspi0 in dual boot type and low power boot type.
-     */
-    if (BOARD_IS_XIP_FLEXSPI0() || !BOARD_IsSingleBootType())
-    {
-        LPM_SaveFlexspi0();
-    }
-
     /* SIM_SEC */
     s_simsecContextIndex = 0;
     LPM_SaveRegister(s_simsecContext, &s_simsecContextIndex, SIM_SEC_BASE, 0x40, 0x60, 0xFFFFFFFF);
@@ -701,38 +677,6 @@ void LPM_ModuleStateSave(void)
     /* CGC0 FRORDTRIM */
     s_cgc0ContextIndex = 0;
     LPM_SaveRegister(s_cgc0Context, &s_cgc0ContextIndex, CGC_RTD_BASE, 0x210, 0x210, 0xFFFFFFFF);
-}
-
-AT_QUICKACCESS_SECTION_CODE(void LPM_RestoreFlexspi0(void))
-{
-    s_flexspi0ContextIndex = 0;
-
-    if (s_flexspi0Context[0] == 0U)
-        return;
-
-    /* Restore generic register */
-    LPM_RestoreRegister(s_flexspi0Context, &s_flexspi0ContextIndex, FLEXSPI0_BASE, 0x0, 0x0,
-                        0xFFFFFFF0); /* Skip MDIS and SWRESET bits */
-    LPM_RestoreRegister(s_flexspi0Context, &s_flexspi0ContextIndex, FLEXSPI0_BASE, 0x4, 0xc4, 0xFFFFFFFF);
-
-    /* Enable FlexSPI module */
-    FLEXSPI0->MCR0 &= ~FLEXSPI_MCR0_MDIS_MASK;
-
-    /* Restore LUT */
-    FLEXSPI0->LUTKEY = FLEXSPI_LUT_KEY_VAL;
-    FLEXSPI0->LUTCR  = FLEXSPI_LUTCR_UNLOCK_MASK;
-    for (uint32_t i = 0; i < CUSTOM_LUT_LENGTH; i++)
-    {
-        FLEXSPI0->LUT[i] = s_flexspi0Context[s_flexspi0ContextIndex + i];
-    }
-    FLEXSPI0->LUTKEY = FLEXSPI_LUT_KEY_VAL;
-    FLEXSPI0->LUTCR  = FLEXSPI_LUTCR_LOCK_MASK;
-
-    /* Software reset */
-    FLEXSPI0->MCR0 |= FLEXSPI_MCR0_SWRESET_MASK;
-    while (FLEXSPI0->MCR0 & FLEXSPI_MCR0_SWRESET_MASK)
-    {
-    }
 }
 
 AT_QUICKACCESS_SECTION_CODE(void LPM_ModuleStateRestore(void))
@@ -774,17 +718,6 @@ AT_QUICKACCESS_SECTION_CODE(void LPM_ModuleStateRestore(void))
     LPM_RestoreRegister(s_pcc1Context, &s_pcc1ContextIndex, PCC1_BASE, 0x88, 0x88, 0xFFFFFFFF);
     LPM_RestoreRegister(s_pcc1Context, &s_pcc1ContextIndex, PCC1_BASE, 0xA0, 0xA0, 0xFFFFFFFF);
     LPM_RestoreRegister(s_pcc1Context, &s_pcc1ContextIndex, PCC1_BASE, 0xB4, 0xBC, 0xFFFFFFFF);
-
-    /* FlexSPI0 */
-    /*
-     * Dual boot type/low power boot type: M33 BOOTROM will initialize flexspi0;
-     * Single boot type: M33 BOOTROM don't initialize flexspi0.
-     * So M33 can access and save registers of flexspi0 in dual boot type and low power boot type.
-     */
-    if (BOARD_IS_XIP_FLEXSPI0() || !BOARD_IsSingleBootType())
-    {
-        LPM_RestoreFlexspi0();
-    }
 
     /* SIM_SEC */
     s_simsecContextIndex = 0;
@@ -1013,29 +946,6 @@ AT_QUICKACCESS_SECTION_CODE(bool LPM_SystemDeepPowerDown(void))
     RTDCMC_SetPowerModeProtection(CMC_RTD, CMC_RTD_PMPROT_ADPD_MASK);
     RTDCMC_EnableDebugOperation(CMC_RTD, false);
 
-    /* Note: Pls enable flexspi pins before using flexspi0 to send command to nor flash */
-    /*
-     * Change function of pins(PTC0~10) of flexspi0 as flexspi when non-XiP
-     * When XiP, skip changing function of pins of flexspi in APP_Suspend().
-     */
-    if (!BOARD_IS_XIP_FLEXSPI0())
-    {
-        IOMUXC_SetPinMux(IOMUXC_PTC0_FLEXSPI0_A_DQS, 0U);
-        IOMUXC_SetPinMux(IOMUXC_PTC1_FLEXSPI0_A_DATA7, 0U);
-        IOMUXC_SetPinMux(IOMUXC_PTC2_FLEXSPI0_A_DATA6, 0U);
-        IOMUXC_SetPinMux(IOMUXC_PTC3_FLEXSPI0_A_DATA5, 0U);
-        IOMUXC_SetPinMux(IOMUXC_PTC4_FLEXSPI0_A_DATA4, 0U);
-        IOMUXC_SetPinMux(IOMUXC_PTC5_FLEXSPI0_A_SS0_B, 0U);
-        IOMUXC_SetPinMux(IOMUXC_PTC6_FLEXSPI0_A_SCLK, 0U);
-        IOMUXC_SetPinMux(IOMUXC_PTC7_FLEXSPI0_A_DATA3, 0U);
-        IOMUXC_SetPinMux(IOMUXC_PTC8_FLEXSPI0_A_DATA2, 0U);
-        IOMUXC_SetPinMux(IOMUXC_PTC9_FLEXSPI0_A_DATA1, 0U);
-        IOMUXC_SetPinMux(IOMUXC_PTC10_FLEXSPI0_A_DATA0, 0U);
-
-        /* Restore flexspi0's settings, it will reset NOR FLASH to default by flexspi pins when with non-XiP */
-        LPM_RestoreFlexspi0();
-    }
-
     /* Detect which mode flash is in(SPI, OPI), currently it's in SPI mode */
     /* Whether enabled 4-Byte address mode, for GD25LX256E, enabled 4-Byte address mode */
     /* Change from 4-byte address mode to 3-byte address mode in SDR SPI Mode for the nor flash GD25LX256E */
@@ -1050,15 +960,6 @@ AT_QUICKACCESS_SECTION_CODE(bool LPM_SystemDeepPowerDown(void))
     status = flexspi_nor_exec_op(BOARD_FLEXSPI_CONNECT_TO_NOR_FLASH, 0, BOARD_FLEXSPI_NOR_FLASH_PORT, kFLEXSPI_Read,
                                  NOR_CMD_LUT_SEQ_IDX_CONFIG, 1, NULL, 0);
     (void)status; /* Fix warning: variable "status" was set but never used */
-    /*
-     * Change function of pins(PTC0~10) of flexspi0 to save power
-     * Note: Currently make sure that the instruction is in TCM, then it's safe to do anything for flexspi0 and NOR
-     * FLASH
-     */
-    for (i = 0; i <= 10; i++)
-    {
-        IOMUXC0->PCR0_IOMUXCARRAY2[i] = 0; /* Set to Analog/HiZ state */
-    }
 
     /* assert is in flash for XiP case(flash_debug, flash_release target), so pls don't check status with assert */
     /* assert(status == kStatus_Success); */
