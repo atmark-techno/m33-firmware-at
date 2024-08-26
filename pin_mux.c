@@ -78,6 +78,9 @@ void BOARD_InitLpuartPins(void) {                          /*!< Function assigne
      *  PTA18: LPUART0_TX   : DI(Driver input)
      *  PTA15: LPUART0_RX   : RO(Receiver output)
      *  PTA16: LPUART0_CTS_B: RE_N(Receiver output enable)
+     *                        This pin is not controlled and must
+     *                        always be pulled down. The receiver is
+     *                        controlled by the i.MX8ULP's LPUART.
      *  PTA17: LPUART0_RTS_B: DE(Driver output enable)
      */
     IOMUXC_SetPinMux(IOMUXC_PTA18_LPUART0_TX, 0U);

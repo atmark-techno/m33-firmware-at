@@ -32,12 +32,16 @@
 #include "fsl_iomuxc.h"
 #include "fsl_lpuart_freertos.h"
 #include "fsl_reset.h"
+
+#include "srtm_message.h"
+#include "srtm_message_struct.h"
 /*******************************************************************************
  * Struct Definitions
  ******************************************************************************/
 #define RPMSG_LITE_LINK_ID            (RL_PLATFORM_IMX8ULP_M33_A35_USER_LINK_ID)
 #define RPMSG_LITE_SHMEM_BASE         (VDEV1_VRING_BASE)
-#define RPMSG_LITE_NS_ANNOUNCE_STRING "rpmsg-virtual-tty-channel"
+/* Communicate with linux/drivers/tty/serial/imx_rpmsg.c */
+#define RPMSG_LITE_NS_ANNOUNCE_STRING "rpmsg-tty-channel"
 #define RPMSG_LITE_MASTER_IS_LINUX
 
 #define APP_DEBUG_UART_BAUDRATE       (115200U)             /* Debug console baud rate. */
@@ -72,6 +76,38 @@ typedef enum _app_wakeup_source
 #define RS485_LPUART_BUFFER_LENGTH (RL_BUFFER_PAYLOAD_SIZE(0))
 #endif
 #define RS485_EVENT_INIT_DONE      (1)
+
+/* sizeof(app_rpmsg_msg) must be less than or equal to LPUART_BUFFER_LENGTH */
+#define RPMSG_MAX_SIZE		(RS485_LPUART_BUFFER_LENGTH - 12)
+
+#define APP_RPMSG_TTY_CATEGORY	(0xf1)
+
+#define APP_RPMSG_VERSION_MAJOR SRTM_VERSION_MAJOR
+#define APP_RPMSG_VERSION_MINOR SRTM_VERSION_MINOR
+
+enum app_rpmsg_header_type {
+    APP_RPMSG_TYPE_REQUEST,
+    APP_RPMSG_TYPE_RESPONSE,
+    APP_RPMSG_TYPE_NOTIFICATION,
+};
+
+enum app_rpmsg_header_cmd {
+    APP_RPMSG_COMMAND_PAYLOAD,
+    APP_RPMSG_COMMAND_SET_BAUD,
+};
+
+/* RS485 Driver output enable */
+#define APP_PIN_PTA17       (0x0011U)
+
+/*******************************************************************************
+ * Data Structures
+ ******************************************************************************/
+struct app_rpmsg_msg {
+    srtm_packet_head_t header;
+    uint16_t len;
+    uint8_t buf[RPMSG_MAX_SIZE];
+} __packed __aligned(1);
+#define app_rpmsg_msg_size(s) (sizeof(struct app_rpmsg_msg) - RPMSG_MAX_SIZE + s)
 
 
 /*******************************************************************************
@@ -208,6 +244,10 @@ static lpuart_rtos_config_t s_rs485LpuartConfig = {
     /* .enableRxRTS = true, */
     /* .enableTxCTS = true, */
     .base        = RS485_LPUART,
+    .rs485       = {
+        .flags   = LPUART_RS485_ENABLED | LPUART_RS485_DE_ON_SEND,
+        .deGpio  = APP_PIN_PTA17,
+    },
 };
 
 /* rpmsg */
@@ -1196,7 +1236,7 @@ static void Rs485InitTask(void *pvParameters)
 /* RS485 Rx Task */
 static void Rs485RxTask(void *pvParameters)
 {
-    void *buffer;
+    struct app_rpmsg_msg *msg;
     uint32_t size;
     int32_t result;
     size_t length;
@@ -1207,22 +1247,33 @@ static void Rs485RxTask(void *pvParameters)
 
     for (;;)
     {
-        buffer = rpmsg_lite_alloc_tx_buffer(s_rpmsgInstance, &size, RL_BLOCK);
-        assert(buffer);
+        msg = rpmsg_lite_alloc_tx_buffer(s_rpmsgInstance, &size, RL_BLOCK);
+        assert(msg);
 
-        LPUART_RTOS_Receive(&s_rs485LpuartRtosHandle, buffer, RS485_LPUART_BUFFER_LENGTH, &length);
+        do {
+            LPUART_RTOS_Receive(&s_rs485LpuartRtosHandle, msg->buf, RPMSG_MAX_SIZE, &length);
+        } while (length == 0);
 
-        result = rpmsg_lite_send_nocopy(s_rpmsgInstance, s_rpmsgEndpoint, s_rpmsgRemoteAddr, buffer, length);
+        msg->header.category = APP_RPMSG_TTY_CATEGORY;
+        msg->header.majorVersion = APP_RPMSG_VERSION_MAJOR;
+        msg->header.minorVersion = APP_RPMSG_VERSION_MINOR;
+        msg->header.type = APP_RPMSG_TYPE_REQUEST;
+        msg->header.command = APP_RPMSG_COMMAND_PAYLOAD;
+        msg->len = length;
+        result = rpmsg_lite_send_nocopy(s_rpmsgInstance, s_rpmsgEndpoint, s_rpmsgRemoteAddr,
+					msg, app_rpmsg_msg_size(msg->len));
         if (result)
             assert(false);
-    }
+     }
 }
 
 /* RS485 Tx Task */
 static void Rs485TxTask(void *pvParameters)
 {
-    void *buffer;
+    struct app_rpmsg_msg *msg;
     uint32_t length;
+    uint32_t baud;
+    status_t status;
     int32_t result;
 
     while (!s_rs485Inited);
@@ -1233,14 +1284,26 @@ static void Rs485TxTask(void *pvParameters)
     {
         /* Get RPMsg rx buffer with message */
         result =
-            rpmsg_queue_recv_nocopy(s_rpmsgInstance, s_rpmsgQueueHandle, (uint32_t *)&s_rpmsgRemoteAddr, (char **)&buffer, &length, RL_BLOCK);
+            rpmsg_queue_recv_nocopy(s_rpmsgInstance, s_rpmsgQueueHandle, (uint32_t *)&s_rpmsgRemoteAddr, (char **)&msg, &length, RL_BLOCK);
         if (result != 0)
             assert(false);
 
-        LPUART_RTOS_Send(&s_rs485LpuartRtosHandle, buffer, length);
+	switch (msg->header.command) {
+	case APP_RPMSG_COMMAND_PAYLOAD:
+            LPUART_RTOS_Send(&s_rs485LpuartRtosHandle, msg->buf, msg->len);
+            break;
+	case APP_RPMSG_COMMAND_SET_BAUD:
+            assert(msg->len == sizeof(uint32_t));
+
+            baud = *((uint32_t *)msg->buf);
+            status = LPUART_SetBaudRate(RS485_LPUART, baud, RS485_LPUART_CLK_FREQ);
+            if (status != kStatus_Success)
+                PRINTF("Failed to set baudrate(%d).\n", baud);
+            break;
+	}
 
         /* Release held RPMsg rx buffer */
-        result = rpmsg_queue_nocopy_free(s_rpmsgInstance, buffer);
+        result = rpmsg_queue_nocopy_free(s_rpmsgInstance, msg);
         if (result != 0)
             assert(false);
     }
