@@ -2196,18 +2196,9 @@ static void SRTM_DispatcherTask(void *pvParameters)
     SRTM_Dispatcher_Run(disp);
 }
 
-static void APP_SRTM_InitPeriph(bool resume)
-{
-    /* enable regulators */
-    gpio_out(GPIOB, 12, 1); // enable VDD1V8
-    gpio_out(GPIOB, 6, 1);  // enable VDD3V3
-}
-
 void APP_SRTM_Init(void)
 {
     UPOWER_PowerOnMemPart(0U, (uint32_t)kUPOWER_MP1_DMA0);
-
-    APP_SRTM_InitPeriph(false);
 
     monSig = xSemaphoreCreateBinary();
     assert(monSig);

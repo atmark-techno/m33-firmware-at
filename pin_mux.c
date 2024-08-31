@@ -23,7 +23,6 @@ void BOARD_InitBootPins(void)
     BOARD_InitTpmPins();
     BOARD_InitHdmiIntPins();
     BOARD_InitPmicModePins();
-    BOARD_InitRegulatorPins();
 }
 
 /* FUNCTION ************************************************************************************************************
@@ -169,12 +168,6 @@ void BOARD_InitPmicModePins(void) {                        /*!< Function assigne
     IOMUXC_SetPinConfig(IOMUXC_PTB8_PMIC0_MODE1, 0U); // pull-down on the board
     IOMUXC_SetPinMux(IOMUXC_PTB9_PMIC0_MODE0, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTB9_PMIC0_MODE0, 0U); // pull-down on the board
-}
-
-void BOARD_InitRegulatorPins(void) {
-    IOMUXC_SetPinMux(IOMUXC_PTB12_PTB12, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTB12_PTB12,
-                        IOMUXC_PCR_OBE_MASK); // PTB12 : VDD_3V3_EN 4.7k pull up EXT_1V8, 100k pull down
 }
 
 /***********************************************************************************************************************
