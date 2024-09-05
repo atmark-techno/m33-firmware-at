@@ -18,7 +18,6 @@
 #include "srtm_rpmsg_endpoint.h"
 #include "srtm_i2c_service.h"
 
-#include "srtm_sai_edma_adapter.h"
 #include "srtm_io_service.h"
 #include "srtm_lfcl_service.h"
 #include "srtm_rtc_service.h"
@@ -85,22 +84,6 @@ typedef struct
 {
     uint32_t cnt; /* step counter now. */
 } app_pedometer_t;
-
-#if SRTM_SAI_EDMA_LOCAL_BUF_ENABLE
-#define BUFFER_LEN (128 * 1024)
-#if (defined(__ICCARM__))
-static uint8_t g_buffer[BUFFER_LEN] @"AudioBuf";
-#else
-static uint8_t g_buffer[BUFFER_LEN] __attribute__((section("AudioBuf,\"w\",%nobits @")));
-#endif
-static srtm_sai_edma_local_buf_t g_local_buf = {
-    .buf       = (uint8_t *)&g_buffer,
-    .bufSize   = BUFFER_LEN,
-    .periods   = SRTM_SAI_EDMA_MAX_LOCAL_BUF_PERIODS,
-    .threshold = 1,
-
-};
-#endif
 
 /*******************************************************************************
  * Prototypes
@@ -204,8 +187,6 @@ static const srtm_io_event_t wuuPinModeEvents[] = {
 
 static srtm_dispatcher_t disp;
 static srtm_peercore_t core;
-static srtm_sai_adapter_t saiAdapter;
-static srtm_service_t audioService;
 static srtm_service_t pwmService;
 static srtm_service_t adcService;
 static srtm_service_t rtcService;
@@ -380,58 +361,6 @@ void APP_WakeupACore(void)
             PRINTF("failed to set PMIC_LSW4 voltage to 1.1 [V]\r\n");
         }
 
-        /*
-         * For case: when RTD is the ower of LPAV and APD enter PD/DPD, Mcore don't enter lp mode, but wakes up
-         * directly. RTD need restore related settings.
-         */
-        if (BOARD_IsLPAVOwnedByRTD())
-        {
-            UPOWER_ReadPmicReg(PCA9460_BUCK3CTRL_ADDR, &(buck3_ctrl.val));
-            UPOWER_ReadPmicReg(PCA9460_LDO1_CFG_ADDR, &(ldo1_cfg.val));
-
-            if (AD_CurrentMode == AD_PD || (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL))
-            {
-                APP_SRTM_EnableLPAV();
-            }
-            else if (AD_CurrentMode == AD_DPD && !ldo1_cfg.reg.L1_ENMODE && !buck3_ctrl.reg.B3_ENMODE)
-            {
-                /* B3_ENMODE = 0x1, L1_ENMODE, ON at RUN State(default) */
-                buck3_ctrl.reg.B3_ENMODE = 0x1;
-                ldo1_cfg.reg.L1_ENMODE   = 0x1;
-                UPOWER_SetPmicReg(PCA9460_LDO1_CFG_ADDR, ldo1_cfg.val);
-                UPOWER_SetPmicReg(PCA9460_BUCK3CTRL_ADDR, buck3_ctrl.val);
-            }
-        }
-        else /* owner of lpav is AD */
-        {
-            /* For RTD hold lpav, sai low power audio demo, we need enable lpav before wakeup APD */
-#if SRTM_SAI_EDMA_LOCAL_BUF_ENABLE
-            if (R32(DDR_IN_SELFREFRESH_BASE))
-            {
-                DisableIRQ(BBNSM_IRQn);
-                DisableIRQ(GPIOA_INT0_IRQn);
-                DisableIRQ(GPIOA_INT1_IRQn);
-                DisableIRQ(GPIOB_INT0_IRQn);
-                DisableIRQ(GPIOB_INT1_IRQn);
-                DisableIRQ(GPIOB_INT1_IRQn);
-                DisableIRQ(WUU0_IRQn);
-
-                PRINTF("Acore will enter avtive, Put ddr into active\r\n");
-                /* ddr in retention state, need put ddr exit retention */
-                APP_SRTM_EnableLPAV();
-
-                W32(DDR_IN_SELFREFRESH_BASE, 0);
-
-                EnableIRQ(GPIOA_INT0_IRQn);
-                EnableIRQ(GPIOA_INT1_IRQn);
-                EnableIRQ(GPIOB_INT0_IRQn);
-                EnableIRQ(GPIOB_INT1_IRQn);
-                EnableIRQ(BBNSM_IRQn);
-                EnableIRQ(WUU0_IRQn);
-            }
-#endif
-        }
-
         if (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL)
         {
             MU_SendMsg(MU0_MUA, 1, 0xFFFFFFFF); /* MCore wakeup ACore with mu interrupt, 1: RPMSG_MU_CHANNEL */
@@ -488,101 +417,6 @@ static void APP_SRTM_ControlCA35(srtm_dispatcher_t dispatcher, void *param1, voi
             }
             break;
         default:
-            break;
-    }
-}
-
-static void APP_SRTM_SetLPAV(srtm_dispatcher_t dispatcher, void *param1, void *param2)
-{
-    lpm_ad_power_mode_e state = (lpm_ad_power_mode_e)(uint32_t)param1;
-
-    switch (state)
-    {
-        case AD_UNKOWN:
-            break;
-        case AD_ACT:
-            break;
-        case AD_DSL:
-        case AD_PD:
-            if (BOARD_IsLPAVOwnedByRTD())
-            {
-                /* Power down lpav domain, put ddr into retention, poweroff LDO1, set BUCK3 to 0.73V */
-                APP_SRTM_DisableLPAV();
-#if SRTM_SAI_EDMA_LOCAL_BUF_ENABLE
-                W32(DDR_IN_SELFREFRESH_BASE, 1);
-                /* In dualboot mode, RTD hold LPAV domain, set LPAV ownership to APD let ddr into retention */
-                SIM_SEC->SYSCTRL0 |= SIM_SEC_SYSCTRL0_LPAV_MASTER_CTRL(1);
-                SIM_SEC->LPAV_MASTER_ALLOC_CTRL = 0x7f;
-                SIM_SEC->LPAV_SLAVE_ALLOC_CTRL |=
-                    (SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SAI6(0x1) | SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SAI7(0x1) |
-                     SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SEMA42(0x1) | SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_LPTPM8(0x1) |
-                     SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SPDIF(0x1));
-#endif
-            }
-            break;
-        case AD_DPD:
-            if (BOARD_IsLPAVOwnedByRTD())
-            {
-                upower_ps_mask_t ps_mask =
-                    (upower_ps_mask_t)(kUPOWER_PS_HIFI4 | kUPOWER_PS_DDRC | kUPOWER_PS_MIPI_DSI | kUPOWER_PS_MIPI_CSI |
-                                       kUPOWER_PS_AV_NIC | kUPOWER_PS_FUSION_AO);
-                uint32_t mp0_mask =
-                    (uint32_t)(kUPOWER_MP0_DCNANO_A | kUPOWER_MP0_DCNANO_B | kUPOWER_MP0_DMA2 | kUPOWER_MP0_HIFI4 |
-                               kUPOWER_MP0_ISI | kUPOWER_MP0_MIPI_CSI | kUPOWER_MP0_MIPI_DSI | kUPOWER_MP0_AV_SYSTEM);
-
-                if (BOARD_IsIpDisabled(IP_GPU) == false)
-                {
-                    ps_mask |= kUPOWER_PS_GPU3D;
-                    mp0_mask |= kUPOWER_MP0_GPU2D_A | kUPOWER_MP0_GPU2D_B | kUPOWER_MP0_GPU3D_A | kUPOWER_MP0_GPU3D_B;
-                }
-
-                if (BOARD_IsIpDisabled(IP_EPDC) == false)
-                {
-                    ps_mask |= kUPOWER_PS_PXP_EPDC;
-                    mp0_mask |= kUPOWER_MP0_EPDC_A | kUPOWER_MP0_EPDC_B | kUPOWER_MP0_PXP;
-                }
-
-                /*
-                 * APD default hold LPAV domain device and needs change the ownership of the LPAV device
-                 * from APD to RTD
-                 */
-                SIM_SEC->LPAV_MASTER_ALLOC_CTRL = 0;
-                SIM_SEC->LPAV_SLAVE_ALLOC_CTRL &=
-                    ~(SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SAI6(0x1) | SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SAI7(0x1) |
-                      SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SEMA42(0x1) | SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_LPTPM8(0x1) |
-                      SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SPDIF(0x1));
-
-                UPOWER_PowerOffSwitches(ps_mask);
-
-                UPOWER_PowerOffMemPart(mp0_mask, 0U);
-
-                /*
-                 * Workaround: After Mcore hold lpav in dualboot mode, Mcore can't resume from PD/DPD modes in some
-                 * boards. Restore lpav master and slave devices can fix it.
-                 */
-                SIM_SEC->LPAV_MASTER_ALLOC_CTRL = 0x7f;
-                SIM_SEC->LPAV_SLAVE_ALLOC_CTRL |=
-                    (SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SAI6(0x1) | SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SAI7(0x1) |
-                     SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SEMA42(0x1) | SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_LPTPM8(0x1) |
-                     SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SPDIF(0x1));
-
-                /* Configure BUCK3CTRL and LDO1_CFG according to PCA9460  */
-                buck3_ctrl.reg.B3_ENMODE = 0x0; /* 00-OFF */
-                buck3_ctrl.reg.B3_FPWM   = 0x0; /* Automatic PFM and PWM mode transition (default) */
-                buck3_ctrl.reg.B3_AD     = 0x1; /* Enable Active discharge resistor when regulator is OFF (default) */
-                buck3_ctrl.reg.B3_LPMODE = 0x3; /* Normal mode (default) */
-                buck3_ctrl.reg.B3_RAMP   = 0x1; /* 25 mV (default) */
-
-                ldo1_cfg.reg.L1_ENMODE = 0x0;   /* 00-OFF */
-                ldo1_cfg.reg.L1_LPMODE = 0x3;   /* Normal mode (default) */
-                ldo1_cfg.reg.L1_LLSEL  = 0x1;   /* 15 mw (default) */
-                ldo1_cfg.reg.L1_CSEL   = 0x2;   /* Auto Cout detection (default) */
-
-                /* Poweroff BUCK3 */
-                UPOWER_SetPmicReg(PCA9460_BUCK3CTRL_ADDR, buck3_ctrl.val);
-                /* Poweroff LDO1 */
-                UPOWER_SetPmicReg(PCA9460_LDO1_CFG_ADDR, ldo1_cfg.val);
-            }
             break;
     }
 }
@@ -1139,13 +973,6 @@ static void APP_SRTM_Linkup(void)
     chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
     SRTM_PeerCore_AddChannel(core, chan);
 
-    /* Create and add SRTM AUDIO channel to peer core*/
-    rpmsgConfig.epName = APP_SRTM_AUDIO_CHANNEL_NAME;
-    chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
-    SRTM_PeerCore_AddChannel(core, chan);
-    assert((audioService != NULL) && (saiAdapter != NULL));
-    SRTM_AudioService_BindChannel(audioService, saiAdapter, chan);
-
     /* Create and add SRTM IO channel to peer core */
     rpmsgConfig.epName = APP_SRTM_IO_CHANNEL_NAME;
     chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
@@ -1232,8 +1059,7 @@ static void APP_SRTM_GpioReset(void)
 
 static void APP_SRTM_ResetServices(void)
 {
-    /* When CA35 resets, we need to avoid async event to send to CA35. Audio and IO services have async events. */
-    SRTM_AudioService_Reset(audioService, core);
+    /* When CA35 resets, we need to avoid async event to send to CA35. IO services have async events. */
     SRTM_RtcService_Reset(rtcService, core);
     APP_SRTM_GpioReset();
 }
@@ -1264,316 +1090,6 @@ static void APP_SRTM_DeinitPeerCore(void)
 
     /* Inform upower that m33 is not using the ddr(it's ready to reset ddr of lpavd) */
     UPOWER_SetRtdUseDdr(false);
-}
-
-static void APP_SRTM_InitAudioDevice(void)
-{
-    edma_config_t dmaConfig;
-
-    /* Initialize DMA0 for SAI */
-    EDMA_GetDefaultConfig(&dmaConfig);
-    EDMA_Init(DMA0, &dmaConfig);
-
-    /* Initialize DMAMUX for SAI */
-    EDMA_SetChannelMux(DMA0, APP_SAI_TX_DMA_CHANNEL, kDmaRequestMux0SAI0Tx);
-    EDMA_SetChannelMux(DMA0, APP_SAI_RX_DMA_CHANNEL, kDmaRequestMux0SAI0Rx);
-}
-
-/*
- * uboot-spl will assign LPAV domain owner to APD in singleboot and to RTD in dualboot/low power boot, and assign LPAV
- * devices to APD in three boot mode.
- * APP_SRTM_EnableLPAV and APP_SRTM_DisableLPAV function logic is for dualboot/low power boot mode.
- * After system exit low power mode, assurance that restore ownership of LPAV to initial cold start.
- */
-void APP_SRTM_EnableLPAV()
-{
-    UPOWER_ReadPmicReg(PCA9460_BUCK3CTRL_ADDR, &(buck3_ctrl.val));
-    UPOWER_ReadPmicReg(PCA9460_LDO1_CFG_ADDR, &(ldo1_cfg.val));
-
-    if (!(ldo1_cfg.reg.L1_ENMODE))
-    {
-        upower_ps_mask_t ps_mask = (upower_ps_mask_t)(kUPOWER_PS_HIFI4 | kUPOWER_PS_DDRC | kUPOWER_PS_MIPI_DSI |
-                                                      kUPOWER_PS_MIPI_CSI | kUPOWER_PS_AV_NIC | kUPOWER_PS_FUSION_AO);
-        upower_ps_mask_t ps_mask_workaround =
-            (upower_ps_mask_t)(kUPOWER_PS_HIFI4 | kUPOWER_PS_AV_NIC | kUPOWER_PS_FUSION_AO);
-        uint32_t mp0_mask =
-            (uint32_t)(kUPOWER_MP0_DCNANO_A | kUPOWER_MP0_DCNANO_B | kUPOWER_MP0_DMA2 | kUPOWER_MP0_HIFI4 |
-                       kUPOWER_MP0_ISI | kUPOWER_MP0_MIPI_CSI | kUPOWER_MP0_MIPI_DSI | kUPOWER_MP0_AV_SYSTEM);
-
-        if (BOARD_IsIpDisabled(IP_GPU) == false)
-        {
-            ps_mask |= kUPOWER_PS_GPU3D;
-            ps_mask_workaround |= kUPOWER_PS_GPU3D;
-            mp0_mask |= kUPOWER_MP0_GPU2D_A | kUPOWER_MP0_GPU2D_B | kUPOWER_MP0_GPU3D_A | kUPOWER_MP0_GPU3D_B;
-        }
-
-        if (BOARD_IsIpDisabled(IP_EPDC) == false)
-        {
-            ps_mask |= kUPOWER_PS_PXP_EPDC;
-            mp0_mask |= kUPOWER_MP0_EPDC_A | kUPOWER_MP0_EPDC_B | kUPOWER_MP0_PXP;
-        }
-
-        UPOWER_SetRtdUseDdr(true);
-
-        if (!BOARD_IsLPAVOwnedByRTD())
-        {
-            /* Set LPAV ownership to RTD */
-            SIM_SEC->SYSCTRL0 &= ~SIM_SEC_SYSCTRL0_LPAV_MASTER_CTRL(1);
-        }
-
-        /* APD default hold LPAV domain device and needs change the ownership of the LPAV device from APD to RTD */
-        SIM_SEC->LPAV_MASTER_ALLOC_CTRL = 0;
-        SIM_SEC->LPAV_SLAVE_ALLOC_CTRL &=
-            ~(SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SAI6(0x1) | SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SAI7(0x1) |
-              SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SEMA42(0x1) | SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_LPTPM8(0x1) |
-              SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SPDIF(0x1));
-
-        /* Power on LPAV domain */
-        UPOWER_PowerOnMemPart(mp0_mask, 0U);
-
-        UPOWER_PowerOnSwitches(ps_mask);
-
-        /* Restore BUCK3 voltage to 1.1V, please refer to PCA9460 for the specific data */
-        UPOWER_SetPmicReg(PCA9460_BUCK3OUT_DVS0_ADDR, 0x28);
-
-        ldo1_cfg.reg.L1_ENMODE = 0x1; /* 00-ON */
-        ldo1_cfg.reg.L1_LPMODE = 0x3; /* Normal mode (default) */
-        ldo1_cfg.reg.L1_LLSEL  = 0x1; /* 15 mw (default) */
-        ldo1_cfg.reg.L1_CSEL   = 0x2; /* Auto Cout detection (default) */
-
-        /* Poweron LDO1 */
-        UPOWER_SetPmicReg(PCA9460_LDO1_CFG_ADDR, ldo1_cfg.val);
-
-        /* Init LPAV clocks */
-        BOARD_LpavInit();
-
-        /* Workaround: If DDR controller register read failed, need to toggle pS7, PS8, PS13, PS14 */
-        while (!LPDDR->DENALI_CTL[0])
-        {
-            /* Toggle pS7, PS8, PS13, PS14 */
-            UPOWER_PowerOffSwitches(ps_mask_workaround);
-            UPOWER_PowerOnSwitches(ps_mask_workaround);
-        }
-
-        /* Control DRAM exit from self-refesh */
-        BOARD_DramExitRetention(dram_class, dram_timing_cfg);
-
-        /*
-         * Restore LPAV devices owner to APD, RTD need keep hold LPAV domain owner in SIM_SEC_SYSCTRL0_LPAV_MASTER_CTRL
-         * to ensure DDR exit retention state after RTD exit Power down for dualboot and low power boot mode
-         */
-        SIM_SEC->LPAV_MASTER_ALLOC_CTRL = 0x7f;
-        SIM_SEC->LPAV_SLAVE_ALLOC_CTRL |=
-            (SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SAI6(0x1) | SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SAI7(0x1) |
-             SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SEMA42(0x1) | SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_LPTPM8(0x1) |
-             SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SPDIF(0x1));
-    }
-}
-
-void APP_SRTM_DisableLPAV()
-{
-    UPOWER_ReadPmicReg(PCA9460_BUCK3CTRL_ADDR, &(buck3_ctrl.val));
-    UPOWER_ReadPmicReg(PCA9460_LDO1_CFG_ADDR, &(ldo1_cfg.val));
-
-    if (ldo1_cfg.reg.L1_ENMODE)
-    {
-        upower_ps_mask_t ps_mask = (upower_ps_mask_t)(kUPOWER_PS_HIFI4 | kUPOWER_PS_DDRC | kUPOWER_PS_MIPI_DSI |
-                                                      kUPOWER_PS_MIPI_CSI | kUPOWER_PS_AV_NIC | kUPOWER_PS_FUSION_AO);
-        uint32_t mp0_mask =
-            (uint32_t)(kUPOWER_MP0_DCNANO_A | kUPOWER_MP0_DCNANO_B | kUPOWER_MP0_DMA2 | kUPOWER_MP0_HIFI4 |
-                       kUPOWER_MP0_ISI | kUPOWER_MP0_MIPI_CSI | kUPOWER_MP0_MIPI_DSI | kUPOWER_MP0_AV_SYSTEM);
-
-        if (BOARD_IsIpDisabled(IP_GPU) == false)
-        {
-            ps_mask |= kUPOWER_PS_GPU3D;
-            mp0_mask |= kUPOWER_MP0_GPU2D_A | kUPOWER_MP0_GPU2D_B | kUPOWER_MP0_GPU3D_A | kUPOWER_MP0_GPU3D_B;
-        }
-
-        if (BOARD_IsIpDisabled(IP_EPDC) == false)
-        {
-            ps_mask |= kUPOWER_PS_PXP_EPDC;
-            mp0_mask |= kUPOWER_MP0_EPDC_A | kUPOWER_MP0_EPDC_B | kUPOWER_MP0_PXP;
-        }
-        /* DDR will enter retention state when LPAV master domain enter Power down */
-        BOARD_DramEnterRetention();
-
-        ldo1_cfg.reg.L1_ENMODE = 0x0; /* 00-OFF */
-        ldo1_cfg.reg.L1_LPMODE = 0x3; /* Normal mode (default) */
-        ldo1_cfg.reg.L1_LLSEL  = 0x1; /* 15 mw (default) */
-        ldo1_cfg.reg.L1_CSEL   = 0x2; /* Auto Cout detection (default) */
-
-        /* Poweroff LDO1 */
-        UPOWER_SetPmicReg(PCA9460_LDO1_CFG_ADDR, ldo1_cfg.val);
-
-#ifndef SRTM_SAI_EDMA_LOCAL_BUF_ENABLE
-        /* For sai_low_power_audio, reduce buck3 power will impact fucntion */
-        /* Set BUCK3 voltage to 0.7375V, please refer to PCA9460 for the specific data */
-        UPOWER_SetPmicReg(PCA9460_BUCK3OUT_DVS0_ADDR, 0x0B);
-#endif
-
-        if (!BOARD_IsLPAVOwnedByRTD())
-        {
-            /* Set LPAV ownership to RTD */
-            SIM_SEC->SYSCTRL0 &= ~SIM_SEC_SYSCTRL0_LPAV_MASTER_CTRL(1);
-        }
-
-        /* APD default hold LPAV domain device and needs change the ownership of the LPAV device from APD to RTD */
-        /*
-         * LPAV_MASTER_ALLOC_CTRL bit fields mismatch between REVC and REVD.
-         * SIM_SEC->LPAV_MASTER_ALLOC_CTRL &= ~(SIM_SEC_LPAV_MASTER_ALLOC_CTRL_DCNANO(0x1) |
-         * SIM_SEC_LPAV_MASTER_ALLOC_CTRL_MIPI_DSI(0x1));
-         */
-        SIM_SEC->LPAV_MASTER_ALLOC_CTRL = 0;
-        SIM_SEC->LPAV_SLAVE_ALLOC_CTRL &=
-            ~(SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SAI6(0x1) | SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SAI7(0x1) |
-              SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SEMA42(0x1) | SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_LPTPM8(0x1) |
-              SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SPDIF(0x1));
-
-        UPOWER_PowerOffSwitches(ps_mask);
-        UPOWER_PowerOffMemPart(mp0_mask, 0U);
-
-        /*
-         * Workaround: After Mcore hold lpav in dualboot mode, Mcore can't resume from PD/DPD modes in some boards.
-         * Restore lpav master and slave devices can fix it.
-         */
-        SIM_SEC->LPAV_MASTER_ALLOC_CTRL = 0x7f;
-        SIM_SEC->LPAV_SLAVE_ALLOC_CTRL |=
-            (SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SAI6(0x1) | SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SAI7(0x1) |
-             SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SEMA42(0x1) | SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_LPTPM8(0x1) |
-             SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SPDIF(0x1));
-
-        UPOWER_SetRtdUseDdr(false);
-    }
-}
-
-#if SRTM_SAI_EDMA_LOCAL_BUF_ENABLE
-/*
- * For sai low power audio demo, when Acore enter Power down mode, Mcore will
- * put ddr into self-refresh-->transfer data by dma and play audio-->put ddr exit self-refresh-->memcpy data from ddr to
- * ssram
- */
-void APP_SRTM_PreCopyCallback()
-{
-    if (R32(DDR_IN_SELFREFRESH_BASE) || (SRTM_PeerCore_GetState(core) == SRTM_PeerCore_State_Deactivated))
-    {
-        /* Disable GAIO BBNSM IRQ before operate LPAV */
-        DisableIRQ(BBNSM_IRQn);
-        DisableIRQ(GPIOA_INT0_IRQn);
-        DisableIRQ(GPIOA_INT1_IRQn);
-        DisableIRQ(GPIOB_INT0_IRQn);
-        DisableIRQ(GPIOB_INT1_IRQn);
-        DisableIRQ(GPIOC_INT0_IRQn);
-        DisableIRQ(GPIOC_INT1_IRQn);
-        DisableIRQ(WUU0_IRQn);
-
-        /* Poweron LPAV domain, ddr exit retention */
-        APP_SRTM_EnableLPAV();
-        W32(DDR_IN_SELFREFRESH_BASE, 0);
-
-        EnableIRQ(GPIOA_INT0_IRQn);
-        EnableIRQ(GPIOA_INT1_IRQn);
-        EnableIRQ(GPIOB_INT0_IRQn);
-        EnableIRQ(GPIOB_INT1_IRQn);
-        EnableIRQ(GPIOC_INT0_IRQn);
-        EnableIRQ(GPIOC_INT1_IRQn);
-        EnableIRQ(BBNSM_IRQn);
-        EnableIRQ(WUU0_IRQn);
-    }
-}
-
-void APP_SRTM_PostCopyCallback()
-{
-    if (SRTM_PeerCore_GetState(core) == SRTM_PeerCore_State_Deactivated)
-    {
-        /* Disable GAIO BBNSM IRQ before operate LPAV */
-        DisableIRQ(BBNSM_IRQn);
-        DisableIRQ(GPIOA_INT0_IRQn);
-        DisableIRQ(GPIOA_INT1_IRQn);
-        DisableIRQ(GPIOB_INT0_IRQn);
-        DisableIRQ(GPIOB_INT1_IRQn);
-        DisableIRQ(GPIOC_INT0_IRQn);
-        DisableIRQ(GPIOC_INT1_IRQn);
-        DisableIRQ(WUU0_IRQn);
-
-        /* Poweroff LPAV domain, put ddr into retention */
-        APP_SRTM_DisableLPAV();
-
-        /* In dualboot mode, RTD hold LPAV domain, set LPAV ownership to APD let ddr into retention */
-        SIM_SEC->SYSCTRL0 |= SIM_SEC_SYSCTRL0_LPAV_MASTER_CTRL(1);
-        SIM_SEC->LPAV_MASTER_ALLOC_CTRL = 0x7f;
-        SIM_SEC->LPAV_SLAVE_ALLOC_CTRL |=
-            (SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SAI6(0x1) | SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SAI7(0x1) |
-             SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SEMA42(0x1) | SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_LPTPM8(0x1) |
-             SIM_SEC_LPAV_SLAVE_ALLOC_CTRL_SPDIF(0x1));
-
-        W32(DDR_IN_SELFREFRESH_BASE, 1);
-
-        EnableIRQ(GPIOA_INT0_IRQn);
-        EnableIRQ(GPIOA_INT1_IRQn);
-        EnableIRQ(GPIOB_INT0_IRQn);
-        EnableIRQ(GPIOB_INT1_IRQn);
-        EnableIRQ(GPIOC_INT0_IRQn);
-        EnableIRQ(GPIOC_INT1_IRQn);
-        EnableIRQ(BBNSM_IRQn);
-        EnableIRQ(WUU0_IRQn);
-    }
-}
-#endif
-
-static void APP_SRTM_InitAudioService(void)
-{
-    srtm_sai_edma_config_t saiTxConfig;
-    srtm_sai_edma_config_t saiRxConfig;
-
-    APP_SRTM_InitAudioDevice();
-
-    memset(&saiTxConfig, 0, sizeof(saiTxConfig));
-    memset(&saiRxConfig, 0, sizeof(saiRxConfig));
-
-    /*  Set SAI DMA IRQ Priority. */
-    NVIC_SetPriority(APP_DMA_IRQN(APP_SAI_TX_DMA_CHANNEL), APP_SAI_TX_DMA_IRQ_PRIO);
-    NVIC_SetPriority(APP_DMA_IRQN(APP_SAI_RX_DMA_CHANNEL), APP_SAI_RX_DMA_IRQ_PRIO);
-    NVIC_SetPriority(APP_SRTM_SAI_IRQn, APP_SAI_IRQ_PRIO);
-
-    /* Create SAI EDMA adapter */
-    SAI_GetClassicI2SConfig(&saiTxConfig.config, kSAI_WordWidth16bits, kSAI_Stereo, kSAI_Channel0Mask);
-    saiTxConfig.config.syncMode           = kSAI_ModeSync; /* Tx in Sync mode */
-    saiTxConfig.config.fifo.fifoWatermark = FSL_FEATURE_SAI_FIFO_COUNTn(APP_SRTM_SAI) - 1;
-    saiTxConfig.mclk                      = CLOCK_GetIpFreq(kCLOCK_Sai0);
-#if SRTM_SAI_EDMA_LOCAL_BUF_ENABLE
-    saiTxConfig.stopOnSuspend = false; /* Keep playing audio on APD suspend. */
-#else
-    saiTxConfig.stopOnSuspend = true;
-#endif
-    saiTxConfig.threshold = 1U; /* Every period transmitted triggers periodDone message to A core. */
-    saiTxConfig.guardTime =
-        1000; /* Unit:ms. This is a lower limit that M core should reserve such time data to wakeup A core. */
-    saiTxConfig.dmaChannel = APP_SAI_TX_DMA_CHANNEL;
-
-    SAI_GetClassicI2SConfig(&saiRxConfig.config, kSAI_WordWidth16bits, kSAI_Stereo, kSAI_Channel0Mask);
-    saiRxConfig.config.syncMode           = kSAI_ModeAsync; /* Rx in async mode */
-    saiRxConfig.config.fifo.fifoWatermark = 1;
-    saiRxConfig.mclk                      = saiTxConfig.mclk;
-#if SRTM_SAI_EDMA_LOCAL_BUF_ENABLE
-    saiRxConfig.stopOnSuspend = false; /* Keep recording data on APD suspend. */
-#else
-    saiRxConfig.stopOnSuspend = true;
-#endif
-    saiRxConfig.threshold  = UINT32_MAX; /* Every period received triggers periodDone message to A core. */
-    saiRxConfig.dmaChannel = APP_SAI_RX_DMA_CHANNEL;
-
-    saiAdapter = SRTM_SaiEdmaAdapter_Create(SAI0, DMA0, &saiTxConfig, &saiRxConfig);
-    assert(saiAdapter);
-
-#if SRTM_SAI_EDMA_LOCAL_BUF_ENABLE
-    SRTM_SaiEdmaAdapter_SetTxLocalBuf(saiAdapter, &g_local_buf);
-    SRTM_SaiEdmaAdapter_SetTxPreCopyCallback(saiAdapter, APP_SRTM_PreCopyCallback);
-    SRTM_SaiEdmaAdapter_SetTxPostCopyCallback(saiAdapter, APP_SRTM_PostCopyCallback);
-#endif
-
-    /* Create and register audio service */
-    audioService = SRTM_AudioService_Create(saiAdapter, NULL);
-    SRTM_Dispatcher_RegisterService(disp, audioService);
 }
 
 static void APP_SRTM_InitPwmDevice(void)
@@ -1807,15 +1323,6 @@ int32_t MU0_A_IRQHandler(void)
             EnableIRQ(CMC1_IRQn);
             /* Help A35 to setup TRDC after A35 entered deep power down moade */
             BOARD_SetTrdcAfterApdReset();
-            /*
-             *  When RTD is the ower of LPAV and APD enter PD mode, RTD need poweroff LDO1, reduce BUCK3 to 0.73V,
-             *  Set flag to put ddr into retention when RTD enter PD mode.
-             *  otherwise APD side is responsible to control them in PD mode.
-             */
-            srtm_procedure_t proc = SRTM_Procedure_Create(APP_SRTM_SetLPAV, (void *)AD_DPD, NULL);
-
-            assert(proc);
-            SRTM_Dispatcher_PostProc(disp, proc);
         }
         else
         {
@@ -1824,14 +1331,6 @@ int32_t MU0_A_IRQHandler(void)
                 MU0_MUA,
                 (mu_core_boot_mode_t)0); /* Delete the code after linux supported sending suspend rpmsg to M Core */
             AD_CurrentMode = AD_PD;      /* AD entered Power Down Mode */
-            /*
-             *  When RTD is the ower of LPAV and APD enter PD mode, RTD need poweroff LDO1 and BUCK3
-             *  otherwise APD side is responsible to control them in DPD mode
-             */
-            srtm_procedure_t proc = SRTM_Procedure_Create(APP_SRTM_SetLPAV, (void *)AD_PD, NULL);
-
-            assert(proc);
-            SRTM_Dispatcher_PostProc(disp, proc);
         }
         AD_WillEnterMode = AD_ACT;
     }
@@ -1993,7 +1492,6 @@ static void APP_SRTM_InitLfclService(void)
 static void APP_SRTM_InitServices(void)
 {
     APP_SRTM_InitI2CService();
-    APP_SRTM_InitAudioService();
     APP_SRTM_InitIoKeyService();
     APP_SRTM_InitPwmService();
     APP_SRTM_InitAdcService();
@@ -2264,7 +1762,6 @@ void APP_SRTM_Suspend(void)
 void APP_SRTM_Resume(bool resume)
 {
     APP_SRTM_InitI2CDevice();
-    APP_SRTM_InitAudioDevice();
     /*
      * IO has restored in APP_Resume(), so don't need init io again in here.
      * For RTD Power Down Mode(Wakeup through WUU), it's okay to initialize io again(use WUU to wakeup cortex-M33, the

@@ -44,9 +44,6 @@ typedef enum
     APP_SRTM_StateShutdown,
 } app_srtm_state_t;
 
-#define APP_SRTM_SAI      (SAI0)
-#define APP_SRTM_SAI_IRQn SAI0_IRQn
-
 #define APP_MS2TICK(ms)       ((ms + portTICK_PERIOD_MS - 1) / portTICK_PERIOD_MS)
 #define APP_DMA_IRQN(channel) (IRQn_Type)((uint32_t)DMA0_0_IRQn + channel)
 
@@ -56,9 +53,6 @@ typedef enum
 
 /* IRQ handler priority definition, bigger number stands for lower priority */
 #define APP_LPI2C_IRQ_PRIO      (5U)
-#define APP_SAI_TX_DMA_IRQ_PRIO (5U)
-#define APP_SAI_RX_DMA_IRQ_PRIO (5U)
-#define APP_SAI_IRQ_PRIO        (5U)
 #define APP_GPIO_IRQ_PRIO       (5U)
 #define APP_WUU_IRQ_PRIO        (5U)
 #define APP_CMC1_IRQ_PRIO       (5U)
@@ -77,7 +71,6 @@ typedef enum
 #define RPMSG_LITE_SRTM_LINK_ID    (RL_PLATFORM_IMX8ULP_M33_A35_SRTM_LINK_ID)
 
 #define APP_SRTM_I2C_CHANNEL_NAME    "rpmsg-i2c-channel"
-#define APP_SRTM_AUDIO_CHANNEL_NAME  "rpmsg-audio-channel"
 #define APP_SRTM_IO_CHANNEL_NAME     "rpmsg-io-channel"
 #define APP_SRTM_PWM_CHANNEL_NAME    "rpmsg-pwm-channel"
 #define APP_SRTM_ADC_CHANNEL_NAME    "rpmsg-adc-channel"
@@ -94,10 +87,6 @@ typedef enum
 #define I2C_SOURCE_CLOCK_FREQ_LPI2C1 CLOCK_GetIpFreq(kCLOCK_Lpi2c1)
 
 #define I2C_SWITCH_NONE 1
-
-/* Audio service */
-#define APP_SAI_TX_DMA_CHANNEL (16U)
-#define APP_SAI_RX_DMA_CHANNEL (17U)
 
 /* WUU module index */
 #define WUU_MODULE_LPTMR0 (0U)
@@ -187,11 +176,6 @@ void APP_SRTM_ClrWakeupModule(uint32_t module, uint16_t event);
 void APP_SRTM_Suspend(void);
 void APP_SRTM_Resume(bool resume);
 
-/* Enable/Disable LPAV DDR function*/
-void APP_SRTM_PreCopyDRAMCallback(void);
-void APP_SRTM_PostCopyDRAMCallback(void);
-void APP_SRTM_DisableLPAV(void);
-void APP_SRTM_EnableLPAV(void);
 bool APP_SRTM_GetSupportDSLForApd(void);
 void APP_SRTM_SetSupportDSLForApd(bool support);
 #if defined(__cplusplus)

@@ -1409,7 +1409,6 @@ int main(void)
     CLOCK_SetIpSrcDiv(kCLOCK_Lpi2c1, kCLOCK_Pcc1BusIpSrcCm33Bus, 0U, 0U);
     //CLOCK_SetIpSrcDiv(kCLOCK_Lpi2c2, kCLOCK_Pcc2BusIpSrcFusionDspBus, 0U, 0U); // Secure Element
     /* Use Pll1Pfd2Div clock source 12.288MHz. */
-    CLOCK_SetIpSrc(kCLOCK_Sai0, kCLOCK_Cm33SaiClkSrcPll1Pfd2Div);
     CLOCK_SetIpSrc(kCLOCK_Lpuart0, kCLOCK_Pcc1BusIpSrcSysOscDiv2);
 
     CLOCK_EnableClock(kCLOCK_Dma0Ch16);
@@ -1420,7 +1419,6 @@ int main(void)
     CLOCK_EnableClock(kCLOCK_Wuu0);
     CLOCK_EnableClock(kCLOCK_Bbnsm);
 
-    RESET_PeripheralReset(kRESET_Sai0);
     RESET_PeripheralReset(kRESET_Lpi2c0);
     RESET_PeripheralReset(kRESET_Lpi2c1);
     //RESET_PeripheralReset(kRESET_Lpi2c2); // Secure Element

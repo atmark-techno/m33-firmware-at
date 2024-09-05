@@ -49,12 +49,10 @@ typedef StaticSemaphore_t srtm_mutex_buf_t;
 
 /* Switch to disable XXXXX service debugging messages. */
 #define SRTM_I2C_SERVICE_DEBUG_OFF    (0)
-#define SRTM_AUDIO_SERVICE_DEBUG_OFF  (0)
 #define SRTM_IO_SERVICE_DEBUG_OFF     (0)
 #define SRTM_LFCL_SERVICE_DEBUG_OFF   (0)
 #define SRTM_PWM_SERVICE_DEBUG_OFF    (0)
 #define SRTM_RTC_SERVICE_DEBUG_OFF    (0)
-#define SRTM_AUDIO_SERVICE_DEBUG_OFF  (0)
 #define SRTM_PMIC_SERVICE_DEBUG_OFF   (0)
 
 #endif /* SDK_OS_FREE_RTOS */
