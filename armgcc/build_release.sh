@@ -1,5 +1,9 @@
-#!/bin/sh
-set -x
+#!/bin/bash
+
+# for `make | tee`
+set -o pipefail
+set -xe
+
 workdir="$(dirname $(readlink -f $0))"
 
 cd "$workdir" || exit 1
@@ -7,7 +11,7 @@ if [ -d "CMakeFiles" ];then rm -rf CMakeFiles; fi
 if [ -f "Makefile" ];then rm -f Makefile; fi
 if [ -f "cmake_install.cmake" ];then rm -f cmake_install.cmake; fi
 if [ -f "CMakeCache.txt" ];then rm -f CMakeCache.txt; fi
-cmake -DCMAKE_TOOLCHAIN_FILE="${SdkRootDirPath}/core/tools/cmake_toolchain_files/armgcc.cmake" -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=release  . || exit
+cmake -DCMAKE_TOOLCHAIN_FILE="${SdkRootDirPath}/core/tools/cmake_toolchain_files/armgcc.cmake" -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=release
 
 [ -e release/sdk20-app.bin ] && mv release/sdk20-app.bin release/sdk20-app.bin.old
 make -j 2>&1 | tee build_log.txt
