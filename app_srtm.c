@@ -619,7 +619,8 @@ static void APP_HandleGPIOHander(uint8_t gpioIdx)
     RGPIO_Type *gpio      = gpios[gpioIdx];
     uint32_t flags        = RGPIO_GetPinsInterruptFlags(gpio, APP_GPIO_INT_SEL);
     uint16_t ioId, ioIdx;
-    uint8_t i, idx;
+    uint8_t i;
+    uint32_t idx;
 
     for (i = 0; i < APP_IO_PINS_PER_CHIP; i++) {
         idx = 1U << i;
