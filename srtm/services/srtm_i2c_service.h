@@ -164,18 +164,6 @@ void SRTM_I2CService_Destroy(srtm_service_t service);
  * @param core Identify which core is to be reset.
  */
 void SRTM_I2CService_Reset(srtm_service_t service, srtm_peercore_t core);
-
-/*!
- * @brief Perfrom a local read of I2C bus
- */
-srtm_status_t SRTM_I2C_RequestBusRead(
-    srtm_service_t service, uint8_t busID, uint16_t slaveAddr, uint8_t *buf, uint16_t len);
-
-/*!
- * @brief Perfrom a local write of I2C bus
- */
-srtm_status_t SRTM_I2C_RequestBusWrite(
-    srtm_service_t service, uint8_t busID, uint16_t slaveAddr, uint8_t *buf, uint16_t len, uint8_t needStop);
 #ifdef __cplusplus
 }
 #endif

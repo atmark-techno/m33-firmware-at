@@ -1896,23 +1896,6 @@ static srtm_status_t APP_SRTM_I2C_Read(srtm_i2c_adapter_t adapter,
     return (retVal == kStatus_Success) ? SRTM_Status_Success : SRTM_Status_TransferFailed;
 }
 
-uint8_t APP_Read_I2C_Register(uint8_t busID, uint16_t slaveAddr, uint8_t regIndex)
-{
-    uint8_t value;
-    SRTM_I2C_RequestBusWrite(i2cService, busID, slaveAddr, &regIndex, 1, 0);
-    SRTM_I2C_RequestBusRead(i2cService, busID, slaveAddr, &value, 1);
-    return value;
-}
-
-uint8_t APP_Write_I2C_Register(uint8_t busID, uint16_t slaveAddr, uint8_t regIndex, uint8_t value)
-{
-    uint8_t write_content[2];
-    write_content[0] = regIndex;
-    write_content[1] = value;
-    SRTM_I2C_RequestBusWrite(i2cService, busID, slaveAddr, write_content, 2, 1);
-    return value;
-}
-
 static srtm_status_t APP_SRTM_ADC_Get(struct adc_handle *handle,
                                       size_t idx,
                                       uint16_t *value)
