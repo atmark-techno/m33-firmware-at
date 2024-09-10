@@ -65,7 +65,7 @@ typedef struct _srtm_i2c_payload *srtm_i2c_payload_t;
 typedef enum
 {
     SRTM_I2C_TYPE_LPI2C = 0U,
-    SRTM_I2C_TYPE_I2C
+    SRTM_I2C_TYPE_FLEXIO_I2C,
 } srtm_i2c_type_t;
 
 typedef enum

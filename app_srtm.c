@@ -37,6 +37,7 @@
 #include "fsl_bbnsm.h"
 #include "fsl_sentinel.h"
 #include "fsl_lpadc.h"
+#include "fsl_flexio_i2c_master.h"
 #include "fsl_reset.h"
 #include "fsl_wdog32.h"
 AT_QUICKACCESS_SECTION_DATA(static wdog32_config_t config);
@@ -235,6 +236,17 @@ static struct _srtm_adc_adapter adcAdapter = {
     .handles_count = sizeof(adcHandles)/sizeof(*adcHandles),
 };
 
+// XXX same as flexio_i2c_read_accel_value_transfer.c, 100k
+#define FLEXIO_I2C_FREQ 100000
+#define FLEXIO_CLOCK_FREQUENCY CLOCK_GetIpFreq(kCLOCK_Flexio0)
+FLEXIO_I2C_Type flexioI2cDev = {
+    .flexioBase = FLEXIO0,
+    .SCLPinIndex = 20, // PTB4
+    .SDAPinIndex = 21, // PTB5
+    .shifterIndex = { 0, 1, },
+    .timerIndex = { 0, 1, 2, },
+};
+
 static struct _i2c_bus platform_i2c_buses[] = {
     {.bus_id         = 0,
      .base_addr      = LPI2C0_BASE,
@@ -244,6 +256,12 @@ static struct _i2c_bus platform_i2c_buses[] = {
     {.bus_id         = 1,
      .base_addr      = LPI2C1_BASE,
      .type           = SRTM_I2C_TYPE_LPI2C,
+     .switch_idx     = I2C_SWITCH_NONE,
+     .switch_channel = SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED},
+    // LPI2C2 as flexio
+    {.bus_id         = 2,
+     .base_addr      = (uint32_t)&flexioI2cDev,
+     .type           = SRTM_I2C_TYPE_FLEXIO_I2C,
      .switch_idx     = I2C_SWITCH_NONE,
      .switch_channel = SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED},
 };
@@ -1156,6 +1174,16 @@ static void APP_SRTM_InitI2CDevice(void)
     LPI2C_MasterInit(LPI2C0, &masterConfig, I2C_SOURCE_CLOCK_FREQ_LPI2C0);
     masterConfig.baudRate_Hz = LPI2C1_BAUDRATE;
     LPI2C_MasterInit(LPI2C1, &masterConfig, I2C_SOURCE_CLOCK_FREQ_LPI2C1);
+
+    // flexio i2c
+    flexio_i2c_master_config_t flexConfig;
+
+    CLOCK_SetIpSrcDiv(kCLOCK_Flexio0, kCLOCK_Pcc0BusIpSrcCm33Bus, 0U, 0U);
+    RESET_PeripheralReset(kRESET_Flexio0);
+
+    FLEXIO_I2C_MasterGetDefaultConfig(&flexConfig);
+    flexConfig.baudRate_Bps = FLEXIO_I2C_FREQ;
+    FLEXIO_I2C_MasterInit(&flexioI2cDev, &flexConfig, FLEXIO_CLOCK_FREQUENCY);
 }
 
 static void APP_SRTM_InitI2CService(void)
@@ -1805,12 +1833,26 @@ static srtm_status_t APP_SRTM_I2C_Write(srtm_i2c_adapter_t adapter,
                                         uint16_t flags)
 {
     status_t retVal   = kStatus_Fail;
-    uint32_t needStop = (flags & SRTM_I2C_FLAG_NEED_STOP) ? kLPI2C_TransferDefaultFlag : kLPI2C_TransferNoStopFlag;
+    uint32_t needStop;
 
     switch (type)
     {
         case SRTM_I2C_TYPE_LPI2C:
+            needStop = (flags & SRTM_I2C_FLAG_NEED_STOP) ? kLPI2C_TransferDefaultFlag : kLPI2C_TransferNoStopFlag;
             retVal = BOARD_LPI2C_Send((LPI2C_Type *)base_addr, slaveAddr, 0, 0, buf, len, needStop);
+            break;
+        case SRTM_I2C_TYPE_FLEXIO_I2C:
+            {
+                // flexio_i2c has no NoStop flag... print error if used?
+                flexio_i2c_master_transfer_t xfer = {
+                    .direction = kFLEXIO_I2C_Write,
+                    .slaveAddress = slaveAddr,
+                    // subaddress, subAddressSize, flags = 0,
+                    .data = buf,
+                    .dataSize = len,
+                };
+                retVal = FLEXIO_I2C_MasterTransferBlocking((FLEXIO_I2C_Type *)base_addr, &xfer);
+            }
             break;
         default:
             break;
@@ -1827,12 +1869,26 @@ static srtm_status_t APP_SRTM_I2C_Read(srtm_i2c_adapter_t adapter,
                                        uint16_t flags)
 {
     status_t retVal   = kStatus_Fail;
-    uint32_t needStop = (flags & SRTM_I2C_FLAG_NEED_STOP) ? kLPI2C_TransferDefaultFlag : kLPI2C_TransferNoStopFlag;
+    uint32_t needStop;
 
     switch (type)
     {
         case SRTM_I2C_TYPE_LPI2C:
+            needStop = (flags & SRTM_I2C_FLAG_NEED_STOP) ? kLPI2C_TransferDefaultFlag : kLPI2C_TransferNoStopFlag;
             retVal = BOARD_LPI2C_Receive((LPI2C_Type *)base_addr, slaveAddr, 0, 0, buf, len, needStop);
+            break;
+        case SRTM_I2C_TYPE_FLEXIO_I2C:
+            {
+                // flexio_i2c has no NoStop flag... print error if used?
+                flexio_i2c_master_transfer_t xfer = {
+                    .direction = kFLEXIO_I2C_Read,
+                    .slaveAddress = slaveAddr,
+                    // subaddress, subAddressSize, flags = 0,
+                    .data = buf,
+                    .dataSize = len,
+                };
+                retVal = FLEXIO_I2C_MasterTransferBlocking((FLEXIO_I2C_Type *)base_addr, &xfer);
+            }
             break;
         default:
             break;

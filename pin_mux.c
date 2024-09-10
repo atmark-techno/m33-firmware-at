@@ -129,6 +129,9 @@ void BOARD_InitPmicI2cPins(void) {                         /*!< Function assigne
     IOMUXC_SetPinMux(IOMUXC_PTB11_PMIC0_SCL, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTB11_PMIC0_SCL,
                         IOMUXC_PCR_ODE_MASK);
+
+    IOMUXC_SetPinMux(IOMUXC_PTB4_FXIO0_D20, 0U);
+    IOMUXC_SetPinMux(IOMUXC_PTB5_FXIO0_D21, 0U);
 }
 
 /* FUNCTION ************************************************************************************************************
