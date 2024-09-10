@@ -56,7 +56,7 @@ SRTM_PACKED_BEGIN struct _srtm_i2c_payload
     uint16_t slaveAddr;
     uint16_t flags;
     uint16_t len;
-    uint8_t data[1]; /* data size is decided by uint16_t len */
+    uint8_t data[0]; /* data size is decided by uint16_t len */
 } SRTM_PACKED_END;
 SRTM_ANON_DEC_END
 

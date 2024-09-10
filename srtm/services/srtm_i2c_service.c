@@ -199,11 +199,11 @@ static srtm_status_t SRTM_I2CService_Request(srtm_service_t service, srtm_reques
     payloadLen = SRTM_CommMessage_GetPayloadLen(request);
     (void)payloadLen; /* try to fix warning: variable 'payloadLen' set but not used */
     assert(i2cReq);
-    assert((uint32_t)(i2cReq->len + sizeof(struct _srtm_i2c_payload) - sizeof(i2cReq->data[0])) <= payloadLen);
+    assert((uint32_t)(i2cReq->len + sizeof(struct _srtm_i2c_payload)) <= payloadLen);
 
     response =
         SRTM_Response_Create(channel, SRTM_I2C_CATEGORY, SRTM_I2C_VERSION, command,
-                             (uint16_t)((sizeof(struct _srtm_i2c_payload) - sizeof(i2cReq->data[0])) + i2cReq->len));
+                             (uint16_t)((sizeof(struct _srtm_i2c_payload)) + i2cReq->len));
     if (response == NULL)
     {
         return SRTM_Status_OutOfMemory;
@@ -223,7 +223,7 @@ static srtm_status_t SRTM_I2CService_Request(srtm_service_t service, srtm_reques
                            "SRTM receive I2C request:cmd=%x, busID %d, slaveAddr 0x%x!, data %d bytes\r\n", command,
                            i2cReq->busID, i2cReq->slaveAddr, i2cReq->len);
         (void)memcpy(i2cResp, i2cReq,
-                     (sizeof(struct _srtm_i2c_payload) - sizeof(i2cReq->data[0]) + (size_t)i2cReq->len));
+                     (sizeof(struct _srtm_i2c_payload) + (size_t)i2cReq->len));
 
         switch (command)
         {
