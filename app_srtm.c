@@ -39,6 +39,8 @@
 #include "fsl_sentinel.h"
 #include "fsl_lpadc.h"
 #include "fsl_reset.h"
+#include "fsl_wdog32.h"
+AT_QUICKACCESS_SECTION_DATA(static wdog32_config_t config);
 
 /*******************************************************************************
  * Definitions
@@ -1928,6 +1930,16 @@ static srtm_status_t APP_SRTM_LfclEventHandler(
             /* Probably also stops RTC/alarm unless enabled with BBNSM_BBNSM_CTRL_RTC_EN/BBNSM_BBNSM_CTRL_TA_EN
              * We use external RTC so this is ok */
             BBNSM->BBNSM_CTRL = BBNSM_BBNSM_CTRL_DP_EN(1)|BBNSM_BBNSM_CTRL_TOSP(1); /* 0x03000000 */
+            break;
+        case SRTM_Lfcl_Event_RebootReq:
+            PRINTF("\r\nAD is entering reboot.\r\nTriggering M33 reset.\r\n\n");
+            /* If watchdog test is enabled, setting TOVAL=0 will always generates a reset. */
+            WDOG32_GetDefaultConfig(&config);
+            config.testMode = kWDOG32_LowByteTest;
+            config.timeoutValue = 0;
+            WDOG32_Init(WDOG1, &config);
+            SDK_DelayAtLeastUs(1000,SDK_DEVICE_MAXIMUM_CPU_CLOCK_FREQUENCY);
+            PRINTF("Error occured while trying to reset M33\n\r"); /* process should not reach here */
             break;
         case SRTM_Lfcl_Event_SuspendReq: /* Notify M Core that Application Domain will enter Power Down Mode */
             /* Save context(such as: MU0_MUA[RCR]) */
