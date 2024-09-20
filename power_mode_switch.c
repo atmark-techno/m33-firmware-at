@@ -256,6 +256,7 @@ static struct rpmsg_lite_endpoint *volatile s_rpmsgEndpoint;
 static volatile rpmsg_queue_handle s_rpmsgQueueHandle;
 static volatile uint32_t s_rpmsgRemoteAddr;
 static volatile bool s_rs485Inited;
+static volatile bool s_rs485Suspend;
 
 static TaskHandle_t s_rs485InitTaskHandle;
 static TaskHandle_t s_rs485rxTaskHandle;
@@ -510,12 +511,28 @@ void APP_DisableGPIO(void)
     }
 }
 
+void APP_Rx485Init(void)
+{
+    s_rs485LpuartConfig.srcclk = RS485_LPUART_CLK_FREQ;
+    LPUART_RTOS_Init(&s_rs485LpuartRtosHandle, &s_rs485LpuartHandle, &s_rs485LpuartConfig);
+    LPUART_RTOS_SetRxTimeout(&s_rs485LpuartRtosHandle, 1, 0);
+}
+
+void APP_Rx485Deinit(void)
+{
+    if (s_rs485LpuartRtosHandle.base)
+        LPUART_RTOS_Deinit(&s_rs485LpuartRtosHandle);
+}
+
 void APP_PowerPreSwitchHook(lpm_rtd_power_mode_e targetMode)
 {
     uint32_t setting;
 
     if ((LPM_PowerModeActive != targetMode))
     {
+        /* At this point the APD is sleeping.RS485 communication is no longer in progress. */
+        APP_Rx485Deinit();
+
         /* Wait for debug console output finished. */
         while (!(kLPUART_TransmissionCompleteFlag & LPUART_GetStatusFlags((LPUART_Type *)BOARD_DEBUG_UART_BASEADDR)))
         {
@@ -572,6 +589,8 @@ void APP_PowerPostSwitchHook(lpm_rtd_power_mode_e targetMode, bool result)
 
         BOARD_InitClock(); /* initialize system osc for uart(using osc as clock source) */
         BOARD_InitDebugConsole();
+
+        APP_Rx485Init();
     }
     PRINTF("== Power switch %s ==\r\n", result ? "OK" : "FAIL");
     /* Reinitialize TRDC */
@@ -977,10 +996,23 @@ static void APP_CreateTask(void)
         xTaskCreate(Rs485InitTask, "RS485 Init Task", 256U, NULL, tskIDLE_PRIORITY + 1U, &s_rs485InitTaskHandle);
 
     if (s_rs485rxTaskHandle == NULL)
-        xTaskCreate(Rs485RxTask, "RS485 Rx Task", 256U, NULL, tskIDLE_PRIORITY + 1, &s_rs485rxTaskHandle);
+        xTaskCreate(Rs485RxTask, "RS485 Rx Task", 256U, NULL, tskIDLE_PRIORITY + 1U, &s_rs485rxTaskHandle);
 
     if (s_rs485txTaskHandle == NULL)
-        xTaskCreate(Rs485TxTask, "RS485 Tx Task", 256U, NULL, tskIDLE_PRIORITY + 1, &s_rs485txTaskHandle);
+        xTaskCreate(Rs485TxTask, "RS485 Tx Task", 256U, NULL, tskIDLE_PRIORITY + 1U, &s_rs485txTaskHandle);
+}
+
+static void APP_SuspendTask(void)
+{
+    s_rs485Suspend = true;
+}
+
+static void APP_ResumeTask(void)
+{
+    s_rs485Suspend = false;
+
+    vTaskResume(s_rs485rxTaskHandle);
+    vTaskResume(s_rs485txTaskHandle);
 }
 
 static void APP_DestroyTask(void)
@@ -1156,11 +1188,13 @@ void PowerModeSwitchTask(void *pvParameters)
             }
             else /* Idle task will handle the low power state. */
             {
+                APP_SuspendTask();
                 APP_GetWakeupConfig();
                 APP_SetWakeupConfig(targetPowerMode);
                 xSemaphoreTake(s_wakeupSig, portMAX_DELAY);
                 /* The call might be blocked by SRTM dispatcher task. Must be called after power mode reset. */
                 APP_ClearWakeupConfig(targetPowerMode);
+                APP_ResumeTask();
             }
         }
         else if ('W' == ch)
@@ -1269,6 +1303,9 @@ static void Rs485RxTask(void *pvParameters)
 
         do {
             LPUART_RTOS_Receive(&s_rs485LpuartRtosHandle, msg->buf, RPMSG_MAX_SIZE, &length);
+
+            if (s_rs485Suspend)
+                vTaskSuspend(NULL);
         } while (length == 0);
 
         msg->header.category = APP_RPMSG_TTY_CATEGORY;
@@ -1304,6 +1341,9 @@ static void Rs485TxTask(void *pvParameters)
             rpmsg_queue_recv_nocopy(s_rpmsgInstance, s_rpmsgQueueHandle, (uint32_t *)&s_rpmsgRemoteAddr, (char **)&msg, &length, RL_BLOCK);
         if (result != 0)
             assert(false);
+
+        if (s_rs485Suspend)
+            vTaskSuspend(NULL);
 
 	switch (msg->header.command) {
 	case APP_RPMSG_COMMAND_PAYLOAD:
@@ -1480,9 +1520,7 @@ int main(void)
     (void)MCMGR_Init();
 #endif /* MCMGR_USED */
 
-    s_rs485LpuartConfig.srcclk = RS485_LPUART_CLK_FREQ;
-    LPUART_RTOS_Init(&s_rs485LpuartRtosHandle, &s_rs485LpuartHandle, &s_rs485LpuartConfig);
-    LPUART_RTOS_SetRxTimeout(&s_rs485LpuartRtosHandle, 1, 0);
+    APP_Rx485Init();
 
     APP_CreateTask();
 
