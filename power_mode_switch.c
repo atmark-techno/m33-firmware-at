@@ -272,6 +272,11 @@ extern pca9460_ldo1_cfg_t ldo1_cfg;
 static uint32_t iomuxBackup[25 + 16 + 24]; /* Backup 25 PTA, 16 PTB and 24 PTC IOMUX registers */
 static uint32_t gpioICRBackup[25 + 16 + 24];
 
+typedef struct {
+    uint32_t pdor;
+    uint32_t pddr;
+} gpioOutputConfig_t;
+static gpioOutputConfig_t gpioOutputBackup[3]; /* Backup PTA, PTB and PTC Output-related GPIO registers */
 
 static void APP_Suspend(void)
 {
@@ -315,6 +320,8 @@ static void APP_Suspend(void)
         }
         backupIndex++;
     }
+    gpioOutputBackup[0].pdor = GPIOA->PDOR;
+    gpioOutputBackup[0].pddr = GPIOA->PDDR;
 
     /* Backup PTB IOMUXC and GPIOB ICR registers then disable */
     for (i = 0; i <= 15; i++)
@@ -386,6 +393,8 @@ static void APP_Suspend(void)
         }
         backupIndex++;
     }
+    gpioOutputBackup[1].pdor = GPIOB->PDOR;
+    gpioOutputBackup[1].pddr = GPIOB->PDDR;
 
     /* Backup PTC IOMUXC and GPIOC ICR registers then disable */
     for (i = 0; i <= 23; i++)
@@ -404,6 +413,8 @@ static void APP_Suspend(void)
 
         backupIndex++;
     }
+    gpioOutputBackup[2].pdor = GPIOC->PDOR;
+    gpioOutputBackup[2].pddr = GPIOC->PDDR;
 
     /* Cleare any potential interrupts before enter Power Down */
     WUU0->PF = WUU0->PF;
@@ -420,6 +431,8 @@ static void APP_Resume(bool resume)
     backupIndex = 0;
 
     /* Restore PTA IOMUXC and GPIOA ICR registers */
+    GPIOA->PDOR = gpioOutputBackup[0].pdor;
+    GPIOA->PDDR = gpioOutputBackup[0].pddr;
     for (i = 0; i <= 24; i++)
     {
         IOMUXC0->PCR0_IOMUXCARRAY0[i] = iomuxBackup[backupIndex];
@@ -428,6 +441,8 @@ static void APP_Resume(bool resume)
     }
 
     /* Restore PTB IOMUXC and GPIOB ICR registers */
+    GPIOB->PDOR = gpioOutputBackup[1].pdor;
+    GPIOB->PDDR = gpioOutputBackup[1].pddr;
     for (i = 0; i <= 15; i++)
     {
         IOMUXC0->PCR0_IOMUXCARRAY1[i] = iomuxBackup[backupIndex];
@@ -436,6 +451,8 @@ static void APP_Resume(bool resume)
     }
 
     /* Restore PTC IOMUXC and GPIOC ICR registers */
+    GPIOC->PDOR = gpioOutputBackup[2].pdor;
+    GPIOC->PDDR = gpioOutputBackup[2].pddr;
     for (i = 0; i <= 23; i++)
     {
         IOMUXC0->PCR0_IOMUXCARRAY2[i] = iomuxBackup[backupIndex];
