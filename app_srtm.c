@@ -236,8 +236,8 @@ static struct _srtm_adc_adapter adcAdapter = {
     .handles_count = sizeof(adcHandles)/sizeof(*adcHandles),
 };
 
-// XXX same as flexio_i2c_read_accel_value_transfer.c, 100k
-#define FLEXIO_I2C_FREQ 100000
+// uses maximum I2C speed from fastmode, 400k
+#define FLEXIO_I2C_FREQ 400000
 #define FLEXIO_CLOCK_FREQUENCY CLOCK_GetIpFreq(kCLOCK_Flexio0)
 FLEXIO_I2C_Type flexioI2cDev = {
     .flexioBase = FLEXIO0,
