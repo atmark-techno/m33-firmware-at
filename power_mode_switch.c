@@ -516,6 +516,7 @@ void APP_Rx485Init(void)
     s_rs485LpuartConfig.srcclk = RS485_LPUART_CLK_FREQ;
     LPUART_RTOS_Init(&s_rs485LpuartRtosHandle, &s_rs485LpuartHandle, &s_rs485LpuartConfig);
     LPUART_RTOS_SetRxTimeout(&s_rs485LpuartRtosHandle, 1, 0);
+    LPUART_RTOS_SetTxTimeout(&s_rs485LpuartRtosHandle, 0, 1);
 }
 
 void APP_Rx485Deinit(void)
@@ -1294,7 +1295,7 @@ static void Rs485RxTask(void *pvParameters)
 
     while (!s_rs485Inited);
 
-    vTaskPrioritySet(xTaskGetCurrentTaskHandle(), configMAX_PRIORITIES - 1);
+    vTaskPrioritySet(xTaskGetCurrentTaskHandle(), configTIMER_TASK_PRIORITY - 1);
 
     for (;;)
     {
@@ -1332,7 +1333,7 @@ static void Rs485TxTask(void *pvParameters)
 
     while (!s_rs485Inited);
 
-    vTaskPrioritySet(xTaskGetCurrentTaskHandle(), configMAX_PRIORITIES - 1);
+    vTaskPrioritySet(xTaskGetCurrentTaskHandle(), configTIMER_TASK_PRIORITY - 1);
 
     for (;;)
     {
