@@ -23,6 +23,7 @@
 #include "srtm_rtc_service.h"
 #include "srtm_rtc_adapter.h"
 #include "srtm_adc_service.h"
+#include "srtm_wdog_service.h"
 
 #include "app_srtm.h"
 #include "board.h"
@@ -193,6 +194,7 @@ static srtm_service_t rtcService;
 static srtm_rtc_adapter_t rtcAdapter;
 static srtm_service_t i2cService;
 static srtm_service_t ioService;
+static srtm_service_t wdogService;
 static SemaphoreHandle_t monSig;
 static struct rpmsg_lite_instance *rpmsgHandle;
 static app_rpmsg_monitor_t rpmsgMonitor;
@@ -997,6 +999,10 @@ static void APP_SRTM_Linkup(void)
     chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
     SRTM_PeerCore_AddChannel(core, chan);
 
+    rpmsgConfig.epName = APP_SRTM_WDOG_CHANNEL_NAME;
+    chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
+    SRTM_PeerCore_AddChannel(core, chan);
+
     SRTM_Dispatcher_AddPeerCore(disp, core);
 }
 
@@ -1441,6 +1447,9 @@ static srtm_status_t APP_SRTM_LfclEventHandler(
                 config.testMode = kWDOG32_LowByteTest;
                 /* If watchdog test is enabled, setting TOVAL=0 will generates a reset immediately */
                 config.timeoutValue = 0;
+                /* disable before reconfiguring if required */
+                if (WDOG32_GetStatusFlags(WDOG1) & kWDOG32_RunningFlag)
+                    WDOG32_Deinit(WDOG1);
                 WDOG32_Init(WDOG1, &config);
             }
             SDK_DelayAtLeastUs(1000,SDK_DEVICE_MAXIMUM_CPU_CLOCK_FREQUENCY);
@@ -1502,6 +1511,56 @@ static void APP_SRTM_InitLfclService(void)
     SRTM_Dispatcher_RegisterService(disp, service);
 }
 
+void WDOG1_IRQHandler(void)
+{
+    PRINTF("WATCHDOG IRQ!\r\n");
+    SRTM_WdogService_NotifyPreTimeout(wdogService);
+    WDOG32_ClearStatusFlags(WDOG1, kWDOG32_InterruptFlag);
+}
+
+static srtm_status_t wdog_enable(bool enabled, uint16_t timeout)
+{
+
+    bool is_running = WDOG32_GetStatusFlags(WDOG1) & kWDOG32_RunningFlag;
+    PRINTF("Watchdog %s (timeout %d)\r\n", enabled ? "start" : "stop",
+           timeout);
+
+    /* timeout cannot be changed while running, always disable first */
+    if (is_running) {
+        WDOG32_Deinit(WDOG1);
+        /* wait for deinit to actually be effective */
+        while (0U == ((WDOG1->CS) & WDOG_CS_RCS_MASK));
+    }
+
+    if (enabled) {
+        wdog32_config_t config;
+        WDOG32_GetDefaultConfig(&config);
+
+        config.timeoutValue = timeout;
+        /* get a warning before reset (log message) */
+        config.enableInterrupt = true;
+
+        WDOG32_Init(WDOG1, &config);
+        EnableIRQ(WDOG1_IRQn);
+    }
+
+    return SRTM_Status_Success;
+}
+
+static srtm_status_t wdog_ping(void)
+{
+    PRINTF("watchdog ping\r\n");
+    WDOG32_Refresh(WDOG1);
+    return SRTM_Status_Success;
+}
+
+static void APP_SRTM_InitWdogService(void)
+{
+    wdogService = SRTM_WdogService_Create(wdog_enable, wdog_ping);
+    SRTM_Dispatcher_RegisterService(disp, wdogService);
+}
+
+
 static void APP_SRTM_InitServices(void)
 {
     APP_SRTM_InitI2CService();
@@ -1510,6 +1569,7 @@ static void APP_SRTM_InitServices(void)
     APP_SRTM_InitAdcService();
     APP_SRTM_InitRtcService();
     APP_SRTM_InitLfclService();
+    APP_SRTM_InitWdogService();
 }
 
 void APP_PowerOffCA35(void)

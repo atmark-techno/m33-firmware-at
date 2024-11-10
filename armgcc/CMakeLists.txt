@@ -87,6 +87,8 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../srtm/services/srtm_rtc_adapter.c"
 "${ProjDirPath}/../srtm/services/srtm_lfcl_service.h"
 "${ProjDirPath}/../srtm/services/srtm_lfcl_service.c"
+"${ProjDirPath}/../srtm/services/srtm_wdog_service.h"
+"${ProjDirPath}/../srtm/services/srtm_wdog_service.c"
 )
 
 target_include_directories(${MCUX_SDK_PROJECT_NAME} PRIVATE
