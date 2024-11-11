@@ -904,7 +904,6 @@ AT_QUICKACCESS_SECTION_CODE(bool LPM_SystemDeepPowerDown(void))
 {
     uint32_t tempLUT[4] = {0};
     status_t status     = kStatus_Fail;
-    int i               = 0;
 
     /* Unlock and disabled in powerdown and deep sleep */
     CGC_RTD->LPOSCCSR &= ~(1 << 23);
