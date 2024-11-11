@@ -30,9 +30,9 @@
 /* Protocol definition */
 #define SRTM_IO_CATEGORY (0x5U)
 
-#define SRTM_IO_VERSION (0x0200U)
+#define SRTM_IO_VERSION (0x0300U)
 
-#define SRTM_IO_RETURN_CODE_SUCEESS     (0x0U)
+#define SRTM_IO_RETURN_CODE_SUCCESS     (0x0U)
 #define SRTM_IO_RETURN_CODE_FAIL        (0x1U)
 #define SRTM_IO_RETURN_CODE_UNSUPPORTED (0x2U)
 
@@ -59,6 +59,7 @@ typedef struct _srtm_io_service
 
 SRTM_PACKED_BEGIN struct _srtm_io_payload
 {
+    uint8_t request_id;
     uint8_t pin_idx;
     uint8_t port_idx;
     union {
@@ -138,6 +139,7 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
     uint8_t command, retCode;
     struct _srtm_io_payload *payload;
     srtm_response_t response;
+    uint8_t request_id = 0;
     uint16_t ioId = 0U;
     uint32_t len;
     srtm_io_value_t value = SRTM_IoValueLow;
@@ -159,90 +161,88 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
         SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: format error, len %d (want %d)!\r\n",
                            __func__, len, sizeof(*payload));
         retCode = SRTM_IO_RETURN_CODE_UNSUPPORTED;
+        goto out;
     }
-    else
+    request_id = payload->request_id;
+    ioId = (payload->port_idx << 8) | payload->pin_idx;
+    pin  = SRTM_IoService_FindPin(handle, ioId);
+    if (!pin)
     {
-        ioId = (payload->port_idx << 8) | payload->pin_idx;
-        pin  = SRTM_IoService_FindPin(handle, ioId);
-        if (!pin)
-        {
-            SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Pin 0x%x not registered!\r\n", __func__, ioId);
-            retCode = SRTM_IO_RETURN_CODE_FAIL;
-        }
-        else
-        {
-            /* Record channel for further input event */
-            handle->channel = channel;
-            switch (command)
+        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Pin 0x%x not registered!\r\n", __func__, ioId);
+        retCode = SRTM_IO_RETURN_CODE_FAIL;
+        goto out;
+    }
+    /* Record channel for further input event */
+    handle->channel = channel;
+    switch (command)
+    {
+        case GPIO_RPMSG_INPUT_INIT:
+            if (handle->inputInit != NULL)
             {
-                case GPIO_RPMSG_INPUT_INIT:
-                    if (handle->inputInit != NULL)
-                    {
-                        status = handle->inputInit(service, channel->core, ioId,
-                                                 payload->input_init.event,
-                                                 payload->input_init.wakeup,
-                                                 payload->input_init.pinctrl);
-                        retCode =
-                            status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCEESS : SRTM_IO_RETURN_CODE_FAIL;
-                    }
-                    else
-                    {
-                        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
-                                           "%s: Command input init not allowed!\r\n", __func__);
-                        retCode = SRTM_IO_RETURN_CODE_FAIL;
-                    }
-                    break;
-                case GPIO_RPMSG_OUTPUT_INIT:
-                    if (handle->outputInit != NULL)
-                    {
-                        status = handle->outputInit(service, channel->core, ioId,
-                                payload->output_init.value, payload->output_init.pinctrl);
-                        retCode =
-                            status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCEESS : SRTM_IO_RETURN_CODE_FAIL;
-                    }
-                    else
-                    {
-                        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
-                                           "%s: Command output init not allowed!\r\n", __func__);
-                        retCode = SRTM_IO_RETURN_CODE_FAIL;
-                    }
-                    break;
-                case GPIO_RPMSG_INPUT_GET:
-                    if (handle->inputGet)
-                    {
-                        status = handle->inputGet(service, channel->core, ioId, &value);
-                        retCode =
-                            status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCEESS : SRTM_IO_RETURN_CODE_FAIL;
-                    }
-                    else
-                    {
-                        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Command input get function not registered!\r\n",
-                                           __func__);
-                        retCode = SRTM_IO_RETURN_CODE_FAIL;
-                    }
-                    break;
-                case GPIO_RPMSG_OUTPUT_SET:
-                    if (handle->outputSet != NULL)
-                    {
-                        status = handle->outputSet(service, channel->core, ioId, payload->output_set.value);
-                        retCode =
-                            status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCEESS : SRTM_IO_RETURN_CODE_FAIL;
-                    }
-                    else
-                    {
-                        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
-                                           "%s: Command ouput set not allowed!\r\n", __func__);
-                        retCode = SRTM_IO_RETURN_CODE_FAIL;
-                    }
-                    break;
-                default:
-                    SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: command %d unsupported!\r\n", __func__, command);
-                    retCode = SRTM_IO_RETURN_CODE_UNSUPPORTED;
-                    break;
+                status = handle->inputInit(service, channel->core, ioId,
+                                         payload->input_init.event,
+                                         payload->input_init.wakeup,
+                                         payload->input_init.pinctrl);
+                retCode =
+                    status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCCESS : SRTM_IO_RETURN_CODE_FAIL;
             }
-        }
+            else
+            {
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
+                                   "%s: Command input init not allowed!\r\n", __func__);
+                retCode = SRTM_IO_RETURN_CODE_FAIL;
+            }
+            break;
+        case GPIO_RPMSG_OUTPUT_INIT:
+            if (handle->outputInit != NULL)
+            {
+                status = handle->outputInit(service, channel->core, ioId,
+                        payload->output_init.value, payload->output_init.pinctrl);
+                retCode =
+                    status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCCESS : SRTM_IO_RETURN_CODE_FAIL;
+            }
+            else
+            {
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
+                                   "%s: Command output init not allowed!\r\n", __func__);
+                retCode = SRTM_IO_RETURN_CODE_FAIL;
+            }
+            break;
+        case GPIO_RPMSG_INPUT_GET:
+            if (handle->inputGet)
+            {
+                status = handle->inputGet(service, channel->core, ioId, &value);
+                retCode =
+                    status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCCESS : SRTM_IO_RETURN_CODE_FAIL;
+            }
+            else
+            {
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Command input get function not registered!\r\n",
+                                   __func__);
+                retCode = SRTM_IO_RETURN_CODE_FAIL;
+            }
+            break;
+        case GPIO_RPMSG_OUTPUT_SET:
+            if (handle->outputSet != NULL)
+            {
+                status = handle->outputSet(service, channel->core, ioId, payload->output_set.value);
+                retCode =
+                    status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCCESS : SRTM_IO_RETURN_CODE_FAIL;
+            }
+            else
+            {
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
+                                   "%s: Command ouput set not allowed!\r\n", __func__);
+                retCode = SRTM_IO_RETURN_CODE_FAIL;
+            }
+            break;
+        default:
+            SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: command %d unsupported!\r\n", __func__, command);
+            retCode = SRTM_IO_RETURN_CODE_UNSUPPORTED;
+            break;
     }
 
+out:
     response = SRTM_Response_Create(channel, SRTM_IO_CATEGORY, SRTM_IO_VERSION, command, 4U);
     if (!response)
     {
@@ -250,6 +250,7 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
     }
 
     payload = (struct _srtm_io_payload*)SRTM_CommMessage_GetPayload(response);
+    payload->request_id = request_id;
     payload->pin_idx = (uint8_t)ioId;
     payload->port_idx = (uint8_t)(ioId >> 8U);
     payload->reply.retcode = retCode;
