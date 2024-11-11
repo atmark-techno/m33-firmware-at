@@ -40,7 +40,6 @@
 #include "fsl_flexio_i2c_master.h"
 #include "fsl_reset.h"
 #include "fsl_wdog32.h"
-AT_QUICKACCESS_SECTION_DATA(static wdog32_config_t config);
 
 /*******************************************************************************
  * Definitions
@@ -1435,11 +1434,15 @@ static srtm_status_t APP_SRTM_LfclEventHandler(
             break;
         case SRTM_Lfcl_Event_RebootReq:
             PRINTF("\r\nAD is entering reboot.\r\nTriggering M33 reset.\r\n\n");
-            /* If watchdog test is enabled, setting TOVAL=0 will always generates a reset. */
-            WDOG32_GetDefaultConfig(&config);
-            config.testMode = kWDOG32_LowByteTest;
-            config.timeoutValue = 0;
-            WDOG32_Init(WDOG1, &config);
+            {
+                wdog32_config_t config;
+
+                WDOG32_GetDefaultConfig(&config);
+                config.testMode = kWDOG32_LowByteTest;
+                /* If watchdog test is enabled, setting TOVAL=0 will generates a reset immediately */
+                config.timeoutValue = 0;
+                WDOG32_Init(WDOG1, &config);
+            }
             SDK_DelayAtLeastUs(1000,SDK_DEVICE_MAXIMUM_CPU_CLOCK_FREQUENCY);
             PRINTF("Error occured while trying to reset M33\n\r"); /* process should not reach here */
             break;
