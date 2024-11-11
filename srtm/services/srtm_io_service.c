@@ -243,7 +243,8 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
     }
 
 out:
-    response = SRTM_Response_Create(channel, SRTM_IO_CATEGORY, SRTM_IO_VERSION, command, 4U);
+    response = SRTM_Response_Create(channel, SRTM_IO_CATEGORY, SRTM_IO_VERSION,
+                                    command, sizeof(*payload));
     if (!response)
     {
         return SRTM_Status_OutOfMemory;
