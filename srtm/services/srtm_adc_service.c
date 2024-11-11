@@ -91,7 +91,7 @@ static srtm_status_t SRTM_AdcService_Request(srtm_service_t service, srtm_reques
         SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO,
                            "SRTM receive ADC request: cmd = 0x%x, idx = 0x%x\r\n",
                            command, adcReq->idx);
-        memcpy(adcResp, adcReq, sizeof(struct _srtm_adc_payload));
+        adcResp->requestID = adcReq->requestID;
         switch (command)
         {
             case SRTM_ADC_CMD_GET:
