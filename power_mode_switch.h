@@ -65,6 +65,8 @@ typedef struct rtd_mode_and_irq_allow
 extern "C" {
 #endif
 
+void PMIC_Reset(void);
+
 #if defined(__cplusplus)
 }
 #endif

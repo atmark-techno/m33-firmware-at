@@ -9,6 +9,7 @@
 #include "task.h"
 #include "timers.h"
 #include "fsl_lpi2c_freertos.h"
+#include "power_mode_switch.h"
 
 #include "srtm_dispatcher.h"
 #include "srtm_peercore.h"
@@ -1440,20 +1441,7 @@ static srtm_status_t APP_SRTM_LfclEventHandler(
             break;
         case SRTM_Lfcl_Event_RebootReq:
             PRINTF("\r\nAD is entering reboot.\r\nTriggering M33 reset.\r\n\n");
-            {
-                wdog32_config_t config;
-
-                WDOG32_GetDefaultConfig(&config);
-                config.testMode = kWDOG32_LowByteTest;
-                /* If watchdog test is enabled, setting TOVAL=0 will generates a reset immediately */
-                config.timeoutValue = 0;
-                /* disable before reconfiguring if required */
-                if (WDOG32_GetStatusFlags(WDOG1) & kWDOG32_RunningFlag)
-                    WDOG32_Deinit(WDOG1);
-                WDOG32_Init(WDOG1, &config);
-            }
-            SDK_DelayAtLeastUs(1000,SDK_DEVICE_MAXIMUM_CPU_CLOCK_FREQUENCY);
-            PRINTF("Error occured while trying to reset M33\n\r"); /* process should not reach here */
+            PMIC_Reset(); /* never returns */
             break;
         case SRTM_Lfcl_Event_SuspendReq: /* Notify M Core that Application Domain will enter Power Down Mode */
             /* Save context(such as: MU0_MUA[RCR]) */

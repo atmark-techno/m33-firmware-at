@@ -1441,6 +1441,16 @@ static void WorkingTask(void *pvParameters)
     }
 }
 
+void PMIC_Reset(void) {
+    UPOWER_SetPmicReg(9 /* SW_RST */, 0x14 /* Cold reset */);
+    /* full poweroff actually takes 16x T OFF_STEP (default 8ms),
+     * just wait a while to be sure it should have worked,
+     * and warn if it failed. */
+    SDK_DelayAtLeastUs(250 * 1000, SDK_DEVICE_MAXIMUM_CPU_CLOCK_FREQUENCY);
+    PRINTF("Reset failed?!!\r\n");
+    while (1);
+}
+
 /*! @brief Main function */
 int main(void)
 {
