@@ -101,7 +101,7 @@ target_include_directories(${MCUX_SDK_PROJECT_NAME} PRIVATE
 
 set_source_files_properties("${ProjDirPath}/../FreeRTOSConfig.h" PROPERTIES COMPONENT_CONFIG_FILE "middleware_freertos-kernel_template")
 
-include(${SdkRootDirPath}/core/devices/MIMX8UD7/all_lib_device.cmake)
+include(${SdkRootDirPath}/core/devices/MIMX8UD5/all_lib_device.cmake)
 
 IF(NOT DEFINED TARGET_LINK_SYSTEM_LIBRARIES)  
     SET(TARGET_LINK_SYSTEM_LIBRARIES "-lm -lc -lgcc -lnosys")  
