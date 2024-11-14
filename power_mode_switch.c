@@ -1470,6 +1470,13 @@ int main(void)
         PRINTF("failed to set PMIC_BUCK3 voltage to 1.05 [V]\r\n");
     }
 
+    /* if we didn't reset from power on also reset pmic */
+    if (!(CMC_RTD->SRS & CMC_SRS_POR_MASK)) {
+            PRINTF("Reset cause not POR (%x), resetting PMIC\r\n", CMC_RTD->SRS);
+            /* XXX try to remember somewhere we failed for uboot to log wdt... */
+            PMIC_Reset();
+    }
+
     UPOWER_PowerOnMemPart(0U, (uint32_t)kUPOWER_MP1_DMA0);
 
     CLOCK_SetIpSrcDiv(kCLOCK_Tpm0, kCLOCK_Pcc1BusIpSrcCm33Bus, 1U, 0U);
