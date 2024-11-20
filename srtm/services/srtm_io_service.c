@@ -38,11 +38,6 @@
 
 #define SRTM_IO_NTF_INPUT_EVENT (0x00U)
 
-/* IO pin list node */
-typedef struct _srtm_io_pin
-{
-} *srtm_io_pin_t;
-
 /* Service handle */
 typedef struct _srtm_io_service
 {
@@ -53,7 +48,6 @@ typedef struct _srtm_io_service
     srtm_io_service_output_set_t outputSet;
     int pin_count;
     srtm_channel_t channel;
-    struct _srtm_io_pin pins[];
 } *srtm_io_service_t;
 
 SRTM_PACKED_BEGIN struct _srtm_io_payload
@@ -101,24 +95,11 @@ enum gpio_rpmsg_header_cmd {
 /*******************************************************************************
  * Code
  ******************************************************************************/
-static srtm_io_pin_t SRTM_IoService_FindPin(srtm_io_service_t handle, uint16_t ioId)
-{
-    /* XXX abstraction leak */
-    uint16_t idx = APP_IO_GetIndex(ioId);
-    if (idx >= handle->pin_count) {
-        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR,
-                               "%s: ioId too high %x\r\n", __func__, ioId);
-        return NULL;
-    }
-    return handle->pins + idx;
-}
-
 /* Both request and notify are called from SRTM dispatcher context */
 static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request_t request)
 {
     srtm_status_t status;
     srtm_io_service_t handle = (srtm_io_service_t)service;
-    srtm_io_pin_t pin;
     srtm_channel_t channel;
     uint8_t command, retCode;
     struct _srtm_io_payload *payload;
@@ -149,13 +130,6 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
     }
     request_id = payload->request_id;
     ioId = (payload->port_idx << 8) | payload->pin_idx;
-    pin  = SRTM_IoService_FindPin(handle, ioId);
-    if (!pin)
-    {
-        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Pin 0x%x not registered!\r\n", __func__, ioId);
-        retCode = SRTM_IO_RETURN_CODE_FAIL;
-        goto out;
-    }
     /* Record channel for further input event */
     handle->channel = channel;
     switch (command)
@@ -263,11 +237,9 @@ srtm_service_t SRTM_IoService_Create(int pin_count,
 
     SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "%s\r\n", __func__);
 
-    handle = (srtm_io_service_t)SRTM_Heap_Malloc(
-            sizeof(struct _srtm_io_service) + pin_count * sizeof(struct _srtm_io_pin));
+    handle = (srtm_io_service_t)SRTM_Heap_Malloc(sizeof(struct _srtm_io_service));
     assert(handle);
 
-    memset(handle->pins, 0, pin_count * sizeof(struct _srtm_io_pin));
     handle->pin_count = pin_count;
     handle->inputInit = inputInit;
     handle->outputInit = outputInit;
@@ -313,18 +285,10 @@ void SRTM_IoService_Reset(srtm_service_t service, srtm_peercore_t core)
 srtm_status_t SRTM_IoService_NotifyInputEvent(srtm_service_t service, uint16_t ioId)
 {
     srtm_io_service_t handle = (srtm_io_service_t)service;
-    srtm_io_pin_t pin;
 
     assert(service);
     /* Service must be running in dispatcher when notifying input event */
     assert(!SRTM_List_IsEmpty(&service->node));
-
-    pin = SRTM_IoService_FindPin(handle, ioId);
-    if (!pin)
-    {
-        /* Pin not registered */
-        return SRTM_Status_InvalidParameter;
-    }
 
     if (handle->channel)
     {
