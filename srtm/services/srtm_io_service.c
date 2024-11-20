@@ -41,7 +41,6 @@
 /* IO pin list node */
 typedef struct _srtm_io_pin
 {
-    bool notified;
 } *srtm_io_pin_t;
 
 /* Service handle */
@@ -102,21 +101,6 @@ enum gpio_rpmsg_header_cmd {
 /*******************************************************************************
  * Code
  ******************************************************************************/
-static void SRTM_IoService_RecycleMessage(srtm_message_t msg, void *param)
-{
-    uint32_t primask;
-    srtm_io_pin_t pin = (srtm_io_pin_t)param;
-
-    assert(pin);
-    assert(pin->notified == true);
-
-    primask = DisableGlobalIRQ();
-    pin->notified = false;
-    EnableGlobalIRQ(primask);
-
-    SRTM_MessagePool_Free(msg);
-}
-
 static srtm_io_pin_t SRTM_IoService_FindPin(srtm_io_service_t handle, uint16_t ioId)
 {
     /* XXX abstraction leak */
@@ -342,17 +326,7 @@ srtm_status_t SRTM_IoService_NotifyInputEvent(srtm_service_t service, uint16_t i
         return SRTM_Status_InvalidParameter;
     }
 
-    uint32_t primask;
-    bool notify = false;
-    primask = DisableGlobalIRQ();
-    if (!pin->notified && handle->channel)
-    {
-            notify = true;
-            pin->notified = true;
-    }
-    EnableGlobalIRQ(primask);
-
-    if (notify)
+    if (handle->channel)
     {
         struct _srtm_io_payload *payload;
         srtm_notification_t notif = SRTM_Notification_Create(
@@ -361,12 +335,8 @@ srtm_status_t SRTM_IoService_NotifyInputEvent(srtm_service_t service, uint16_t i
         if (!notif) {
             SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR,
                             "%s: alloc notification failed.\r\n", __func__);
-            /* can't be raced as we didn't send a notification */
-            pin->notified = false;
             return SRTM_Status_OutOfMemory;
         }
-        /* restore pin->notified before free when sent is done */
-        SRTM_Message_SetFreeFunc(notif, SRTM_IoService_RecycleMessage, pin);
         payload = (struct _srtm_io_payload*)SRTM_CommMessage_GetPayload(notif);
         payload->pin_idx = (uint8_t)ioId;
         payload->port_idx = (uint8_t)(ioId >> 8U);
