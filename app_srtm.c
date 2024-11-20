@@ -844,15 +844,17 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
         case SRTM_IoEventLowLevel:
             RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptLogicZero);
             /* Power level cannot trigger wakeup */
-            assert(!wakeup);
+            wakeup = 0;
             break;
         case SRTM_IoEventHighLevel:
             RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptLogicOne);
             /* Power level cannot trigger wakeup */
-            assert(!wakeup);
+            wakeup = 0;
+            break;
+        case SRTM_IoEventDisable:
+            RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptOrDMADisabled);
             break;
         default:
-            RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptOrDMADisabled);
             break;
     }
     if (!wakeup && wuuIdx < ARRAY_SIZE(wuuPins))

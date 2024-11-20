@@ -46,6 +46,7 @@ typedef enum _srtm_io_event
     SRTM_IoEventEitherEdge,
     SRTM_IoEventLowLevel,
     SRTM_IoEventHighLevel,
+    SRTM_IoEventDisable = 0xff,
 } srtm_io_event_t;
 
 /**
