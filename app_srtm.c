@@ -248,6 +248,25 @@ FLEXIO_I2C_Type flexioI2cDev = {
     .shifterIndex = { 0, 1, },
     .timerIndex = { 0, 1, 2, },
 };
+flexio_i2c_master_handle_t flexio_i2c_handle;
+volatile bool i2c_completionFlag = false;
+volatile bool i2c_nakFlag        = false;
+
+static void flexio_i2c_master_Callback(FLEXIO_I2C_Type *base,
+                                       flexio_i2c_master_handle_t *handle,
+                                       status_t status,
+                                       void *userData)
+{
+    if (status == kStatus_Success)
+    {
+        i2c_completionFlag = true;
+    }
+
+    if (status == kStatus_FLEXIO_I2C_Nak)
+    {
+        i2c_nakFlag = true;
+    }
+}
 
 static struct _i2c_bus platform_i2c_buses[] = {
     {.bus_id         = 0,
@@ -1174,6 +1193,7 @@ static void APP_SRTM_InitI2CDevice(void)
     FLEXIO_I2C_MasterGetDefaultConfig(&flexConfig);
     flexConfig.baudRate_Bps = FLEXIO_I2C_FREQ;
     FLEXIO_I2C_MasterInit(&flexioI2cDev, &flexConfig, FLEXIO_CLOCK_FREQUENCY);
+    FLEXIO_I2C_MasterTransferCreateHandle(&flexioI2cDev, &flexio_i2c_handle, flexio_i2c_master_Callback, NULL);
 }
 
 static void APP_SRTM_InitI2CService(void)
@@ -1886,7 +1906,15 @@ static srtm_status_t APP_SRTM_I2C_Write(srtm_i2c_adapter_t adapter,
                     .data = buf,
                     .dataSize = len,
                 };
-                retVal = FLEXIO_I2C_MasterTransferBlocking((FLEXIO_I2C_Type *)base_addr, &xfer);
+
+                retVal = FLEXIO_I2C_MasterTransferNonBlocking((FLEXIO_I2C_Type *)base_addr, &flexio_i2c_handle, &xfer);
+                while ((!i2c_nakFlag) && (!i2c_completionFlag))
+                {
+                }
+                if (i2c_nakFlag) retVal = kStatus_FLEXIO_I2C_Nak;
+
+                i2c_nakFlag = false;
+                i2c_completionFlag = false;
             }
             break;
         default:
@@ -1922,7 +1950,15 @@ static srtm_status_t APP_SRTM_I2C_Read(srtm_i2c_adapter_t adapter,
                     .data = buf,
                     .dataSize = len,
                 };
-                retVal = FLEXIO_I2C_MasterTransferBlocking((FLEXIO_I2C_Type *)base_addr, &xfer);
+
+                retVal = FLEXIO_I2C_MasterTransferNonBlocking((FLEXIO_I2C_Type *)base_addr, &flexio_i2c_handle, &xfer);
+                while ((!i2c_nakFlag) && (!i2c_completionFlag))
+                {
+                }
+                if (i2c_nakFlag) retVal = kStatus_FLEXIO_I2C_Nak;
+
+                i2c_nakFlag = false;
+                i2c_completionFlag = false;
             }
             break;
         default:
