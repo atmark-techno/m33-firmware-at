@@ -643,6 +643,15 @@ void BOARD_SetTrdcGlobalConfig(void)
         mbcBlockConfig.memoryBlockIdx            = 33U;  /* MBC2_DOM7_MEM1_BLK_CFG_W33 */
         TRDC_MbcSetMemoryBlockConfig(TRDC, &mbcBlockConfig);
 
+        /* non secure state can access BBNSM(PBridge0 slot 56) for cortex-A35 */
+        mbcBlockConfig.memoryAccessControlSelect = TRDC_MBC_ACCESS_CONTROL_POLICY_ALL_INDEX;
+        mbcBlockConfig.nseEnable                 = true; /* non secure state can access the block for cortex-A35 */
+        mbcBlockConfig.mbcIdx                    = 2U;   /* MBC2 */
+        mbcBlockConfig.domainIdx                 = 7U;   /* MBC2_DOM7 */
+        mbcBlockConfig.slaveMemoryIdx            = 0U;   /* MBC2_DOM7_MEM0 */
+        mbcBlockConfig.memoryBlockIdx            = 56U;  /* MBC2_DOM7_MEM0_BLK_CFG_W56 */
+        TRDC_MbcSetMemoryBlockConfig(TRDC, &mbcBlockConfig);
+
         /* non secure state can access flexspi0(PBridge0 slot 57 of T-MBC2, also need setup T-MRC0) for cortex-A35 */
         mbcBlockConfig.memoryAccessControlSelect = TRDC_MBC_ACCESS_CONTROL_POLICY_ALL_INDEX;
         mbcBlockConfig.nseEnable                 = true; /* non secure state can access the block for cortex-A35 */
