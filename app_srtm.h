@@ -62,8 +62,9 @@ typedef enum
 /* Define the timeout ms to polling the A Core link up status */
 #define APP_LINKUP_TIMER_PERIOD_MS (10U)
 
-/* Define the timeout ms to refresh s400 watchdog timer to keep s400 alive(23 hours) */
-#define APP_REFRESH_S400_WDG_TIMER_PERIOD_MS (23 * 60 * 60 * 1000U)
+/* Define the timeout ms to refresh s400 watchdog timer to keep s400 alive
+ * (1 hour, dies after 24h) */
+#define APP_REFRESH_S400_WDG_TIMER_PERIOD_MS (60 * 60 * 1000U)
 
 /* Define the timeout ms to send rtc alarm event */
 #define APP_RTC_ALM_EVT_TIMER_PERIOD_MS (50U)
