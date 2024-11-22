@@ -487,6 +487,7 @@ static void APP_HandleGPIOHander(uint8_t gpioIdx)
             suspendContext.io.data[ioIdx].wakeup)
         {
             /* Wakeup A Core(CA35) when A Core is in Power Down Mode */
+            PRINTF("Wake up from gpio %d/%d\r\n", gpioIdx, i);
             APP_WakeupACore();
         }
         SRTM_IoService_NotifyInputEvent(ioService, ioId);
@@ -839,6 +840,8 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
 
     /* wakeup cannot trigger on level, switch to edge if wakeup requested */
     if (wakeup) {
+        PRINTF("Wakeup requested on %d/%d, mode %d\r\n",
+                gpioIdx, pinIdx, event);
         if (event == SRTM_IoEventLowLevel)
             event = SRTM_IoEventFallingEdge;
         if (event == SRTM_IoEventHighLevel)
