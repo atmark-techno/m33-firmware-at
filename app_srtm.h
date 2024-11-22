@@ -126,6 +126,15 @@ static inline uint16_t APP_IO_GetId(uint8_t inputIdx) {
         return 0xffff;
     return ((inputIdx / APP_IO_PINS_PER_CHIP) << 8U) | (inputIdx % APP_IO_PINS_PER_CHIP);
 }
+extern const uint8_t wuuPins[];
+static inline uint8_t APP_IO_GetWUUPin(uint8_t gpio_idx, uint8_t pin_idx) {
+    /* only PTA/PTB */
+    if (gpio_idx > 2)
+        return 255;
+    if (pin_idx > APP_IO_PINS_PER_CHIP)
+        return 255;
+    return wuuPins[APP_IO_IDX(gpio_idx, pin_idx)];
+}
 
 #define APP_GPIO_INT_SEL   (kRGPIO_InterruptOutput2)
 

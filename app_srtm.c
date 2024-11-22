@@ -147,38 +147,58 @@ static int64_t apd_boot_cnt = 0; /* it's cold boot when apd_boot_cnt(Application
 
 static bool support_dsl_for_apd = false; /* true: support deep sleep mode; false: not support deep sleep mode */
 
-static const uint16_t wuuPins[] = {
-    0x0000U, /* WUU_P0 PTA0 */
-    0x0003U, /* WUU_P1 PTA3 */
-    0x0004U, /* WUU_P2 PTA4 */
-    0x0006U, /* WUU_P3 PTA6 */
-    0x0007U, /* WUU_P4 PTA7 */
-    0x0008U, /* WUU_P5 PTA8 */
-    0x0009U, /* WUU_P6 PTA9 */
-    0x000AU, /* WUU_P7 PTA10 */
-    0x000BU, /* WUU_P8 PTA11 */
-    0x000CU, /* WUU_P9 PTA12 */
-    0x000DU, /* WUU_P10 PTA13 */
-    0x000EU, /* WUU_P11 PTA14 */
-    0x000FU, /* WUU_P12 PTA15 */
-    0x0010U, /* WUU_P13 PTA16 */
-    0x0011U, /* WUU_P14 PTA17 */
-    0x0012U, /* WUU_P15 PTA18 */
-    0x0018U, /* WUU_P16 PTA24 */
-
-    0x0100U, /* WUU_P17 PTB0 */
-    0x0101U, /* WUU_P18 PTB1 */
-    0x0102U, /* WUU_P19 PTB2 */
-    0x0103U, /* WUU_P20 PTB3 */
-    0x0104U, /* WUU_P21 PTB4 */
-    0x0105U, /* WUU_P22 PTB5 */
-    0x0106U, /* WUU_P23 PTB6 */
-    0x010CU, /* WUU_P24 PTB12 */
-    0x010DU, /* WUU_P25 PTB13 */
-    0x010EU, /* WUU_P26 PTB14 */
-    0x010FU, /* WUU_P27 PTB15 */
+const uint8_t wuuPins[] = {
+    0, /* WUU_P0 PTA0 */
+    255, /* PTA1 */
+    255, /* PTA2 */
+    1, /* WUU0_P1 PTA3 */
+    2, /* WUU0_P2 PTA4 */
+    255, /* PTA5 */
+    3, /* WUU0_P3 PTA6 */
+    4, /* WUU0_P4 PTA7 */
+    5, /* WUU0_P5 PTA8 */
+    6, /* WUU0_P6 PTA9 */
+    7, /* WUU0_P7 PTA10 */
+    8, /* WUU0_P8 PTA11 */
+    9, /* WUU0_P9 PTA12 */
+    10, /* WUU0_P10 PTA13 */
+    11, /* WUU0_P11 PTA14 */
+    12, /* WUU0_P12 PTA15 */
+    13, /* WUU0_P13 PTA16 */
+    14, /* WUU0_P14 PTA17 */
+    15, /* WUU0_P15 PTA18 */
+    255, /* PTA19 */
+    255, /* PTA20 */
+    255, /* PTA21 */
+    255, /* PTA22 */
+    255, /* PTA23 */
+    16, /* WUU0_P16 PTA24 */
+    17, /* WUU0_P17 PTB0 */
+    18, /* WUU0_P18 PTB1 */
+    19, /* WUU0_P19 PTB2 */
+    20, /* WUU0_P20 PTB3 */
+    21, /* WUU0_P21 PTB4 */
+    22, /* WUU0_P22 PTB5 */
+    23, /* WUU0_P23 PTB6 */
+    255, /* PTB7 */
+    255, /* PTB8 */
+    255, /* PTB9 */
+    255, /* PTB10 */
+    255, /* PTB11 */
+    24, /* WUU0_P24 PTB12 */
+    25, /* WUU0_P25 PTB13 */
+    26, /* WUU0_P26 PTB14 */
+    27, /* WUU0_P27 PTB15 */
+    255, /* 16 (no more pins after PTB15) */
+    255, /* 17 */
+    255, /* 18 */
+    255, /* 19 */
+    255, /* 20 */
+    255, /* 21 */
+    255, /* 22 */
+    255, /* 23 */
+    255, /* 24 */
 };
-
 
 static const srtm_io_event_t wuuPinModeEvents[] = {
     SRTM_IoEventNone,        /* kWUU_ExternalPinDisable */
@@ -348,21 +368,6 @@ void rtdCtxSave(void)
 void rtdCtxRestore(void)
 {
     MU0_MUA_Restore();
-}
-
-static uint8_t APP_IO_GetWUUPin(uint16_t ioId)
-{
-    uint8_t i;
-
-    for (i = 0; i < ARRAY_SIZE(wuuPins); i++)
-    {
-        if (wuuPins[i] == ioId)
-        {
-            break;
-        }
-    }
-
-    return i;
 }
 
 void APP_WakeupACore(void)
@@ -741,6 +746,7 @@ static void APP_IO_SetPinConfig(uint16_t ioId, uint32_t pinctrl)
 
     /* check table is sound... */
     BUILD_BUG_ON(ARRAY_SIZE(pinFuncId) != APP_IO_NUM);
+    BUILD_BUG_ON(ARRAY_SIZE(wuuPins) != 2 * APP_IO_PINS_PER_CHIP);
 
     assert(index < APP_IO_NUM);
 
@@ -819,15 +825,13 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
     uint16_t ioId   = APP_IO_GetId(inputIdx);
     uint8_t gpioIdx = APP_GPIO_IDX(ioId);
     uint8_t pinIdx  = APP_PIN_IDX(ioId);
-    uint8_t wuuIdx  = APP_IO_GetWUUPin(ioId);
+    uint8_t wuuIdx  = APP_IO_GetWUUPin(gpioIdx, pinIdx);
 
     wuu_external_wakeup_pin_config_t config;
 
     assert(gpioIdx < APP_IO_CHIPS);                  /* Only support GPIOA, GPIOB and GPIOC */
     assert(pinIdx < APP_IO_PINS_PER_CHIP);
-    assert(wuuIdx <= ARRAY_SIZE(wuuPins)); /* When wuuIdx == ARRAY_SIZE(wuuPins),
-                                              it means there's no WUU pin for ioId. */
-    if (wakeup && wuuIdx == ARRAY_SIZE(wuuPins)) {
+    if (wakeup && wuuIdx == 255) {
         PRINTF("Wakeup requested on %x which has no wakeup\r\n", ioId);
         return SRTM_Status_Error;
     }
@@ -887,7 +891,7 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
         default:
             break;
     }
-    if (!wakeup && wuuIdx < ARRAY_SIZE(wuuPins))
+    if (!wakeup && wuuIdx != 255)
     {
         config.edge = kWUU_ExternalPinDisable;
         WUU_SetExternalWakeUpPinsConfig(WUU0, wuuIdx, &config);
