@@ -830,6 +830,14 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
     if (pinctrl == IO_PINCTRL_UNSET)
         pinctrl = IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK;
 
+    /* wakeup cannot trigger on level, switch to edge if wakeup requested */
+    if (wakeup) {
+        if (event == SRTM_IoEventLowLevel)
+            event = SRTM_IoEventFallingEdge;
+        if (event == SRTM_IoEventHighLevel)
+            event = SRTM_IoEventRisingEdge;
+    }
+
     APP_IO_SetPinConfig(ioId, pinctrl);
     switch (event)
     {
@@ -837,7 +845,6 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
             RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptRisingEdge);
             if (wakeup)
             {
-                assert(wuuIdx < ARRAY_SIZE(wuuPins));
                 config.edge = kWUU_ExternalPinRisingEdge;
                 WUU_SetExternalWakeUpPinsConfig(WUU0, wuuIdx, &config);
             }
@@ -846,7 +853,6 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
             RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptFallingEdge);
             if (wakeup)
             {
-                assert(wuuIdx < ARRAY_SIZE(wuuPins));
                 config.edge = kWUU_ExternalPinFallingEdge;
                 WUU_SetExternalWakeUpPinsConfig(WUU0, wuuIdx, &config);
             }
@@ -855,20 +861,15 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
             RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptEitherEdge);
             if (wakeup)
             {
-                assert(wuuIdx < ARRAY_SIZE(wuuPins));
                 config.edge = kWUU_ExternalPinAnyEdge;
                 WUU_SetExternalWakeUpPinsConfig(WUU0, wuuIdx, &config);
             }
             break;
         case SRTM_IoEventLowLevel:
             RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptLogicZero);
-            /* Power level cannot trigger wakeup */
-            wakeup = 0;
             break;
         case SRTM_IoEventHighLevel:
             RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptLogicOne);
-            /* Power level cannot trigger wakeup */
-            wakeup = 0;
             break;
         case SRTM_IoEventDisable:
             RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptOrDMADisabled);
