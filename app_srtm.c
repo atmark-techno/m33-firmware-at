@@ -677,6 +677,7 @@ static uint32_t pinFuncId[][PIN_FUNC_ID_SIZE] = {
     {IOMUXC_PTA21_PTA21},
     {IOMUXC_PTA22_PTA22},
     {IOMUXC_PTA23_PTA23},
+    {IOMUXC_PTA24_PTA24},
     {IOMUXC_PTB0_PTB0},
     {IOMUXC_PTB1_PTB1},
     {IOMUXC_PTB2_PTB2},
@@ -694,6 +695,7 @@ static uint32_t pinFuncId[][PIN_FUNC_ID_SIZE] = {
     {IOMUXC_PTB14_PTB14},
     {IOMUXC_PTB15_PTB15},
     {0}, /* no PTB after 15 */
+    {0},
     {0},
     {0},
     {0},
@@ -725,6 +727,7 @@ static uint32_t pinFuncId[][PIN_FUNC_ID_SIZE] = {
     {IOMUXC_PTC21_PTC21},
     {IOMUXC_PTC22_PTC22},
     {IOMUXC_PTC23_PTC23},
+    {0}, /* no PTC24 */
 };
 
 /*

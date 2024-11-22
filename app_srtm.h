@@ -102,7 +102,7 @@ typedef enum
 #define LPTMR1_WUU_WAKEUP_EVENT (kWUU_InternalModuleInterrupt)
 
 /* GPIO */
-#define APP_IO_PINS_PER_CHIP 24U
+#define APP_IO_PINS_PER_CHIP 25U
 #define APP_IO_CHIPS         3U /* Only support GPIOA, GPIOB and GPIOC */
 #define APP_IO_NUM         (APP_IO_CHIPS * APP_IO_PINS_PER_CHIP)
 #define APP_GPIO_IDX(ioId) ((uint8_t)(((uint16_t)ioId) >> 8U))
