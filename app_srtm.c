@@ -823,6 +823,10 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
     assert(pinIdx < APP_IO_PINS_PER_CHIP);
     assert(wuuIdx <= ARRAY_SIZE(wuuPins)); /* When wuuIdx == ARRAY_SIZE(wuuPins),
                                               it means there's no WUU pin for ioId. */
+    if (wakeup && wuuIdx == ARRAY_SIZE(wuuPins)) {
+        PRINTF("Wakeup requested on %x which has no wakeup\r\n", ioId);
+        return SRTM_Status_Error;
+    }
     config.event = kWUU_ExternalPinInterrupt;
     config.mode  = kWUU_ExternalPinActiveAlways;
 
