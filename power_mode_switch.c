@@ -56,9 +56,6 @@
 #define SYSTICK_WUU_WAKEUP_EVENT (kWUU_InternalModuleInterrupt)
 
 #define APP_LPTMR1_IRQ_PRIO (5U)
-#define WUU_WAKEUP_PIN_IDX     (24U) /* WUU0_P24 used for RTD Button2 (SW8) */
-#define WUU_WAKEUP_PIN_TYPE    kWUU_ExternalPinFallingEdge
-#define APP_WAKEUP_BUTTON_NAME "RTD BUTTON2 (SW8)"
 
 typedef enum _app_wakeup_source
 {
@@ -279,12 +276,43 @@ typedef struct {
 } gpioOutputConfig_t;
 static gpioOutputConfig_t gpioOutputBackup[3]; /* Backup PTA, PTB and PTC Output-related GPIO registers */
 
+static void PinMuxPrepareSuspend(uint8_t gpioIdx, uint8_t pinIdx)
+{
+    uint8_t wuuIndex = APP_IO_GetWUUPin(gpioIdx, pinIdx);
+    __IO uint32_t *IOMUXC = &(gpioIdx == 0 ? IOMUXC0->PCR0_IOMUXCARRAY0 : IOMUXC0->PCR0_IOMUXCARRAY1)[pinIdx];
+
+    if (wuuIndex == 255)
+    {
+        *IOMUXC = 0;
+        return;
+    }
+
+    // WUU_PEx_WUPEx_SHIFT is exactly WUU (index * 2)
+    uint32_t mask = 3 << (wuuIndex * 2 % 32);
+    __IO uint32_t *PE = wuuIndex < 16 ? &WUU0->PE1 : &WUU0->PE2;
+    uint32_t setting = *PE & mask;
+    if (!setting)
+    {
+        *IOMUXC = 0;
+        return;
+    }
+
+    /*
+     * Disable interrupt temperarily to prevent glitch
+     * interrupt during switching IOMUXC pin selection
+     */
+    *PE &= ~mask;
+
+    /* select WUU pin. They're all 0xD! */
+    *IOMUXC = IOMUXC_PCR_MUX_MODE(0xD);
+
+    *PE |= setting;
+}
+
 static void APP_Suspend(void)
 {
     uint32_t i;
-    uint32_t setting;
     uint32_t backupIndex;
-    lpm_rtd_power_mode_e targetPowerMode = LPM_GetPowerMode();
 
     backupIndex = 0;
 
@@ -297,27 +325,15 @@ static void APP_Suspend(void)
 
         GPIOA->ICR[i] = 0; /* Disable interrupts */
 
-                           /*
-                            * Skip PTA20 ~ 23(JTAG pins)[define SKIP_JTAG_PINS as 1] if want to debug code with JTAG before entering power
-                            * down/deep sleep mode
-                            */
+        /*
+         * Skip PTA20 ~ 23(JTAG pins)[define SKIP_JTAG_PINS as 1] if want to debug code with JTAG before entering power
+         * down/deep sleep mode
+         */
 #if SKIP_JTAG_PINS
-        if ((i >= 20) && (i <= 23))
+        if (i < 20 || i > 23)
 #endif
         {
-#if 0
-            if (targetPowerMode == LPM_PowerModeDeepSleep)
-            {
-                /*
-                 * Failed to wakeup cortex-M33 by SW8 button after set any pads of PTA/PTB to Analog/HiZ state when RTD in
-                 * deep sleep mode, so do nothing here for Deep Sleep Mode
-                 */
-            }
-            else
-#endif
-            {
-                IOMUXC0->PCR0_IOMUXCARRAY0[i] = 0;
-            }
+            PinMuxPrepareSuspend(0, i);
         }
         backupIndex++;
     }
@@ -331,66 +347,11 @@ static void APP_Suspend(void)
 
         gpioICRBackup[backupIndex] = GPIOB->ICR[i];
 
-#if 0
-        if (targetPowerMode == LPM_PowerModeDeepSleep)
-        {
-            /*
-             * Failed to wakeup cortext-M33 by SW8 button after disable any gpios's interrupt when RTD in Deep Sleep
-             * Mode, so do nothing here for Deep Sleep Mode
-             */
-        }
-        else
-#endif
-        {
-            GPIOB->ICR[i] = 0; /* disable interrupts */
-        }
+        GPIOB->ICR[i] = 0; /* disable interrupts */
 
-        /*
-         * If it's wakeup source, need to set as WUU0_P26
-         * Power Down/Deep Power Down wakeup through WUU and NMI pin
-         * Sleep/Deep Sleep wakeup via interrupt from M33 peripherals or external GPIO pins. WIC detects wakeup source.
-         */
-        if ((i == 14) && (WUU0->PE2 & WUU_PE2_WUPE26_MASK))
+        if ((i != 10) && (i != 11)) /* PTB10 and PTB11 is used as i2c function by upower */
         {
-            if (targetPowerMode == LPM_PowerModeDeepSleep)
-            {
-                /*
-                 * Deep Sleep wakeup via interrupt not WUU,
-                 * so do nothing in here for Deep Sleep Mode
-                 */
-                /* enable interrupts for PTB14 */
-                GPIOB->ICR[i] = gpioICRBackup[backupIndex];
-            }
-            else
-            {
-                /*
-                 * Disable interrupt temperarily to prevent glitch
-                 * interrupt during switching IOMUXC pin selection
-                 */
-                setting = WUU0->PE2 & WUU_PE2_WUPE26_MASK;
-                WUU0->PE2 &= !WUU_PE2_WUPE26_MASK;
-
-                /* Change PTB14's function as WUU0_P26(IOMUXC_PTB14_WUU0_P26) */
-                IOMUXC0->PCR0_IOMUXCARRAY1[i] = IOMUXC0_PCR0_IOMUXCARRAY1_MUX(15);
-
-                WUU0->PE2 |= setting;
-            }
-        }
-        else if ((i != 10) && (i != 11)) /* PTB10 and PTB11 is used as i2c function by upower */
-        {
-#if 0
-            if (targetPowerMode == LPM_PowerModeDeepSleep)
-            {
-                /*
-                 * Failed to wakeup cortex-M33 by sw8 button after setup any pads of PTA/PTB to Analog/HiZ state when
-                 * RTD in Deep Sleep Mode, so do nothing here for Deep Sleep Mode
-                 */
-            }
-            else
-#endif
-            {
-                IOMUXC0->PCR0_IOMUXCARRAY1[i] = 0;
-            }
+            PinMuxPrepareSuspend(1, i);
         }
         backupIndex++;
     }
@@ -481,10 +442,10 @@ void APP_DisableGPIO(void)
                             * power down mode
                             */
 #if SKIP_JTAG_PINS
-        if ((i >= 20) && (i <= 23))
+        if (i < 20 || i > 23)
 #endif
         {
-            IOMUXC0->PCR0_IOMUXCARRAY0[i] = 0; /* Set to Analog/HiZ state */
+            PinMuxPrepareSuspend(0, i);
         }
     }
 
@@ -494,7 +455,7 @@ void APP_DisableGPIO(void)
         if ((i != 10) && (i != 11))            /* PTB10 and PTB11 is used as i2c function by upower */
         {
             GPIOB->ICR[i]                 = 0; /* Disable interrupts */
-            IOMUXC0->PCR0_IOMUXCARRAY1[i] = 0; /* Set to Analog/HiZ state */
+            PinMuxPrepareSuspend(1, i);
         }
     }
 
@@ -527,8 +488,6 @@ void APP_Rx485Deinit(void)
 
 void APP_PowerPreSwitchHook(lpm_rtd_power_mode_e targetMode)
 {
-    uint32_t setting;
-
     if ((LPM_PowerModeActive != targetMode))
     {
         /* At this point the APD is sleeping.RS485 communication is no longer in progress. */
@@ -553,19 +512,6 @@ void APP_PowerPreSwitchHook(lpm_rtd_power_mode_e targetMode)
         else if (LPM_PowerModeDeepPowerDown == targetMode)
         {
             APP_DisableGPIO();
-            /* If PTB14 is wakeup source, set to WUU0_P26 */
-            if ((WUU0->PE2 & WUU_PE2_WUPE26_MASK) != 0)
-            {
-                /* Disable interrupt temperarily to prevent glitch
-                 * interrupt during switching IOMUXC pin selection
-                 */
-                setting = WUU0->PE2 & WUU_PE2_WUPE26_MASK;
-                WUU0->PE2 &= !WUU_PE2_WUPE26_MASK;
-
-                IOMUXC0->PCR0_IOMUXCARRAY1[14] = IOMUXC0_PCR0_IOMUXCARRAY0_MUX(15);
-
-                WUU0->PE2 |= setting;
-            }
 
             /* Cleare any potential interrupts before enter Deep Power Down */
             WUU0->PF = WUU0->PF;
@@ -736,35 +682,41 @@ static allow_give_sig_e APP_AllowGiveSig(lpm_rtd_power_mode_e current_mode, uint
 /* WUU0 interrupt handler. */
 void APP_WUU0_IRQHandler(void)
 {
+    /* "really" wake up for LPTMR1 alarm or GPIO.
+     * If only LPTRM0 (SYSTICK) then we'll sleep again */
     bool wakeup = false;
 
     if (WUU_GetInternalWakeupModuleFlag(WUU0, WUU_MODULE_LPTMR1))
     {
         /* Woken up by LPTMR, then clear LPTMR flag. */
         LPTMR_ClearStatusFlags(LPTMR1, kLPTMR_TimerCompareFlag);
-        LPTMR_DisableInterrupts(LPTMR1, kLPTMR_TimerInterruptEnable);
-        LPTMR_StopTimer(LPTMR1);
         wakeup = true;
     }
-
-    if (WUU_GetExternalWakeupPinFlag(WUU0, WUU_WAKEUP_PIN_IDX))
+    if (LPTMR_GetEnabledInterrupts(LPTMR1))
     {
-        /* Woken up by external pin. */
-        WUU_ClearExternalWakeupPinFlag(WUU0, WUU_WAKEUP_PIN_IDX);
-        wakeup = true;
+        /* disable anyway if enabled, or would fire late.*/
+        LPTMR_DisableInterrupts(LPTMR1, kLPTMR_TimerInterruptEnable);
+        LPTMR_StopTimer(LPTMR1);
     }
 
     if (WUU_GetInternalWakeupModuleFlag(WUU0, WUU_MODULE_SYSTICK))
     {
-        /* Woken up by Systick LPTMR, then clear LPTMR flag. */
+        /* Woken up by Systick LPTMR0, then clear LPTMR flag. */
         LPTMR_ClearStatusFlags(SYSTICK_BASE, kLPTMR_TimerCompareFlag);
     }
 
-    if (wakeup)
+    if (WUU0->PF)
     {
-        xSemaphoreGiveFromISR(s_wakeupSig, NULL);
-        portYIELD_FROM_ISR(pdTRUE);
+        /* clear pin interrupt flag */
+        WUU0->PF = WUU0->PF;
+        wakeup   = true;
     }
+
+    if (!wakeup)
+        return;
+
+    xSemaphoreGiveFromISR(s_wakeupSig, NULL);
+    portYIELD_FROM_ISR(pdTRUE);
 }
 
 /* LPTMR1 interrupt handler. */
@@ -885,56 +837,17 @@ static uint32_t APP_GetWakeupTimeout(void)
     return timeout;
 }
 
-/* Get wakeup source by user input. */
-static app_wakeup_source_t APP_GetWakeupSource(void)
-{
-    uint8_t ch;
-
-    while (1)
-    {
-        PRINTF("Select the wake up source:\r\n");
-        PRINTF("Press T for LPTMR - Low Power Timer\r\n");
-        PRINTF("Press S for switch/button %s. \r\n", APP_WAKEUP_BUTTON_NAME);
-
-        PRINTF("\r\nWaiting for key press..\r\n\r\n");
-
-        ch = GETCHAR();
-
-        if ((ch >= 'a') && (ch <= 'z'))
-        {
-            ch -= 'a' - 'A';
-        }
-
-        if (ch == 'T')
-        {
-            return kAPP_WakeupSourceLptmr;
-        }
-        else if (ch == 'S')
-        {
-            return kAPP_WakeupSourcePin;
-        }
-        else
-        {
-            PRINTF("Wrong value!\r\n");
-        }
-    }
-}
-
 /* Get wakeup timeout and wakeup source. */
 static void APP_GetWakeupConfig(void)
 {
     /* Get wakeup source by user input. */
-    s_wakeupSource = APP_GetWakeupSource();
+    s_wakeupSource = kAPP_WakeupSourceLptmr;
 
     if (kAPP_WakeupSourceLptmr == s_wakeupSource)
     {
         /* Wakeup source is LPTMR, user should input wakeup timeout value. */
         s_wakeupTimeout = APP_GetWakeupTimeout();
         PRINTF("Will wakeup in %d seconds.\r\n", s_wakeupTimeout);
-    }
-    else
-    {
-        PRINTF("Press %s to wake up.\r\n", APP_WAKEUP_BUTTON_NAME);
     }
 }
 
@@ -957,25 +870,6 @@ static void APP_SetWakeupConfig(lpm_rtd_power_mode_e targetMode)
             APP_SRTM_SetWakeupModule(WUU_MODULE_LPTMR1, LPTMR1_WUU_WAKEUP_EVENT);
             PCC1->PCC_LPTMR1 &= ~PCC1_PCC_LPTMR1_SSADO_MASK;
             PCC1->PCC_LPTMR1 |= PCC1_PCC_LPTMR1_SSADO(1);
-        }
-    }
-    else
-    {
-        /* Set PORT pin. */
-        if (kAPP_WakeupSourcePin == s_wakeupSource)
-        {
-            uint16_t event = (uint16_t)WUU_WAKEUP_PIN_TYPE;
-            /*
-             * Need setup SSADO field when gate core, platform, bus clock(RTD clock mode), unless failed to wakeup
-             * cortex-m33 by button. Currently will gate core, platform, bus clock when RTD enter Deep Sleep
-             * Mode(LPM_SystemDeepSleep->RTDCMC_SetClockMode), so setup SSADO field here for Deep Sleep Mode.
-             */
-            if (LPM_PowerModeDeepSleep == targetMode)
-            {
-                PCC1->PCC_RGPIOB &= ~PCC1_PCC_RGPIOB_SSADO_MASK;
-                PCC1->PCC_RGPIOB |= PCC1_PCC_RGPIOB_SSADO(1);
-                event |= 0x100; /* enable wakeup flag */
-            }
         }
     }
 }
@@ -1372,6 +1266,7 @@ void vApplicationMallocFailedHook(void)
     PRINTF("Malloc Failed!!!\r\n");
 }
 
+/* called by FreeRTOS */
 void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
 {
     uint32_t irqMask;
