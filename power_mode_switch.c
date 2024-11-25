@@ -1311,31 +1311,6 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
     BOARD_ResumeClockInit();
 }
 
-/* Called in PowerModeSwitchTask */
-static bool APP_LpmListener(lpm_rtd_power_mode_e curMode, lpm_rtd_power_mode_e newMode, void *data)
-{
-    PRINTF("WorkingTask %d: Transfer from %s to %s\r\n", (uint32_t)data, s_modeNames[curMode], s_modeNames[newMode]);
-
-    /* Do necessary preparation for this mode change */
-
-    return true; /* allow this switch */
-}
-
-/*!
- * @brief simulating working task.
- */
-static void WorkingTask(void *pvParameters)
-{
-    LPM_RegisterPowerListener(APP_LpmListener, pvParameters);
-
-    for (;;)
-    {
-        /* Use App task logic to replace vTaskDelay */
-        PRINTF("Task %d is working now\r\n", (uint32_t)pvParameters);
-        vTaskDelay(portMAX_DELAY);
-    }
-}
-
 void PMIC_Reset(void) {
     UPOWER_SetPmicReg(9 /* SW_RST */, 0x14 /* Cold reset */);
     /* full poweroff actually takes 16x T OFF_STEP (default 8ms),
@@ -1426,7 +1401,6 @@ int main(void)
     s_wakeupSig = xSemaphoreCreateBinary();
 
     xTaskCreate(PowerModeSwitchTask, "Main Task", 512U, NULL, tskIDLE_PRIORITY + 1U, NULL);
-    xTaskCreate(WorkingTask, "Working Task", configMINIMAL_STACK_SIZE, (void *)1, tskIDLE_PRIORITY + 2U, NULL);
 
 #ifdef MCMGR_USED
     /* Initialize MCMGR before calling its API */
