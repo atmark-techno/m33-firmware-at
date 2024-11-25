@@ -73,6 +73,10 @@ typedef struct
     {
         uint32_t CR;
     } mu;
+    struct
+    {
+        uint16_t timeout;
+    } wdog;
 } app_suspend_ctx_t;
 
 typedef enum
@@ -946,6 +950,7 @@ static srtm_status_t wdog_enable(bool enabled, uint16_t timeout)
         WDOG32_Init(WDOG1, &config);
         EnableIRQ(WDOG1_IRQn);
     }
+    suspendContext.wdog.timeout = enabled ? timeout : 0;
 
     return SRTM_Status_Success;
 }
@@ -955,6 +960,14 @@ static srtm_status_t wdog_ping(void)
     PRINTF("watchdog ping\r\n");
     WDOG32_Refresh(WDOG1);
     return SRTM_Status_Success;
+}
+
+static void APP_SRTM_WdogResume(void)
+{
+    if (suspendContext.wdog.timeout == 0)
+        return;
+
+    wdog_enable(true, suspendContext.wdog.timeout);
 }
 
 static void APP_SRTM_InitWdogService(void)
@@ -1858,6 +1871,7 @@ void APP_SRTM_Suspend(void)
 
 void APP_SRTM_Resume(bool resume)
 {
+    APP_SRTM_WdogResume();
     APP_SRTM_InitI2CDevice();
     /*
      * IO has restored in APP_Resume(), so don't need init io again in here.
