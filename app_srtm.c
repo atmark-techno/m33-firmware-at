@@ -914,6 +914,55 @@ static srtm_status_t APP_IO_InputInit(
     return APP_IO_ConfInput(inputIdx, event, wakeup, pinctrl);
 }
 
+void WDOG1_IRQHandler(void)
+{
+    PRINTF("WATCHDOG IRQ!\r\n");
+    SRTM_WdogService_NotifyPreTimeout(wdogService);
+    WDOG32_ClearStatusFlags(WDOG1, kWDOG32_InterruptFlag);
+}
+
+static srtm_status_t wdog_enable(bool enabled, uint16_t timeout)
+{
+
+    bool is_running = WDOG32_GetStatusFlags(WDOG1) & kWDOG32_RunningFlag;
+    PRINTF("Watchdog %s (timeout %d)\r\n", enabled ? "start" : "stop",
+           timeout);
+
+    /* timeout cannot be changed while running, always disable first */
+    if (is_running) {
+        WDOG32_Deinit(WDOG1);
+        /* wait for deinit to actually be effective */
+        while (0U == ((WDOG1->CS) & WDOG_CS_RCS_MASK));
+    }
+
+    if (enabled) {
+        wdog32_config_t config;
+        WDOG32_GetDefaultConfig(&config);
+
+        config.timeoutValue = timeout;
+        /* get a warning before reset (log message) */
+        config.enableInterrupt = true;
+
+        WDOG32_Init(WDOG1, &config);
+        EnableIRQ(WDOG1_IRQn);
+    }
+
+    return SRTM_Status_Success;
+}
+
+static srtm_status_t wdog_ping(void)
+{
+    PRINTF("watchdog ping\r\n");
+    WDOG32_Refresh(WDOG1);
+    return SRTM_Status_Success;
+}
+
+static void APP_SRTM_InitWdogService(void)
+{
+    wdogService = SRTM_WdogService_Create(wdog_enable, wdog_ping);
+    SRTM_Dispatcher_RegisterService(disp, wdogService);
+}
+
 static void APP_SRTM_DoWakeup(void *param)
 {
     APP_WakeupACore();
@@ -1535,56 +1584,6 @@ static void APP_SRTM_InitLfclService(void)
     SRTM_LfclService_Subscribe(service, APP_SRTM_LfclEventHandler, NULL);
     SRTM_Dispatcher_RegisterService(disp, service);
 }
-
-void WDOG1_IRQHandler(void)
-{
-    PRINTF("WATCHDOG IRQ!\r\n");
-    SRTM_WdogService_NotifyPreTimeout(wdogService);
-    WDOG32_ClearStatusFlags(WDOG1, kWDOG32_InterruptFlag);
-}
-
-static srtm_status_t wdog_enable(bool enabled, uint16_t timeout)
-{
-
-    bool is_running = WDOG32_GetStatusFlags(WDOG1) & kWDOG32_RunningFlag;
-    PRINTF("Watchdog %s (timeout %d)\r\n", enabled ? "start" : "stop",
-           timeout);
-
-    /* timeout cannot be changed while running, always disable first */
-    if (is_running) {
-        WDOG32_Deinit(WDOG1);
-        /* wait for deinit to actually be effective */
-        while (0U == ((WDOG1->CS) & WDOG_CS_RCS_MASK));
-    }
-
-    if (enabled) {
-        wdog32_config_t config;
-        WDOG32_GetDefaultConfig(&config);
-
-        config.timeoutValue = timeout;
-        /* get a warning before reset (log message) */
-        config.enableInterrupt = true;
-
-        WDOG32_Init(WDOG1, &config);
-        EnableIRQ(WDOG1_IRQn);
-    }
-
-    return SRTM_Status_Success;
-}
-
-static srtm_status_t wdog_ping(void)
-{
-    PRINTF("watchdog ping\r\n");
-    WDOG32_Refresh(WDOG1);
-    return SRTM_Status_Success;
-}
-
-static void APP_SRTM_InitWdogService(void)
-{
-    wdogService = SRTM_WdogService_Create(wdog_enable, wdog_ping);
-    SRTM_Dispatcher_RegisterService(disp, wdogService);
-}
-
 
 static void APP_SRTM_InitServices(void)
 {
