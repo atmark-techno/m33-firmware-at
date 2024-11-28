@@ -77,6 +77,7 @@ typedef enum
 #define APP_SRTM_RTC_CHANNEL_NAME    "rpmsg-rtc-channel"
 #define APP_SRTM_LFCL_CHANNEL_NAME   "rpmsg-life-cycle-channel"
 #define APP_SRTM_WDOG_CHANNEL_NAME   "rpmsg-wdog-channel"
+#define APP_SRTM_TTY_CHANNEL_NAME    "rpmsg-tty-channel"
 
 #define PEER_CORE_ID (1U)
 

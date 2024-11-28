@@ -25,6 +25,7 @@
 #include "srtm_rtc_adapter.h"
 #include "srtm_adc_service.h"
 #include "srtm_wdog_service.h"
+#include "srtm_tty_service.h"
 
 #include "app_srtm.h"
 #include "board.h"
@@ -40,6 +41,7 @@
 #include "fsl_sentinel.h"
 #include "fsl_lpadc.h"
 #include "fsl_flexio_i2c_master.h"
+#include "fsl_lpuart_freertos.h"
 #include "fsl_reset.h"
 #include "fsl_wdog32.h"
 
@@ -211,6 +213,34 @@ static const srtm_io_event_t wuuPinModeEvents[] = {
     SRTM_IoEventEitherEdge   /* kWUU_ExternalPinAnyEdge */
 };
 
+
+/* RS485 on CON3 */
+#define RS485_LPUART               LPUART0
+#define RS485_LPUART_BAUDRATE      (115200U)
+#define RS485_LPUART_CLK_FREQ      CLOCK_GetIpFreq(kCLOCK_Lpuart0)
+#define APP_PIN_PTA17       (0x0011U)
+
+
+static lpuart_rtos_handle_t s_rs485LpuartRtosHandle;
+static lpuart_handle_t s_rs485LpuartHandle;
+
+static uint8_t s_rs485BackgroundBuffer[4096];
+static lpuart_rtos_config_t s_rs485LpuartConfig = {
+    .baudrate    = RS485_LPUART_BAUDRATE,
+    .parity      = kLPUART_ParityDisabled,
+    .stopbits    = kLPUART_OneStopBit,
+    .buffer      = s_rs485BackgroundBuffer,
+    .buffer_size = sizeof(s_rs485BackgroundBuffer),
+    /* .enableRxRTS = true, */
+    /* .enableTxCTS = true, */
+    .base        = RS485_LPUART,
+    .rs485       = {
+        .flags   = LPUART_RS485_ENABLED | LPUART_RS485_DE_ON_SEND,
+        .deGpio  = APP_PIN_PTA17,
+    },
+};
+
+
 static srtm_dispatcher_t disp;
 static srtm_peercore_t core;
 static srtm_service_t pwmService;
@@ -220,6 +250,7 @@ static srtm_rtc_adapter_t rtcAdapter;
 static srtm_service_t i2cService;
 static srtm_service_t ioService;
 static srtm_service_t wdogService;
+static srtm_service_t ttyService;
 static SemaphoreHandle_t monSig;
 static struct rpmsg_lite_instance *rpmsgHandle;
 static app_rpmsg_monitor_t rpmsgMonitor;
@@ -976,6 +1007,68 @@ static void APP_SRTM_InitWdogService(void)
     SRTM_Dispatcher_RegisterService(disp, wdogService);
 }
 
+static void tty_rx_task(void *pvParameters)
+{
+    uint8_t *buf;
+    uint16_t maxlen;
+    while (true)
+    {
+        size_t recvlen = 0;
+
+        srtm_notification_t notif = SRTM_TtyService_NotifyAlloc(&buf, &maxlen);
+        if (!notif) {
+            // message already printed in alloc failure
+            SDK_DelayAtLeastUs(1000000, SDK_DEVICE_MAXIMUM_CPU_CLOCK_FREQUENCY);
+            continue;
+        }
+
+        do {
+            LPUART_RTOS_Receive(&s_rs485LpuartRtosHandle, buf, maxlen, &recvlen);
+            // XXX log error?
+        } while (recvlen == 0);
+
+        SRTM_TtyService_NotifySend(ttyService, notif, recvlen);
+    }
+}
+
+static int tty_tx(uint16_t len, uint8_t *buf)
+{
+    int rc;
+    // not yet ready
+    if (!s_rs485LpuartRtosHandle.base)
+        return kStatus_Fail;
+
+    rc = LPUART_RTOS_Send(&s_rs485LpuartRtosHandle, buf, len);
+    if (rc) {
+        PRINTF("Send fail for buf len %d, first byte %x: %d\r\n",
+                len, len > 0 ? buf[0] : 0, rc);
+    }
+    return rc;
+}
+
+static int tty_setbaud(uint32_t baud)
+{
+    return LPUART_SetBaudRate(RS485_LPUART, baud, RS485_LPUART_CLK_FREQ);
+}
+
+
+static void APP_SRTM_InitTtyDevice(void)
+{
+    s_rs485LpuartConfig.srcclk = RS485_LPUART_CLK_FREQ;
+    LPUART_RTOS_Init(&s_rs485LpuartRtosHandle, &s_rs485LpuartHandle, &s_rs485LpuartConfig);
+    LPUART_RTOS_SetRxTimeout(&s_rs485LpuartRtosHandle, 1, 0); /* short timeout to give data back asap */
+    LPUART_RTOS_SetTxTimeout(&s_rs485LpuartRtosHandle, 0, 0); /* XXX no timeout, depends on baud rate */
+}
+
+static void APP_SRTM_InitTtyService(void)
+{
+    APP_SRTM_InitTtyDevice();
+
+    ttyService = SRTM_TtyService_Create(tty_tx, tty_setbaud);
+    SRTM_Dispatcher_RegisterService(disp, ttyService);
+    xTaskCreate(tty_rx_task, "rs485 rx task", 256U, NULL, tskIDLE_PRIORITY + 2U, NULL);
+}
+
 static void APP_SRTM_DoWakeup(void *param)
 {
     APP_WakeupACore();
@@ -1099,6 +1192,10 @@ static void APP_SRTM_Linkup(void)
     SRTM_PeerCore_AddChannel(core, chan);
 
     rpmsgConfig.epName = APP_SRTM_WDOG_CHANNEL_NAME;
+    chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
+    SRTM_PeerCore_AddChannel(core, chan);
+
+    rpmsgConfig.epName = APP_SRTM_TTY_CHANNEL_NAME;
     chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
     SRTM_PeerCore_AddChannel(core, chan);
 
@@ -1607,6 +1704,7 @@ static void APP_SRTM_InitServices(void)
     APP_SRTM_InitRtcService();
     APP_SRTM_InitLfclService();
     APP_SRTM_InitWdogService();
+    APP_SRTM_InitTtyService();
 }
 
 void APP_PowerOffCA35(void)
@@ -1867,6 +1965,8 @@ void APP_SRTM_StartCommunication(void)
 
 void APP_SRTM_Suspend(void)
 {
+    // XXX checkme flush?
+    LPUART_RTOS_Deinit(&s_rs485LpuartRtosHandle);
 }
 
 void APP_SRTM_Resume(bool resume)
@@ -1882,6 +1982,7 @@ void APP_SRTM_Resume(bool resume)
     /* APP_SRTM_InitIoKeyDevice(); */
     APP_SRTM_InitPwmDevice();
     APP_SRTM_InitAdcDevice();
+    APP_SRTM_InitTtyDevice();
     HAL_RtcInit(rtcHandle, 0);
     if (resume)
     {
