@@ -216,6 +216,7 @@ static const srtm_io_event_t wuuPinModeEvents[] = {
 
 /* RS485 on CON3 */
 #define RS485_LPUART               LPUART0
+#define RS485_LPUART_IRQn          LPUART0_IRQn
 #define RS485_LPUART_BAUDRATE      (115200U)
 #define RS485_LPUART_CLK_FREQ      CLOCK_GetIpFreq(kCLOCK_Lpuart0)
 #define APP_PIN_PTA17       (0x0011U)
@@ -1054,6 +1055,9 @@ static int tty_setbaud(uint32_t baud)
 
 static void APP_SRTM_InitTtyDevice(void)
 {
+    /* IRQ enable by lpuart but priority isn't set, set it now */
+    NVIC_SetPriority(RS485_LPUART_IRQn, APP_LPUART_IRQ_PRIO);
+
     s_rs485LpuartConfig.srcclk = RS485_LPUART_CLK_FREQ;
     LPUART_RTOS_Init(&s_rs485LpuartRtosHandle, &s_rs485LpuartHandle, &s_rs485LpuartConfig);
     LPUART_RTOS_SetRxTimeout(&s_rs485LpuartRtosHandle, 1, 0); /* short timeout to give data back asap */

@@ -53,6 +53,7 @@ typedef enum
 
 /* IRQ handler priority definition, bigger number stands for lower priority */
 #define APP_LPI2C_IRQ_PRIO      (5U)
+#define APP_LPUART_IRQ_PRIO     (5U)
 #define APP_GPIO_IRQ_PRIO       (5U)
 #define APP_WUU_IRQ_PRIO        (5U)
 #define APP_CMC1_IRQ_PRIO       (5U)
