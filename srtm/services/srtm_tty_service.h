@@ -44,8 +44,7 @@ extern "C" {
  *
  * @return SRTM service handle on success and NULL on failure.
  */
-srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx,
-                                      srtm_tty_service_set_baud_t setBaud);
+srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service_set_baud_t setBaud);
 
 /*!
  * @brief Destroy TTY service.
@@ -68,9 +67,7 @@ void SRTM_TtyService_Reset(srtm_service_t service, srtm_peercore_t core);
 // store pointer to payload in arg
 srtm_notification_t SRTM_TtyService_NotifyAlloc(uint8_t **buf, uint16_t *len);
 // send notify buffer
-srtm_status_t SRTM_TtyService_NotifySend(srtm_service_t service,
-                                         srtm_notification_t notif,
-                                         uint16_t len);
+srtm_status_t SRTM_TtyService_NotifySend(srtm_service_t service, srtm_notification_t notif, uint16_t len);
 
 #ifdef __cplusplus
 }

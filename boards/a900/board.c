@@ -41,11 +41,11 @@ uint32_t dram_class;
 /*******************************************************************************
  * Variables
  ******************************************************************************/
-static uint32_t mrc_start_addr[2] = {0x4000000, 0x40000000};
-static uint32_t mrc_end_addr[2]   = {0xC000000, 0x50000000};
+static uint32_t mrc_start_addr[2] = { 0x4000000, 0x40000000 };
+static uint32_t mrc_end_addr[2]   = { 0xC000000, 0x50000000 };
 
 /* Boot Type Name(enum BOOT_TYPE) */
-static const char *s_bootTypeNames[] = {"Single Boot Type", "Dual Boot Type", "Low Power Boot Type"};
+static const char *s_bootTypeNames[] = { "Single Boot Type", "Dual Boot Type", "Low Power Boot Type" };
 
 /* TRDC */
 static bool releasedTrdc =
@@ -60,60 +60,62 @@ struct fsb_map_entry
 
 /* Register context for LPAV FSB FUSE */
 const struct fsb_map_entry fsb_mapping_table[] = {
-    {3, 8},  {4, 8},  {-1, 48}, /* Reserve 48 words */
-    {5, 8},  {6, 8},  {8, 4, true}, {24, 4, true}, {26, 4, true}, {27, 4, true}, {28, 8}, {29, 8}, {30, 8}, {31, 8},
-    {37, 8}, {38, 8}, {39, 8},      {40, 8},       {41, 8},       {42, 8},       {43, 8}, {44, 8}, {45, 8}, {46, 8},
+    { 3, 8 },  { 4, 8 },  { -1, 48 }, /* Reserve 48 words */
+    { 5, 8 },  { 6, 8 },  { 8, 4, true }, { 24, 4, true }, { 26, 4, true }, { 27, 4, true }, { 28, 8 },
+    { 29, 8 }, { 30, 8 }, { 31, 8 },      { 37, 8 },       { 38, 8 },       { 39, 8 },       { 40, 8 },
+    { 41, 8 }, { 42, 8 }, { 43, 8 },      { 44, 8 },       { 45, 8 },       { 46, 8 },
 };
 
 /* Register context for LPAV CGC2 */
 static uint32_t cgc2[][2] = {
-    {0x2da60014, 0x08004000}, {0x2da60020, 0x0},        {0x2da6003c, 0x18004180}, {0x2da60040, 0x48200000},
-    {0x2da60108, 0x00808080}, {0x2da60208, 0x00808080}, {0x2da60900, 0x0},        {0x2da60904, 0x0},
-    {0x2da60908, 0x0},        {0x2da60910, 0x0},        {0x2da60a00, 0x0},
+    { 0x2da60014, 0x08004000 }, { 0x2da60020, 0x0 },        { 0x2da6003c, 0x18004180 }, { 0x2da60040, 0x48200000 },
+    { 0x2da60108, 0x00808080 }, { 0x2da60208, 0x00808080 }, { 0x2da60900, 0x0 },        { 0x2da60904, 0x0 },
+    { 0x2da60908, 0x0 },        { 0x2da60910, 0x0 },        { 0x2da60a00, 0x0 },
 };
 
 /* Register context for LPAV PLL4 */
 static uint32_t pll4[][2] = {
-    {0x2da60604, 0x80},       {0x2da60608, 0x80808081}, {0x2da6060c, 0x808080C0}, {0x2da60610, 0x00160000},
-    {0x2da60618, 0x00000001}, {0x2da6061c, 0x0},        {0x2da60620, 0x0},        {0x2da60624, 0x00001300},
-    {0x2da60600, 0x03000001}, {0x2da68614, 0xD8DE5ECC},
+    { 0x2da60604, 0x80 },       { 0x2da60608, 0x80808081 }, { 0x2da6060c, 0x808080C0 }, { 0x2da60610, 0x00160000 },
+    { 0x2da60618, 0x00000001 }, { 0x2da6061c, 0x0 },        { 0x2da60620, 0x0 },        { 0x2da60624, 0x00001300 },
+    { 0x2da60600, 0x03000001 }, { 0x2da68614, 0xD8DE5ECC },
 };
 
 /* Register context for LPAV PCC5 part 1 */
 static uint32_t pcc5_0[][2] = {
-    {0x2da70000, 0xC0000000}, {0x2da70004, 0x80000000}, {0x2da70008, 0x80000000}, {0x2da7000c, 0x80000000},
-    {0x2da70010, 0x80000000}, {0x2da70014, 0x80000000}, {0x2da70018, 0x80000000}, {0x2da7001c, 0x80000000},
-    {0x2da70020, 0x80000000}, {0x2da70024, 0x80000000}, {0x2da70028, 0x80000000}, {0x2da7002c, 0x80000000},
-    {0x2da70030, 0x80000000}, {0x2da70034, 0x80000000}, {0x2da70038, 0x80000000}, {0x2da7003c, 0x80000000},
-    {0x2da70040, 0x80000000}, {0x2da70044, 0x80000000}, {0x2da70048, 0x80000000}, {0x2da7004c, 0x80000000},
-    {0x2da70050, 0x80000000}, {0x2da70054, 0x80000000}, {0x2da70058, 0x80000000}, {0x2da7005c, 0x80000000},
-    {0x2da70060, 0x80000000}, {0x2da70064, 0x80000000}, {0x2da70068, 0x80000000}, {0x2da7006c, 0x80000000},
-    {0x2da70070, 0x80000000}, {0x2da70074, 0x80000000}, {0x2da70078, 0x80000000}, {0x2da7007c, 0x80000000},
-    {0x2da70080, 0x80000000}
+    { 0x2da70000, 0xC0000000 }, { 0x2da70004, 0x80000000 }, { 0x2da70008, 0x80000000 }, { 0x2da7000c, 0x80000000 },
+    { 0x2da70010, 0x80000000 }, { 0x2da70014, 0x80000000 }, { 0x2da70018, 0x80000000 }, { 0x2da7001c, 0x80000000 },
+    { 0x2da70020, 0x80000000 }, { 0x2da70024, 0x80000000 }, { 0x2da70028, 0x80000000 }, { 0x2da7002c, 0x80000000 },
+    { 0x2da70030, 0x80000000 }, { 0x2da70034, 0x80000000 }, { 0x2da70038, 0x80000000 }, { 0x2da7003c, 0x80000000 },
+    { 0x2da70040, 0x80000000 }, { 0x2da70044, 0x80000000 }, { 0x2da70048, 0x80000000 }, { 0x2da7004c, 0x80000000 },
+    { 0x2da70050, 0x80000000 }, { 0x2da70054, 0x80000000 }, { 0x2da70058, 0x80000000 }, { 0x2da7005c, 0x80000000 },
+    { 0x2da70060, 0x80000000 }, { 0x2da70064, 0x80000000 }, { 0x2da70068, 0x80000000 }, { 0x2da7006c, 0x80000000 },
+    { 0x2da70070, 0x80000000 }, { 0x2da70074, 0x80000000 }, { 0x2da70078, 0x80000000 }, { 0x2da7007c, 0x80000000 },
+    { 0x2da70080, 0x80000000 }
 
 };
 
 /* Register context for LPAV PCC5 part 2 */
 static uint32_t pcc5_1[][2] = {
-    {0x2da70084, 0x80000000}, {0x2da70088, 0x80000000}, {0x2da7008c, 0x80000000}, {0x2da700a0, 0x80000000},
-    {0x2da700a4, 0x80000000}, {0x2da700a8, 0x80000000}, {0x2da700ac, 0x80000000}, {0x2da700b0, 0x90000000},
-    {0x2da700b4, 0x80000000}, {0x2da700bc, 0x80000000}, {0x2da700c0, 0x81000005}, {0x2da700c8, 0x90400000},
-    {0x2da700cc, 0x80000000}, {0x2da700d0, 0x90000000}, {0x2da700f0, 0x92000000}, {0x2da700f4, 0x92000000},
-    {0x2da700f8, 0x97000005}, {0x2da70108, 0xD0000000}, {0x2da7010c, 0x80000000}, {0x2da70110, 0x80000000},
-    {0x2da70114, 0xC0000000},
+    { 0x2da70084, 0x80000000 }, { 0x2da70088, 0x80000000 }, { 0x2da7008c, 0x80000000 }, { 0x2da700a0, 0x80000000 },
+    { 0x2da700a4, 0x80000000 }, { 0x2da700a8, 0x80000000 }, { 0x2da700ac, 0x80000000 }, { 0x2da700b0, 0x90000000 },
+    { 0x2da700b4, 0x80000000 }, { 0x2da700bc, 0x80000000 }, { 0x2da700c0, 0x81000005 }, { 0x2da700c8, 0x90400000 },
+    { 0x2da700cc, 0x80000000 }, { 0x2da700d0, 0x90000000 }, { 0x2da700f0, 0x92000000 }, { 0x2da700f4, 0x92000000 },
+    { 0x2da700f8, 0x97000005 }, { 0x2da70108, 0xD0000000 }, { 0x2da7010c, 0x80000000 }, { 0x2da70110, 0x80000000 },
+    { 0x2da70114, 0xC0000000 },
 };
 
 /* Register context for LPAV SIM */
 static uint32_t lpav_sim[][2] = {
-    {0x2da50000, 0x0}, {0x2da50004, 0x0}, {0x2da50008, 0x02112002}, {0x2da5001c, 0x0},
-    {0x2da50020, 0x0}, {0x2da50024, 0x0}, {0x2da50034, 0xFFFFFFFF},
+    { 0x2da50000, 0x0 }, { 0x2da50004, 0x0 }, { 0x2da50008, 0x02112002 }, { 0x2da5001c, 0x0 },
+    { 0x2da50020, 0x0 }, { 0x2da50024, 0x0 }, { 0x2da50034, 0xFFFFFFFF },
 };
 
 /* DDR PHY register index for frequency diff */
-static uint32_t freq_specific_reg_array[PHY_DIFF_NUM] = {
-    90,  92,  93,  96,  97,  100, 101, 102, 103, 104, 114,  346,  348,  349,  352, 353, 356,
-    357, 358, 359, 360, 370, 602, 604, 605, 608, 609, 612,  613,  614,  615,  616, 626, 858,
-    860, 861, 864, 865, 868, 869, 870, 871, 872, 882, 1063, 1319, 1566, 1624, 1625};
+static uint32_t freq_specific_reg_array[PHY_DIFF_NUM] = { 90,  92,  93,  96,  97,   100,  101,  102,  103, 104,
+                                                          114, 346, 348, 349, 352,  353,  356,  357,  358, 359,
+                                                          360, 370, 602, 604, 605,  608,  609,  612,  613, 614,
+                                                          615, 616, 626, 858, 860,  861,  864,  865,  868, 869,
+                                                          870, 871, 872, 882, 1063, 1319, 1566, 1624, 1625 };
 
 /*******************************************************************************
  * Code
@@ -620,7 +622,7 @@ void BOARD_SetTrdcGlobalConfig(void)
         mbcBlockConfig.slaveMemoryIdx            = 0U;   /* MBC2_DOM7_MEM0 */
         mbcBlockConfig.memoryBlockIdx            = 47U;  /* MBC2_DOM7_MEM0_BLK_CFG_W47 */
         TRDC_MbcSetMemoryBlockConfig(TRDC, &mbcBlockConfig);
-        mbcBlockConfig.memoryBlockIdx = 48U;             /* MBC2_DOM7_MEM0_BLK_CFG_W48 */
+        mbcBlockConfig.memoryBlockIdx = 48U; /* MBC2_DOM7_MEM0_BLK_CFG_W48 */
         TRDC_MbcSetMemoryBlockConfig(TRDC, &mbcBlockConfig);
 
         /* non secure state can access PCC1(PBridge1 slot 17) and ADC1(PBridge1 slot 34) for cortex-A35 */
@@ -631,7 +633,7 @@ void BOARD_SetTrdcGlobalConfig(void)
         mbcBlockConfig.slaveMemoryIdx            = 1U;   /* MBC2_DOM7_MEM1 */
         mbcBlockConfig.memoryBlockIdx            = 17U;  /* MBC2_DOM7_MEM1_BLK_CFG_W17 */
         TRDC_MbcSetMemoryBlockConfig(TRDC, &mbcBlockConfig);
-        mbcBlockConfig.memoryBlockIdx = 34U;             /* MBC2_DOM7_MEM1_BLK_CFG_W34 */
+        mbcBlockConfig.memoryBlockIdx = 34U; /* MBC2_DOM7_MEM1_BLK_CFG_W34 */
         TRDC_MbcSetMemoryBlockConfig(TRDC, &mbcBlockConfig);
 
         /* non secure state can access iomuxc0(PBridge1 slot 33) for cortex-A35 */
@@ -717,7 +719,7 @@ void BOARD_SetTrdcGlobalConfig(void)
         mbcBlockConfig.slaveMemoryIdx            = 3U;   /* MBC2_DOM7_MEM3, slave memoty is sentinel */
         mbcBlockConfig.memoryBlockIdx            = 1U;   /* MBC2_DOM7_MEM3_BLK_CFG_W1 */
         TRDC_MbcSetMemoryBlockConfig(TRDC, &mbcBlockConfig);
-        mbcBlockConfig.memoryBlockIdx = 2U;              /* MBC2_DOM7_MEM3_BLK_CFG_W2 */
+        mbcBlockConfig.memoryBlockIdx = 2U; /* MBC2_DOM7_MEM3_BLK_CFG_W2 */
         TRDC_MbcSetMemoryBlockConfig(TRDC, &mbcBlockConfig);
 
         /* non secure state can access RTD_SIM_SEC(PBridge0 slot 43, T-MBC2) for cortex-A35 */
@@ -905,11 +907,11 @@ void BOARD_SetTrdcGlobalConfig(void)
         mbcBlockConfig.slaveMemoryIdx            = 1U;                  /* MBC2_DOM0_MEM1 */
         mbcBlockConfig.memoryBlockIdx            = 40U;                 /* MBC2_DOM0_MEM1_BLK_CFG_W40 */
         TRDC_MbcSetMemoryBlockConfig(TRDC, &mbcBlockConfig);
-        mbcBlockConfig.memoryBlockIdx = 41U;                            /* MBC2_DOM0_MEM1_BLK_CFG_W41 */
+        mbcBlockConfig.memoryBlockIdx = 41U; /* MBC2_DOM0_MEM1_BLK_CFG_W41 */
         TRDC_MbcSetMemoryBlockConfig(TRDC, &mbcBlockConfig);
-        mbcBlockConfig.memoryBlockIdx = 42U;                            /* MBC2_DOM0_MEM1_BLK_CFG_W42 */
+        mbcBlockConfig.memoryBlockIdx = 42U; /* MBC2_DOM0_MEM1_BLK_CFG_W42 */
         TRDC_MbcSetMemoryBlockConfig(TRDC, &mbcBlockConfig);
-        mbcBlockConfig.memoryBlockIdx = 43U;                            /* MBC2_DOM0_MEM1_BLK_CFG_W43 */
+        mbcBlockConfig.memoryBlockIdx = 43U; /* MBC2_DOM0_MEM1_BLK_CFG_W43 */
         TRDC_MbcSetMemoryBlockConfig(TRDC, &mbcBlockConfig);
 
         /* non secure state can access ssram(T-MBC0) for eDMA0 */
@@ -1054,7 +1056,7 @@ void BOARD_SetTrdcAfterApdReset(void)
         mbcBlockConfig.slaveMemoryIdx            = 3U;    /* MBC2_DOM7_MEM3, slave memoty is sentinel */
         mbcBlockConfig.memoryBlockIdx            = 1U;    /* MBC2_DOM7_MEM3_BLK_CFG_W1 */
         TRDC_MbcSetMemoryBlockConfig(TRDC, &mbcBlockConfig);
-        mbcBlockConfig.memoryBlockIdx = 2U;               /* MBC2_DOM7_MEM3_BLK_CFG_W2 */
+        mbcBlockConfig.memoryBlockIdx = 2U; /* MBC2_DOM7_MEM3_BLK_CFG_W2 */
         TRDC_MbcSetMemoryBlockConfig(TRDC, &mbcBlockConfig);
 
         /* secure state can access RTD_SIM_SEC(PBridge0 slot 43, T-MBC2) for cortex-A35 */
@@ -1074,7 +1076,7 @@ void BOARD_SetTrdcAfterApdReset(void)
         mbcBlockConfig.slaveMemoryIdx            = 0U;    /* MBC2_DOM7_MEM0 */
         mbcBlockConfig.memoryBlockIdx            = 47U;   /* MBC2_DOM7_MEM0_BLK_CFG_W47 */
         TRDC_MbcSetMemoryBlockConfig(TRDC, &mbcBlockConfig);
-        mbcBlockConfig.memoryBlockIdx = 48U;              /* MBC2_DOM7_MEM0_BLK_CFG_W48 */
+        mbcBlockConfig.memoryBlockIdx = 48U; /* MBC2_DOM7_MEM0_BLK_CFG_W48 */
         TRDC_MbcSetMemoryBlockConfig(TRDC, &mbcBlockConfig);
     }
 }
@@ -1354,7 +1356,7 @@ status_t BOARD_InitPsRam(void)
     flexspi_device_config_t deviceconfig = {
         .flexspiRootClk       = 392000000, /* 392MHZ SPI serial clock, DDR serial clock 196M */
         .isSck2Enabled        = false,
-        .flashSize            = 0x2000,    /* 64Mb/KByte */
+        .flashSize            = 0x2000, /* 64Mb/KByte */
         .CSIntervalUnit       = kFLEXSPI_CsIntervalUnit1SckCycle,
         .CSInterval           = 5,
         .CSHoldTime           = 3,
@@ -1436,7 +1438,7 @@ status_t BOARD_InitPsRam(void)
     config.ahbConfig.buffer[0].masterIndex    = 2;    /* DMA0 */
     config.ahbConfig.buffer[0].bufferSize     = 1024; /* Allocate 1KB bytes for DMA0 */
     config.ahbConfig.buffer[0].enablePrefetch = true;
-    config.ahbConfig.buffer[0].priority       = 7;    /* Set DMA0 to highest priority. */
+    config.ahbConfig.buffer[0].priority       = 7; /* Set DMA0 to highest priority. */
     /* All other masters use last buffer with 1KB bytes. */
     config.ahbConfig.buffer[FSL_FEATURE_FLEXSPI_AHB_BUFFER_COUNT - 1].bufferSize = 1024;
     config.enableCombination                                                     = true;
@@ -1627,7 +1629,7 @@ void BOARD_FlexspiClockSafeConfig(void)
 #if defined(SDK_I2C_BASED_COMPONENT_USED) && SDK_I2C_BASED_COMPONENT_USED
 void BOARD_LPI2C_Init(LPI2C_Type *base, uint32_t clkSrc_Hz)
 {
-    lpi2c_master_config_t lpi2cConfig = {0};
+    lpi2c_master_config_t lpi2cConfig = { 0 };
 
     /*
      * lpi2cConfig.debugEnable = false;
@@ -1643,13 +1645,8 @@ void BOARD_LPI2C_Init(LPI2C_Type *base, uint32_t clkSrc_Hz)
     LPI2C_MasterInit(base, &lpi2cConfig, clkSrc_Hz);
 }
 
-status_t BOARD_LPI2C_Send(LPI2C_Type *base,
-                          uint8_t deviceAddress,
-                          uint32_t subAddress,
-                          uint8_t subAddressSize,
-                          uint8_t *txBuff,
-                          uint16_t txBuffSize,
-                          uint32_t flags)
+status_t BOARD_LPI2C_Send(LPI2C_Type *base, uint8_t deviceAddress, uint32_t subAddress, uint8_t subAddressSize,
+                          uint8_t *txBuff, uint16_t txBuffSize, uint32_t flags)
 {
     lpi2c_master_transfer_t xfer;
 
@@ -1664,13 +1661,8 @@ status_t BOARD_LPI2C_Send(LPI2C_Type *base,
     return LPI2C_MasterTransferBlocking(base, &xfer);
 }
 
-status_t BOARD_LPI2C_Receive(LPI2C_Type *base,
-                             uint8_t deviceAddress,
-                             uint32_t subAddress,
-                             uint8_t subAddressSize,
-                             uint8_t *rxBuff,
-                             uint16_t rxBuffSize,
-                             uint32_t flags)
+status_t BOARD_LPI2C_Receive(LPI2C_Type *base, uint8_t deviceAddress, uint32_t subAddress, uint8_t subAddressSize,
+                             uint8_t *rxBuff, uint16_t rxBuffSize, uint32_t flags)
 {
     lpi2c_master_transfer_t xfer;
 
@@ -1690,20 +1682,16 @@ void BOARD_Accel_I2C_Init(void)
     BOARD_LPI2C_Init(BOARD_ACCEL_I2C_BASEADDR, BOARD_ACCEL_I2C_CLOCK_FREQ);
 }
 
-status_t BOARD_Accel_I2C_Send(
-    uint8_t deviceAddress, uint32_t subAddress, uint8_t subaddressSize, uint32_t txBuff, uint32_t flags)
+status_t BOARD_Accel_I2C_Send(uint8_t deviceAddress, uint32_t subAddress, uint8_t subaddressSize, uint32_t txBuff,
+                              uint32_t flags)
 {
     uint8_t data = (uint8_t)txBuff;
 
     return BOARD_LPI2C_Send(BOARD_ACCEL_I2C_BASEADDR, deviceAddress, subAddress, subaddressSize, &data, 1, flags);
 }
 
-status_t BOARD_Accel_I2C_Receive(uint8_t deviceAddress,
-                                 uint32_t subAddress,
-                                 uint8_t subaddressSize,
-                                 uint8_t *rxBuff,
-                                 uint8_t rxBuffSize,
-                                 uint32_t flags)
+status_t BOARD_Accel_I2C_Receive(uint8_t deviceAddress, uint32_t subAddress, uint8_t subaddressSize, uint8_t *rxBuff,
+                                 uint8_t rxBuffSize, uint32_t flags)
 {
     return BOARD_LPI2C_Receive(BOARD_ACCEL_I2C_BASEADDR, deviceAddress, subAddress, subaddressSize, rxBuff, rxBuffSize,
                                flags);
@@ -1714,23 +1702,15 @@ void BOARD_Codec_I2C_Init(void)
     BOARD_LPI2C_Init(BOARD_CODEC_I2C_BASEADDR, BOARD_CODEC_I2C_CLOCK_FREQ);
 }
 
-status_t BOARD_Codec_I2C_Send(uint8_t deviceAddress,
-                              uint32_t subAddress,
-                              uint8_t subAddressSize,
-                              const uint8_t *txBuff,
-                              uint8_t txBuffSize,
-                              uint32_t flags)
+status_t BOARD_Codec_I2C_Send(uint8_t deviceAddress, uint32_t subAddress, uint8_t subAddressSize, const uint8_t *txBuff,
+                              uint8_t txBuffSize, uint32_t flags)
 {
     return BOARD_LPI2C_Send(BOARD_CODEC_I2C_BASEADDR, deviceAddress, subAddress, subAddressSize, (uint8_t *)txBuff,
                             txBuffSize, flags);
 }
 
-status_t BOARD_Codec_I2C_Receive(uint8_t deviceAddress,
-                                 uint32_t subAddress,
-                                 uint8_t subAddressSize,
-                                 uint8_t *rxBuff,
-                                 uint8_t rxBuffSize,
-                                 uint32_t flags)
+status_t BOARD_Codec_I2C_Receive(uint8_t deviceAddress, uint32_t subAddress, uint8_t subAddressSize, uint8_t *rxBuff,
+                                 uint8_t rxBuffSize, uint32_t flags)
 {
     return BOARD_LPI2C_Receive(BOARD_CODEC_I2C_BASEADDR, deviceAddress, subAddress, subAddressSize, rxBuff, rxBuffSize,
                                flags);
@@ -1741,15 +1721,15 @@ void BOARD_Display_I2C_Init(void)
     BOARD_LPI2C_Init(BOARD_DISPLAY_I2C_BASEADDR, BOARD_DISPLAY_I2C_CLOCK_FREQ);
 }
 
-status_t BOARD_Display_I2C_Send(
-    uint8_t deviceAddress, uint32_t subAddress, uint8_t subAddressSize, const uint8_t *txBuff, uint8_t txBuffSize)
+status_t BOARD_Display_I2C_Send(uint8_t deviceAddress, uint32_t subAddress, uint8_t subAddressSize,
+                                const uint8_t *txBuff, uint8_t txBuffSize)
 {
     return BOARD_LPI2C_Send(BOARD_DISPLAY_I2C_BASEADDR, deviceAddress, subAddress, subAddressSize, (uint8_t *)txBuff,
                             txBuffSize, 0);
 }
 
-status_t BOARD_Display_I2C_Receive(
-    uint8_t deviceAddress, uint32_t subAddress, uint8_t subAddressSize, uint8_t *rxBuff, uint8_t rxBuffSize)
+status_t BOARD_Display_I2C_Receive(uint8_t deviceAddress, uint32_t subAddress, uint8_t subAddressSize, uint8_t *rxBuff,
+                                   uint8_t rxBuffSize)
 {
     return BOARD_LPI2C_Receive(BOARD_CODEC_I2C_BASEADDR, deviceAddress, subAddress, subAddressSize, rxBuff, rxBuffSize,
                                0);
@@ -1763,23 +1743,15 @@ void BOARD_PCA6416A_I2C_Init(void)
     BOARD_LPI2C_Init(BOARD_PCA6416A_I2C, BOARD_PCA6416A_I2C_CLOCK_FREQ);
 }
 
-status_t BOARD_PCA6416A_I2C_Send(uint8_t deviceAddress,
-                                 uint32_t subAddress,
-                                 uint8_t subAddressSize,
-                                 const uint8_t *txBuff,
-                                 uint8_t txBuffSize,
-                                 uint32_t flags)
+status_t BOARD_PCA6416A_I2C_Send(uint8_t deviceAddress, uint32_t subAddress, uint8_t subAddressSize,
+                                 const uint8_t *txBuff, uint8_t txBuffSize, uint32_t flags)
 {
     return BOARD_LPI2C_Send(BOARD_PCA6416A_I2C, deviceAddress, subAddress, subAddressSize, (uint8_t *)txBuff,
                             txBuffSize, flags);
 }
 
-status_t BOARD_PCA6416A_I2C_Receive(uint8_t deviceAddress,
-                                    uint32_t subAddress,
-                                    uint8_t subAddressSize,
-                                    uint8_t *rxBuff,
-                                    uint8_t rxBuffSize,
-                                    uint32_t flags)
+status_t BOARD_PCA6416A_I2C_Receive(uint8_t deviceAddress, uint32_t subAddress, uint8_t subAddressSize, uint8_t *rxBuff,
+                                    uint8_t rxBuffSize, uint32_t flags)
 {
     return BOARD_LPI2C_Receive(BOARD_PCA6416A_I2C, deviceAddress, subAddress, subAddressSize, rxBuff, rxBuffSize,
                                flags);
@@ -2179,10 +2151,10 @@ void BOARD_DramExitRetention(uint32_t dram_class, struct dram_cfg *dram_timing_c
          */
         /* e. PI_PWRUP_SREFRESH_EXIT_CS=0xF */
         /* f. PI_DLL_RESET=0x1 */
-        SETBIT32(LPDDR_BASE + DENALI_PI_137, 0x1);                       /* PI_DLL_RESET=1 */
-        SETBIT32(LPDDR_BASE + DENALI_PI_132, 0x01000000);                /* PI_PWRUP_SELF_REF_EXIT = 1 */
-        CLRBIT32(LPDDR_BASE + DENALI_PI_132, BIT(16));                   /* PI_MC_PWRUP_SELF_REF_EXIT = 0 */
-        LPDDR->DENALI_PI_4 &= ~LPDDR_DENALI_PI_4_PI_INIT_LVL_EN_MASK;    /* PI_INT_LVL_EN = 0 */
+        SETBIT32(LPDDR_BASE + DENALI_PI_137, 0x1);                    /* PI_DLL_RESET=1 */
+        SETBIT32(LPDDR_BASE + DENALI_PI_132, 0x01000000);             /* PI_PWRUP_SELF_REF_EXIT = 1 */
+        CLRBIT32(LPDDR_BASE + DENALI_PI_132, BIT(16));                /* PI_MC_PWRUP_SELF_REF_EXIT = 0 */
+        LPDDR->DENALI_PI_4 &= ~LPDDR_DENALI_PI_4_PI_INIT_LVL_EN_MASK; /* PI_INT_LVL_EN = 0 */
         LPDDR->DENALI_PI_174 |= (LPDDR_DENALI_PI_174_PI_WRLVL_EN_F0(3) |
                                  LPDDR_DENALI_PI_174_PI_WRLVL_EN_F1(3)); /* PI_WRLVL_EN_F0 = 3, PI_WRLVL_EN_F1 = 3 */
         LPDDR->DENALI_PI_175 |= LPDDR_DENALI_PI_175_PI_WRLVL_EN_F2(3);   /* PI_WRLVL_EN_F2 = 3 */

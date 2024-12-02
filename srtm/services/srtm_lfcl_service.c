@@ -30,8 +30,8 @@
 
 #define SRTM_LFCL_VERSION (0x0100U)
 
-#define SRTM_LFCL_RETURN_CODE_SUCEESS     (0x0U)
-#define SRTM_LFCL_RETURN_CODE_FAIL        (0x1U)
+#define SRTM_LFCL_RETURN_CODE_SUCEESS (0x0U)
+#define SRTM_LFCL_RETURN_CODE_FAIL (0x1U)
 #define SRTM_LFCL_RETURN_CODE_UNSUPPORTED (0x2U)
 
 #define SRTM_LFCL_CMD_CHANGE_POWER_MODE (0x00U)
@@ -39,12 +39,12 @@
 
 #define SRTM_LFCL_NTF_HEART_BEAT (0x01U)
 
-#define SRTM_LFCL_POWER_MODE_RUN      (0x01U)
-#define SRTM_LFCL_POWER_MODE_VLLS     (0x05U)
-#define SRTM_LFCL_POWER_MODE_REBOOT   (0x06U)
+#define SRTM_LFCL_POWER_MODE_RUN (0x01U)
+#define SRTM_LFCL_POWER_MODE_VLLS (0x05U)
+#define SRTM_LFCL_POWER_MODE_REBOOT (0x06U)
 #define SRTM_LFCL_POWER_MODE_SHUTDOWN (0x07U)
-#define SRTM_LFCL_HEART_BEAT_DISABLE  (0x00U)
-#define SRTM_LFCL_HEART_BEAT_ENABLE   (0x01U)
+#define SRTM_LFCL_HEART_BEAT_DISABLE (0x00U)
+#define SRTM_LFCL_HEART_BEAT_ENABLE (0x01U)
 
 /* Callback list node */
 typedef struct _srtm_lfcl_callback
@@ -52,7 +52,7 @@ typedef struct _srtm_lfcl_callback
     srtm_list_t node;
     srtm_lfcl_service_cb_t callback;
     void *param;
-} *srtm_lfcl_callback_t;
+} * srtm_lfcl_callback_t;
 
 /* Service handle */
 typedef struct _srtm_lfcl_service
@@ -63,7 +63,7 @@ typedef struct _srtm_lfcl_service
 #if defined(SRTM_STATIC_API) && SRTM_STATIC_API
     srtm_mutex_buf_t mutexStatic;
 #endif
-} *srtm_lfcl_service_t;
+} * srtm_lfcl_service_t;
 
 /*******************************************************************************
  * Prototypes
@@ -76,10 +76,8 @@ typedef struct _srtm_lfcl_service
 /*******************************************************************************
  * Code
  ******************************************************************************/
-static srtm_status_t SRTM_LfclService_NotifySubscribers(srtm_lfcl_service_t handle,
-                                                        srtm_peercore_t core,
-                                                        srtm_lfcl_event_t event,
-                                                        void *eventParam)
+static srtm_status_t SRTM_LfclService_NotifySubscribers(srtm_lfcl_service_t handle, srtm_peercore_t core,
+                                                        srtm_lfcl_event_t event, void *eventParam)
 {
     srtm_status_t status = SRTM_Status_Success;
     srtm_lfcl_callback_t cb;
@@ -114,8 +112,8 @@ static void SRTM_LfclService_DeactivatePeerCore(srtm_dispatcher_t disp, void *pa
     (void)SRTM_PeerCore_Deactivate(core, SRTM_LfclService_WakeupPeerCore, param1);
 }
 
-static srtm_status_t SRTM_LfclService_ChangePowerMode(
-    srtm_lfcl_service_t handle, srtm_peercore_t core, uint8_t mode, srtm_procedure_t *pPre, srtm_procedure_t *pPost)
+static srtm_status_t SRTM_LfclService_ChangePowerMode(srtm_lfcl_service_t handle, srtm_peercore_t core, uint8_t mode,
+                                                      srtm_procedure_t *pPre, srtm_procedure_t *pPost)
 {
     srtm_status_t status;
 

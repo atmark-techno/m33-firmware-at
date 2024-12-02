@@ -34,7 +34,7 @@ typedef struct _srtm_rpmsg_endpoint
     srtm_rpmsg_endpoint_rx_cb_t rxCallback;
     void *rxCallbackParam;
     bool started;
-} *srtm_rpmsg_endpoint_t;
+} * srtm_rpmsg_endpoint_t;
 
 /*******************************************************************************
  * Prototypes
@@ -189,8 +189,8 @@ srtm_channel_t SRTM_RPMsgEndpoint_Create(srtm_rpmsg_endpoint_config_t *config)
     handle->rxCallback      = NULL;
     handle->rxCallbackParam = NULL;
 #if defined(SRTM_STATIC_API) && SRTM_STATIC_API
-    handle->rpmsgEndpoint =
-        rpmsg_lite_create_ept(config->rpmsgHandle, config->localAddr, SRTM_RPMsgEndpoint_RxHandler, handle, config->ept_context);
+    handle->rpmsgEndpoint = rpmsg_lite_create_ept(config->rpmsgHandle, config->localAddr, SRTM_RPMsgEndpoint_RxHandler,
+                                                  handle, config->ept_context);
 #else
     handle->rpmsgEndpoint =
         rpmsg_lite_create_ept(config->rpmsgHandle, config->localAddr, SRTM_RPMsgEndpoint_RxHandler, handle);
@@ -204,12 +204,12 @@ srtm_channel_t SRTM_RPMsgEndpoint_Create(srtm_rpmsg_endpoint_config_t *config)
     }
 
     SRTM_List_Init(&handle->channel.node);
-    handle->channel.core     = NULL;
-    handle->channel.destroy  = SRTM_RPMsgEndpoint_Destroy;
-    handle->channel.start    = SRTM_RPMsgEndpoint_Start;
-    handle->channel.stop     = SRTM_RPMsgEndpoint_Stop;
-    handle->channel.sendData = SRTM_RPMsgEndpoint_SendData;
-    handle->channel.sendDataPreCallback = NULL;
+    handle->channel.core                 = NULL;
+    handle->channel.destroy              = SRTM_RPMsgEndpoint_Destroy;
+    handle->channel.start                = SRTM_RPMsgEndpoint_Start;
+    handle->channel.stop                 = SRTM_RPMsgEndpoint_Stop;
+    handle->channel.sendData             = SRTM_RPMsgEndpoint_SendData;
+    handle->channel.sendDataPreCallback  = NULL;
     handle->channel.sendDataPostCallback = NULL;
 
     if (config->epName != NULL)
@@ -239,8 +239,7 @@ void SRTM_RPMsgEndpoint_Destroy(srtm_channel_t channel)
     SRTM_Heap_Free(handle);
 }
 
-srtm_status_t SRTM_RPMsgEndpoint_OverrideRxHandler(srtm_channel_t channel,
-                                                   srtm_rpmsg_endpoint_rx_cb_t callback,
+srtm_status_t SRTM_RPMsgEndpoint_OverrideRxHandler(srtm_channel_t channel, srtm_rpmsg_endpoint_rx_cb_t callback,
                                                    void *param)
 {
     srtm_rpmsg_endpoint_t handle = (srtm_rpmsg_endpoint_t)(void *)channel;

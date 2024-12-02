@@ -97,35 +97,19 @@ typedef struct
  * Prototypes
  ******************************************************************************/
 
-static srtm_status_t APP_SRTM_I2C_Read(srtm_i2c_adapter_t adapter,
-                                       uint32_t base_addr,
-                                       srtm_i2c_type_t type,
-                                       uint16_t slaveAddr,
-                                       uint8_t *buf,
-                                       uint16_t len,
-                                       uint16_t flags);
+static srtm_status_t APP_SRTM_I2C_Read(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
+                                       uint16_t slaveAddr, uint8_t *buf, uint16_t len, uint16_t flags);
 
-static srtm_status_t APP_SRTM_I2C_Write(srtm_i2c_adapter_t adapter,
-                                        uint32_t base_addr,
-                                        srtm_i2c_type_t type,
-                                        uint16_t slaveAddr,
-                                        uint8_t *buf,
-                                        uint16_t len,
-                                        uint16_t flags);
+static srtm_status_t APP_SRTM_I2C_Write(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
+                                        uint16_t slaveAddr, uint8_t *buf, uint16_t len, uint16_t flags);
 
-static srtm_status_t APP_SRTM_I2C_SwitchChannel(srtm_i2c_adapter_t adapter,
-                                                uint32_t base_addr,
-                                                srtm_i2c_type_t type,
-                                                uint16_t slaveAddr,
-                                                srtm_i2c_switch_channel channel);
+static srtm_status_t APP_SRTM_I2C_SwitchChannel(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
+                                                uint16_t slaveAddr, srtm_i2c_switch_channel channel);
 
-static srtm_status_t APP_IO_InputInit(
-    srtm_service_t service, srtm_peercore_t core, uint16_t ioId, srtm_io_event_t event,
-    bool wakeup, uint32_t pinctrl);
+static srtm_status_t APP_IO_InputInit(srtm_service_t service, srtm_peercore_t core, uint16_t ioId,
+                                      srtm_io_event_t event, bool wakeup, uint32_t pinctrl);
 
-static srtm_status_t APP_SRTM_ADC_Get(struct adc_handle *handle,
-                                      size_t idx,
-                                      uint16_t *value);
+static srtm_status_t APP_SRTM_ADC_Get(struct adc_handle *handle, size_t idx, uint16_t *value);
 
 /*******************************************************************************
  * Variables
@@ -154,47 +138,47 @@ static int64_t apd_boot_cnt = 0; /* it's cold boot when apd_boot_cnt(Application
 static bool support_dsl_for_apd = false; /* true: support deep sleep mode; false: not support deep sleep mode */
 
 const uint8_t wuuPins[] = {
-    0, /* WUU_P0 PTA0 */
+    0,   /* WUU_P0 PTA0 */
     255, /* PTA1 */
     255, /* PTA2 */
-    1, /* WUU0_P1 PTA3 */
-    2, /* WUU0_P2 PTA4 */
+    1,   /* WUU0_P1 PTA3 */
+    2,   /* WUU0_P2 PTA4 */
     255, /* PTA5 */
-    3, /* WUU0_P3 PTA6 */
-    4, /* WUU0_P4 PTA7 */
-    5, /* WUU0_P5 PTA8 */
-    6, /* WUU0_P6 PTA9 */
-    7, /* WUU0_P7 PTA10 */
-    8, /* WUU0_P8 PTA11 */
-    9, /* WUU0_P9 PTA12 */
-    10, /* WUU0_P10 PTA13 */
-    11, /* WUU0_P11 PTA14 */
-    12, /* WUU0_P12 PTA15 */
-    13, /* WUU0_P13 PTA16 */
-    14, /* WUU0_P14 PTA17 */
-    15, /* WUU0_P15 PTA18 */
+    3,   /* WUU0_P3 PTA6 */
+    4,   /* WUU0_P4 PTA7 */
+    5,   /* WUU0_P5 PTA8 */
+    6,   /* WUU0_P6 PTA9 */
+    7,   /* WUU0_P7 PTA10 */
+    8,   /* WUU0_P8 PTA11 */
+    9,   /* WUU0_P9 PTA12 */
+    10,  /* WUU0_P10 PTA13 */
+    11,  /* WUU0_P11 PTA14 */
+    12,  /* WUU0_P12 PTA15 */
+    13,  /* WUU0_P13 PTA16 */
+    14,  /* WUU0_P14 PTA17 */
+    15,  /* WUU0_P15 PTA18 */
     255, /* PTA19 */
     255, /* PTA20 */
     255, /* PTA21 */
     255, /* PTA22 */
     255, /* PTA23 */
-    16, /* WUU0_P16 PTA24 */
-    17, /* WUU0_P17 PTB0 */
-    18, /* WUU0_P18 PTB1 */
-    19, /* WUU0_P19 PTB2 */
-    20, /* WUU0_P20 PTB3 */
-    21, /* WUU0_P21 PTB4 */
-    22, /* WUU0_P22 PTB5 */
-    23, /* WUU0_P23 PTB6 */
+    16,  /* WUU0_P16 PTA24 */
+    17,  /* WUU0_P17 PTB0 */
+    18,  /* WUU0_P18 PTB1 */
+    19,  /* WUU0_P19 PTB2 */
+    20,  /* WUU0_P20 PTB3 */
+    21,  /* WUU0_P21 PTB4 */
+    22,  /* WUU0_P22 PTB5 */
+    23,  /* WUU0_P23 PTB6 */
     255, /* PTB7 */
     255, /* PTB8 */
     255, /* PTB9 */
     255, /* PTB10 */
     255, /* PTB11 */
-    24, /* WUU0_P24 PTB12 */
-    25, /* WUU0_P25 PTB13 */
-    26, /* WUU0_P26 PTB14 */
-    27, /* WUU0_P27 PTB15 */
+    24,  /* WUU0_P24 PTB12 */
+    25,  /* WUU0_P25 PTB13 */
+    26,  /* WUU0_P26 PTB14 */
+    27,  /* WUU0_P27 PTB15 */
     255, /* 16 (no more pins after PTB15) */
     255, /* 17 */
     255, /* 18 */
@@ -213,14 +197,12 @@ static const srtm_io_event_t wuuPinModeEvents[] = {
     SRTM_IoEventEitherEdge   /* kWUU_ExternalPinAnyEdge */
 };
 
-
 /* RS485 on CON3 */
-#define RS485_LPUART               LPUART0
-#define RS485_LPUART_IRQn          LPUART0_IRQn
-#define RS485_LPUART_BAUDRATE      (115200U)
-#define RS485_LPUART_CLK_FREQ      CLOCK_GetIpFreq(kCLOCK_Lpuart0)
-#define APP_PIN_PTA17       (0x0011U)
-
+#define RS485_LPUART LPUART0
+#define RS485_LPUART_IRQn LPUART0_IRQn
+#define RS485_LPUART_BAUDRATE (115200U)
+#define RS485_LPUART_CLK_FREQ CLOCK_GetIpFreq(kCLOCK_Lpuart0)
+#define APP_PIN_PTA17 (0x0011U)
 
 static lpuart_rtos_handle_t s_rs485LpuartRtosHandle;
 static lpuart_handle_t s_rs485LpuartHandle;
@@ -240,7 +222,6 @@ static lpuart_rtos_config_t s_rs485LpuartConfig = {
         .deGpio  = APP_PIN_PTA17,
     },
 };
-
 
 static srtm_dispatcher_t disp;
 static srtm_peercore_t core;
@@ -278,20 +259,21 @@ lpm_ad_power_mode_e AD_WillEnterMode = AD_UNKOWN;
 
 /* pwmHandles must strictly follow TPM instances. If you don't provide service for some TPM instance,
  * set the corresponding handle to NULL. */
-static hal_pwm_handle_t pwmHandles[2] = {(hal_pwm_handle_t)pwmHandle0, NULL};
+static hal_pwm_handle_t pwmHandles[2] = { (hal_pwm_handle_t)pwmHandle0, NULL };
 
 static struct adc_handle adcHandles[] = {
-    {.chan = 5,
-     .side = kLPADC_SampleChannelSingleEndSideB,
-     .scale = kLPADC_SamplePartScale,
-     .average = kLPADC_HardwareAverageCount4,
-     .cmdid = 1,
+    {
+        .chan    = 5,
+        .side    = kLPADC_SampleChannelSingleEndSideB,
+        .scale   = kLPADC_SamplePartScale,
+        .average = kLPADC_HardwareAverageCount4,
+        .cmdid   = 1,
     },
 };
 static struct _srtm_adc_adapter adcAdapter = {
-    .get = APP_SRTM_ADC_Get,
-    .handles = adcHandles,
-    .handles_count = sizeof(adcHandles)/sizeof(*adcHandles),
+    .get           = APP_SRTM_ADC_Get,
+    .handles       = adcHandles,
+    .handles_count = sizeof(adcHandles) / sizeof(*adcHandles),
 };
 
 // uses maximum I2C speed from fastmode, 400k
@@ -308,9 +290,7 @@ flexio_i2c_master_handle_t flexio_i2c_handle;
 volatile bool i2c_completionFlag = false;
 volatile bool i2c_nakFlag        = false;
 
-static void flexio_i2c_master_Callback(FLEXIO_I2C_Type *base,
-                                       flexio_i2c_master_handle_t *handle,
-                                       status_t status,
+static void flexio_i2c_master_Callback(FLEXIO_I2C_Type *base, flexio_i2c_master_handle_t *handle, status_t status,
                                        void *userData)
 {
     if (status == kStatus_Success)
@@ -325,32 +305,32 @@ static void flexio_i2c_master_Callback(FLEXIO_I2C_Type *base,
 }
 
 static struct _i2c_bus platform_i2c_buses[] = {
-    {.bus_id         = 0,
-     .base_addr      = LPI2C0_BASE,
-     .type           = SRTM_I2C_TYPE_LPI2C,
-     .switch_idx     = I2C_SWITCH_NONE,
-     .switch_channel = SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED},
-    {.bus_id         = 1,
-     .base_addr      = LPI2C1_BASE,
-     .type           = SRTM_I2C_TYPE_LPI2C,
-     .switch_idx     = I2C_SWITCH_NONE,
-     .switch_channel = SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED},
+    { .bus_id         = 0,
+      .base_addr      = LPI2C0_BASE,
+      .type           = SRTM_I2C_TYPE_LPI2C,
+      .switch_idx     = I2C_SWITCH_NONE,
+      .switch_channel = SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED },
+    { .bus_id         = 1,
+      .base_addr      = LPI2C1_BASE,
+      .type           = SRTM_I2C_TYPE_LPI2C,
+      .switch_idx     = I2C_SWITCH_NONE,
+      .switch_channel = SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED },
     // LPI2C2 as flexio
-    {.bus_id         = 2,
-     .base_addr      = (uint32_t)&flexioI2cDev,
-     .type           = SRTM_I2C_TYPE_FLEXIO_I2C,
-     .switch_idx     = I2C_SWITCH_NONE,
-     .switch_channel = SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED},
+    { .bus_id         = 2,
+      .base_addr      = (uint32_t)&flexioI2cDev,
+      .type           = SRTM_I2C_TYPE_FLEXIO_I2C,
+      .switch_idx     = I2C_SWITCH_NONE,
+      .switch_channel = SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED },
 };
 
-static struct _srtm_i2c_adapter i2c_adapter = {.read          = APP_SRTM_I2C_Read,
-                                               .write         = APP_SRTM_I2C_Write,
-                                               .switchchannel = APP_SRTM_I2C_SwitchChannel,
-                                               .bus_structure = {
-                                                   .buses      = platform_i2c_buses,
-                                                   .bus_num    = sizeof(platform_i2c_buses) / sizeof(struct _i2c_bus),
-                                                   .switch_num = 0,
-                                               }};
+static struct _srtm_i2c_adapter i2c_adapter = { .read          = APP_SRTM_I2C_Read,
+                                                .write         = APP_SRTM_I2C_Write,
+                                                .switchchannel = APP_SRTM_I2C_SwitchChannel,
+                                                .bus_structure = {
+                                                    .buses      = platform_i2c_buses,
+                                                    .bus_num    = sizeof(platform_i2c_buses) / sizeof(struct _i2c_bus),
+                                                    .switch_num = 0,
+                                                } };
 
 static RGPIO_Type *const gpios[] = RGPIO_BASE_PTRS;
 #define IO_PINCTRL_UNSET 0xffffffffU
@@ -410,15 +390,15 @@ void APP_WakeupACore(void)
 {
     if (wake_acore_flag)
     {
-        if (UPOWER_ChngPmicVoltage(PMIC_LDO3, 3300*1000))
+        if (UPOWER_ChngPmicVoltage(PMIC_LDO3, 3300 * 1000))
         {
             PRINTF("failed to set PMIC_LDO3 voltage to 3.3 [V]\r\n");
         }
-        if (UPOWER_ChngPmicVoltage(PMIC_LSW2, 1800*1000))
+        if (UPOWER_ChngPmicVoltage(PMIC_LSW2, 1800 * 1000))
         {
             PRINTF("failed to set PMIC_LSW2 voltage to 1.8 [V]\r\n");
         }
-        if (UPOWER_ChngPmicVoltage(PMIC_LSW4, 1100*1000))
+        if (UPOWER_ChngPmicVoltage(PMIC_LSW4, 1100 * 1000))
         {
             PRINTF("failed to set PMIC_LSW4 voltage to 1.1 [V]\r\n");
         }
@@ -509,20 +489,20 @@ void WUU0_IRQHandler(void)
     }
 }
 
-
 static void APP_HandleGPIOHander(uint8_t gpioIdx)
 {
-    RGPIO_Type *gpio      = gpios[gpioIdx];
-    uint32_t flags        = RGPIO_GetPinsInterruptFlags(gpio, APP_GPIO_INT_SEL);
+    RGPIO_Type *gpio = gpios[gpioIdx];
+    uint32_t flags   = RGPIO_GetPinsInterruptFlags(gpio, APP_GPIO_INT_SEL);
     uint16_t ioId, ioIdx;
     uint8_t i;
     uint32_t idx;
 
-    for (i = 0; i < APP_IO_PINS_PER_CHIP; i++) {
+    for (i = 0; i < APP_IO_PINS_PER_CHIP; i++)
+    {
         idx = 1U << i;
-        if (! (flags & idx))
+        if (!(flags & idx))
             continue;
-        ioId = APP_IO_ID(gpioIdx, i);
+        ioId  = APP_IO_ID(gpioIdx, i);
         ioIdx = APP_IO_IDX(gpioIdx, i);
         if ((AD_CurrentMode == AD_PD || (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL)) &&
             suspendContext.io.data[ioIdx].wakeup)
@@ -695,81 +675,81 @@ void BBNSM_IRQHandler(void)
 
 #define PIN_FUNC_ID_SIZE (5)
 static uint32_t pinFuncId[][PIN_FUNC_ID_SIZE] = {
-    {IOMUXC_PTA0_PTA0},
-    {IOMUXC_PTA1_PTA1},
-    {IOMUXC_PTA2_PTA2},
-    {IOMUXC_PTA3_PTA3},
-    {IOMUXC_PTA4_PTA4},
-    {IOMUXC_PTA5_PTA5},
-    {IOMUXC_PTA6_PTA6},
-    {IOMUXC_PTA7_PTA7},
-    {IOMUXC_PTA8_PTA8},
-    {IOMUXC_PTA9_PTA9},
-    {IOMUXC_PTA10_PTA10},
-    {IOMUXC_PTA11_PTA11},
-    {IOMUXC_PTA12_PTA12},
-    {IOMUXC_PTA13_PTA13},
-    {IOMUXC_PTA14_PTA14},
-    {IOMUXC_PTA15_PTA15},
-    {IOMUXC_PTA16_PTA16},
-    {IOMUXC_PTA17_PTA17},
-    {IOMUXC_PTA18_PTA18},
-    {IOMUXC_PTA19_PTA19},
-    {IOMUXC_PTA20_PTA20},
-    {IOMUXC_PTA21_PTA21},
-    {IOMUXC_PTA22_PTA22},
-    {IOMUXC_PTA23_PTA23},
-    {IOMUXC_PTA24_PTA24},
-    {IOMUXC_PTB0_PTB0},
-    {IOMUXC_PTB1_PTB1},
-    {IOMUXC_PTB2_PTB2},
-    {IOMUXC_PTB3_PTB3},
-    {IOMUXC_PTB4_PTB4},
-    {IOMUXC_PTB5_PTB5},
-    {IOMUXC_PTB6_PTB6},
-    {IOMUXC_PTB7_PTB7},
-    {IOMUXC_PTB8_PTB8},
-    {IOMUXC_PTB9_PTB9},
-    {IOMUXC_PTB10_PTB10},
-    {IOMUXC_PTB11_PTB11},
-    {IOMUXC_PTB12_PTB12},
-    {IOMUXC_PTB13_PTB13},
-    {IOMUXC_PTB14_PTB14},
-    {IOMUXC_PTB15_PTB15},
-    {0}, /* no PTB after 15 */
-    {0},
-    {0},
-    {0},
-    {0},
-    {0},
-    {0},
-    {0},
-    {0},
-    {IOMUXC_PTC0_PTC0},
-    {IOMUXC_PTC1_PTC1},
-    {IOMUXC_PTC2_PTC2},
-    {IOMUXC_PTC3_PTC3},
-    {IOMUXC_PTC4_PTC4},
-    {IOMUXC_PTC5_PTC5},
-    {IOMUXC_PTC6_PTC6},
-    {IOMUXC_PTC7_PTC7},
-    {IOMUXC_PTC8_PTC8},
-    {IOMUXC_PTC9_PTC9},
-    {IOMUXC_PTC10_PTC10},
-    {IOMUXC_PTC11_PTC11},
-    {IOMUXC_PTC12_PTC12},
-    {IOMUXC_PTC13_PTC13},
-    {IOMUXC_PTC14_PTC14},
-    {IOMUXC_PTC15_PTC15},
-    {IOMUXC_PTC16_PTC16},
-    {IOMUXC_PTC17_PTC17},
-    {IOMUXC_PTC18_PTC18},
-    {IOMUXC_PTC19_PTC19},
-    {IOMUXC_PTC20_PTC20},
-    {IOMUXC_PTC21_PTC21},
-    {IOMUXC_PTC22_PTC22},
-    {IOMUXC_PTC23_PTC23},
-    {0}, /* no PTC24 */
+    { IOMUXC_PTA0_PTA0 },
+    { IOMUXC_PTA1_PTA1 },
+    { IOMUXC_PTA2_PTA2 },
+    { IOMUXC_PTA3_PTA3 },
+    { IOMUXC_PTA4_PTA4 },
+    { IOMUXC_PTA5_PTA5 },
+    { IOMUXC_PTA6_PTA6 },
+    { IOMUXC_PTA7_PTA7 },
+    { IOMUXC_PTA8_PTA8 },
+    { IOMUXC_PTA9_PTA9 },
+    { IOMUXC_PTA10_PTA10 },
+    { IOMUXC_PTA11_PTA11 },
+    { IOMUXC_PTA12_PTA12 },
+    { IOMUXC_PTA13_PTA13 },
+    { IOMUXC_PTA14_PTA14 },
+    { IOMUXC_PTA15_PTA15 },
+    { IOMUXC_PTA16_PTA16 },
+    { IOMUXC_PTA17_PTA17 },
+    { IOMUXC_PTA18_PTA18 },
+    { IOMUXC_PTA19_PTA19 },
+    { IOMUXC_PTA20_PTA20 },
+    { IOMUXC_PTA21_PTA21 },
+    { IOMUXC_PTA22_PTA22 },
+    { IOMUXC_PTA23_PTA23 },
+    { IOMUXC_PTA24_PTA24 },
+    { IOMUXC_PTB0_PTB0 },
+    { IOMUXC_PTB1_PTB1 },
+    { IOMUXC_PTB2_PTB2 },
+    { IOMUXC_PTB3_PTB3 },
+    { IOMUXC_PTB4_PTB4 },
+    { IOMUXC_PTB5_PTB5 },
+    { IOMUXC_PTB6_PTB6 },
+    { IOMUXC_PTB7_PTB7 },
+    { IOMUXC_PTB8_PTB8 },
+    { IOMUXC_PTB9_PTB9 },
+    { IOMUXC_PTB10_PTB10 },
+    { IOMUXC_PTB11_PTB11 },
+    { IOMUXC_PTB12_PTB12 },
+    { IOMUXC_PTB13_PTB13 },
+    { IOMUXC_PTB14_PTB14 },
+    { IOMUXC_PTB15_PTB15 },
+    { 0 }, /* no PTB after 15 */
+    { 0 },
+    { 0 },
+    { 0 },
+    { 0 },
+    { 0 },
+    { 0 },
+    { 0 },
+    { 0 },
+    { IOMUXC_PTC0_PTC0 },
+    { IOMUXC_PTC1_PTC1 },
+    { IOMUXC_PTC2_PTC2 },
+    { IOMUXC_PTC3_PTC3 },
+    { IOMUXC_PTC4_PTC4 },
+    { IOMUXC_PTC5_PTC5 },
+    { IOMUXC_PTC6_PTC6 },
+    { IOMUXC_PTC7_PTC7 },
+    { IOMUXC_PTC8_PTC8 },
+    { IOMUXC_PTC9_PTC9 },
+    { IOMUXC_PTC10_PTC10 },
+    { IOMUXC_PTC11_PTC11 },
+    { IOMUXC_PTC12_PTC12 },
+    { IOMUXC_PTC13_PTC13 },
+    { IOMUXC_PTC14_PTC14 },
+    { IOMUXC_PTC15_PTC15 },
+    { IOMUXC_PTC16_PTC16 },
+    { IOMUXC_PTC17_PTC17 },
+    { IOMUXC_PTC18_PTC18 },
+    { IOMUXC_PTC19_PTC19 },
+    { IOMUXC_PTC20_PTC20 },
+    { IOMUXC_PTC21_PTC21 },
+    { IOMUXC_PTC22_PTC22 },
+    { IOMUXC_PTC23_PTC23 },
+    { 0 }, /* no PTC24 */
 };
 
 /*
@@ -786,10 +766,10 @@ static void APP_IO_SetPinConfig(uint16_t ioId, uint32_t pinctrl)
 
     assert(index < APP_IO_NUM);
 
-    IOMUXC_SetPinMux(pinFuncId[index][0], pinFuncId[index][1], pinFuncId[index][2],
-                     pinFuncId[index][3], pinFuncId[index][4], 0U);
-    IOMUXC_SetPinConfig(pinFuncId[index][0], pinFuncId[index][1], pinFuncId[index][2],
-                        pinFuncId[index][3], pinFuncId[index][4], pinctrl);
+    IOMUXC_SetPinMux(pinFuncId[index][0], pinFuncId[index][1], pinFuncId[index][2], pinFuncId[index][3],
+                     pinFuncId[index][4], 0U);
+    IOMUXC_SetPinConfig(pinFuncId[index][0], pinFuncId[index][1], pinFuncId[index][2], pinFuncId[index][3],
+                        pinFuncId[index][4], pinctrl);
 }
 
 static srtm_status_t APP_IO_SetOutput(uint16_t ioId, srtm_io_value_t ioValue)
@@ -805,11 +785,8 @@ static srtm_status_t APP_IO_SetOutput(uint16_t ioId, srtm_io_value_t ioValue)
     return SRTM_Status_Success;
 }
 
-static srtm_status_t APP_IO_OutputInit(srtm_service_t service,
-                                      srtm_peercore_t core,
-                                      uint16_t ioId,
-                                      srtm_io_value_t ioValue,
-                                      uint32_t pinctrl)
+static srtm_status_t APP_IO_OutputInit(srtm_service_t service, srtm_peercore_t core, uint16_t ioId,
+                                       srtm_io_value_t ioValue, uint32_t pinctrl)
 {
     uint8_t index = APP_IO_GetIndex(ioId);
 
@@ -825,9 +802,7 @@ static srtm_status_t APP_IO_OutputInit(srtm_service_t service,
     return APP_IO_SetOutput(ioId, ioValue);
 }
 
-static srtm_status_t APP_IO_InputGet(srtm_service_t service,
-                                     srtm_peercore_t core,
-                                     uint16_t ioId,
+static srtm_status_t APP_IO_InputGet(srtm_service_t service, srtm_peercore_t core, uint16_t ioId,
                                      srtm_io_value_t *pIoValue)
 {
     uint8_t gpioIdx = APP_GPIO_IDX(ioId);
@@ -842,9 +817,7 @@ static srtm_status_t APP_IO_InputGet(srtm_service_t service,
     return SRTM_Status_Success;
 }
 
-static srtm_status_t APP_IO_OutputSet(srtm_service_t service,
-                                      srtm_peercore_t core,
-                                      uint16_t ioId,
+static srtm_status_t APP_IO_OutputSet(srtm_service_t service, srtm_peercore_t core, uint16_t ioId,
                                       srtm_io_value_t ioValue)
 {
     uint8_t index = APP_IO_GetIndex(ioId);
@@ -865,9 +838,10 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
 
     wuu_external_wakeup_pin_config_t config;
 
-    assert(gpioIdx < APP_IO_CHIPS);                  /* Only support GPIOA, GPIOB and GPIOC */
+    assert(gpioIdx < APP_IO_CHIPS); /* Only support GPIOA, GPIOB and GPIOC */
     assert(pinIdx < APP_IO_PINS_PER_CHIP);
-    if (wakeup && wuuIdx == 255) {
+    if (wakeup && wuuIdx == 255)
+    {
         PRINTF("Wakeup requested on %x which has no wakeup\r\n", ioId);
         return SRTM_Status_Error;
     }
@@ -879,9 +853,9 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
         pinctrl = IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK;
 
     /* wakeup cannot trigger on level, switch to edge if wakeup requested */
-    if (wakeup) {
-        PRINTF("Wakeup requested on %d/%d, mode %d\r\n",
-                gpioIdx, pinIdx, event);
+    if (wakeup)
+    {
+        PRINTF("Wakeup requested on %d/%d, mode %d\r\n", gpioIdx, pinIdx, event);
         if (event == SRTM_IoEventLowLevel)
             event = SRTM_IoEventFallingEdge;
         if (event == SRTM_IoEventHighLevel)
@@ -936,9 +910,8 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
     return SRTM_Status_Success;
 }
 
-static srtm_status_t APP_IO_InputInit(
-    srtm_service_t service, srtm_peercore_t core, uint16_t ioId, srtm_io_event_t event,
-    bool wakeup, uint32_t pinctrl)
+static srtm_status_t APP_IO_InputInit(srtm_service_t service, srtm_peercore_t core, uint16_t ioId,
+                                      srtm_io_event_t event, bool wakeup, uint32_t pinctrl)
 {
     uint8_t inputIdx = APP_IO_GetIndex(ioId);
 
@@ -961,17 +934,19 @@ static srtm_status_t wdog_enable(bool enabled, uint16_t timeout)
 {
 
     bool is_running = WDOG32_GetStatusFlags(WDOG1) & kWDOG32_RunningFlag;
-    PRINTF("Watchdog %s (timeout %d)\r\n", enabled ? "start" : "stop",
-           timeout);
+    PRINTF("Watchdog %s (timeout %d)\r\n", enabled ? "start" : "stop", timeout);
 
     /* timeout cannot be changed while running, always disable first */
-    if (is_running) {
+    if (is_running)
+    {
         WDOG32_Deinit(WDOG1);
         /* wait for deinit to actually be effective */
-        while (0U == ((WDOG1->CS) & WDOG_CS_RCS_MASK));
+        while (0U == ((WDOG1->CS) & WDOG_CS_RCS_MASK))
+            ;
     }
 
-    if (enabled) {
+    if (enabled)
+    {
         wdog32_config_t config;
         WDOG32_GetDefaultConfig(&config);
 
@@ -1017,13 +992,15 @@ static void tty_rx_task(void *pvParameters)
         size_t recvlen = 0;
 
         srtm_notification_t notif = SRTM_TtyService_NotifyAlloc(&buf, &maxlen);
-        if (!notif) {
+        if (!notif)
+        {
             // message already printed in alloc failure
             SDK_DelayAtLeastUs(1000000, SDK_DEVICE_MAXIMUM_CPU_CLOCK_FREQUENCY);
             continue;
         }
 
-        do {
+        do
+        {
             LPUART_RTOS_Receive(&s_rs485LpuartRtosHandle, buf, maxlen, &recvlen);
             // XXX log error?
         } while (recvlen == 0);
@@ -1040,9 +1017,9 @@ static int tty_tx(uint16_t len, uint8_t *buf)
         return kStatus_Fail;
 
     rc = LPUART_RTOS_Send(&s_rs485LpuartRtosHandle, buf, len);
-    if (rc) {
-        PRINTF("Send fail for buf len %d, first byte %x: %d\r\n",
-                len, len > 0 ? buf[0] : 0, rc);
+    if (rc)
+    {
+        PRINTF("Send fail for buf len %d, first byte %x: %d\r\n", len, len > 0 ? buf[0] : 0, rc);
     }
     return rc;
 }
@@ -1051,7 +1028,6 @@ static int tty_setbaud(uint32_t baud)
 {
     return LPUART_SetBaudRate(RS485_LPUART, baud, RS485_LPUART_CLK_FREQ);
 }
-
 
 static void APP_SRTM_InitTtyDevice(void)
 {
@@ -1249,8 +1225,7 @@ static void APP_SRTM_GpioReset(void)
         }
         else
         {
-            APP_IO_InputInit(NULL, NULL, APP_IO_GetId(i), SRTM_IoEventNone,
-                             false, IO_PINCTRL_UNSET);
+            APP_IO_InputInit(NULL, NULL, APP_IO_GetId(i), SRTM_IoEventNone, false, IO_PINCTRL_UNSET);
         }
     }
 
@@ -1327,18 +1302,19 @@ static void APP_SRTM_InitAdcDevice(void)
     config.enableAnalogPreliminary = true;
     LPADC_Init(ADC1, &config);
 
-    for (i = 0; i < adcAdapter.handles_count; i++) {
+    for (i = 0; i < adcAdapter.handles_count; i++)
+    {
         lpadc_conv_command_config_t commandConfig;
         LPADC_GetDefaultConvCommandConfig(&commandConfig);
-        commandConfig.channelNumber = adcAdapter.handles[i].chan;
-        commandConfig.sampleChannelMode = adcAdapter.handles[i].side;
-        commandConfig.sampleScaleMode = adcAdapter.handles[i].scale;
+        commandConfig.channelNumber       = adcAdapter.handles[i].chan;
+        commandConfig.sampleChannelMode   = adcAdapter.handles[i].side;
+        commandConfig.sampleScaleMode     = adcAdapter.handles[i].scale;
         commandConfig.hardwareAverageMode = adcAdapter.handles[i].average;
         LPADC_SetConvCommandConfig(ADC1, adcAdapter.handles[i].cmdid, &commandConfig);
 
         lpadc_conv_trigger_config_t triggerConfig;
         LPADC_GetDefaultConvTriggerConfig(&triggerConfig);
-        triggerConfig.targetCommandId = adcAdapter.handles[i].cmdid;
+        triggerConfig.targetCommandId       = adcAdapter.handles[i].cmdid;
         triggerConfig.enableHardwareTrigger = false;
         LPADC_SetConvTriggerConfig(ADC1, i, &triggerConfig);
     }
@@ -1395,12 +1371,10 @@ static void APP_SRTM_InitIoKeyDevice(void)
     for (i = 0; i < 0; i++)
     {
         uint16_t ioId = APP_IO_GetId(i);
-        RGPIO_PinInit(gpios[APP_GPIO_IDX(ioId)], APP_PIN_IDX(ioId),
-                      &gpioConfig);
+        RGPIO_PinInit(gpios[APP_GPIO_IDX(ioId)], APP_PIN_IDX(ioId), &gpioConfig);
         if (!suspendContext.io.data[i].overridden)
         {
-            APP_IO_ConfInput(i, suspendContext.io.data[i].event,
-                             suspendContext.io.data[i].wakeup, IO_PINCTRL_UNSET);
+            APP_IO_ConfInput(i, suspendContext.io.data[i].event, suspendContext.io.data[i].wakeup, IO_PINCTRL_UNSET);
         }
     }
 }
@@ -1427,9 +1401,8 @@ static void APP_SRTM_InitIoKeyService(void)
     EnableIRQ(GPIOC_INT0_IRQn);
     EnableIRQ(GPIOC_INT1_IRQn);
 
-    ioService = SRTM_IoService_Create(APP_IO_NUM,
-                                      APP_IO_InputInit, APP_IO_OutputInit,
-                                      APP_IO_InputGet, APP_IO_OutputSet);
+    ioService =
+        SRTM_IoService_Create(APP_IO_NUM, APP_IO_InputInit, APP_IO_OutputInit, APP_IO_InputGet, APP_IO_OutputSet);
     SRTM_Dispatcher_RegisterService(disp, ioService);
 }
 
@@ -1625,8 +1598,8 @@ static void APP_SRTM_InitRtcService(void)
     SRTM_Dispatcher_RegisterService(disp, rtcService);
 }
 
-static srtm_status_t APP_SRTM_LfclEventHandler(
-    srtm_service_t service, srtm_peercore_t core, srtm_lfcl_event_t event, void *eventParam, void *userParam)
+static srtm_status_t APP_SRTM_LfclEventHandler(srtm_service_t service, srtm_peercore_t core, srtm_lfcl_event_t event,
+                                               void *eventParam, void *userParam)
 {
     switch (event)
     {
@@ -1637,7 +1610,7 @@ static srtm_status_t APP_SRTM_LfclEventHandler(
             PRINTF("\r\nAD shutdown\r\n");
             /* Probably also stops RTC/alarm unless enabled with BBNSM_BBNSM_CTRL_RTC_EN/BBNSM_BBNSM_CTRL_TA_EN
              * We use external RTC so this is ok */
-            BBNSM->BBNSM_CTRL = BBNSM_BBNSM_CTRL_DP_EN(1)|BBNSM_BBNSM_CTRL_TOSP(1); /* 0x03000000 */
+            BBNSM->BBNSM_CTRL = BBNSM_BBNSM_CTRL_DP_EN(1) | BBNSM_BBNSM_CTRL_TOSP(1); /* 0x03000000 */
             break;
         case SRTM_Lfcl_Event_RebootReq:
             PRINTF("\r\nAD is entering reboot.\r\nTriggering M33 reset.\r\n\n");
@@ -1999,11 +1972,8 @@ void APP_SRTM_SetRpmsgMonitor(app_rpmsg_monitor_t monitor, void *param)
     rpmsgMonitorParam = param;
 }
 
-static srtm_status_t APP_SRTM_I2C_SwitchChannel(srtm_i2c_adapter_t adapter,
-                                                uint32_t base_addr,
-                                                srtm_i2c_type_t type,
-                                                uint16_t slaveAddr,
-                                                srtm_i2c_switch_channel channel)
+static srtm_status_t APP_SRTM_I2C_SwitchChannel(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
+                                                uint16_t slaveAddr, srtm_i2c_switch_channel channel)
 {
     uint8_t txBuff[1];
     assert(channel < SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED);
@@ -2012,97 +1982,87 @@ static srtm_status_t APP_SRTM_I2C_SwitchChannel(srtm_i2c_adapter_t adapter,
                           SRTM_I2C_FLAG_NEED_STOP); // APP_SRTM_I2C_Write
 }
 
-static srtm_status_t APP_SRTM_I2C_Write(srtm_i2c_adapter_t adapter,
-                                        uint32_t base_addr,
-                                        srtm_i2c_type_t type,
-                                        uint16_t slaveAddr,
-                                        uint8_t *buf,
-                                        uint16_t len,
-                                        uint16_t flags)
+static srtm_status_t APP_SRTM_I2C_Write(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
+                                        uint16_t slaveAddr, uint8_t *buf, uint16_t len, uint16_t flags)
 {
-    status_t retVal   = kStatus_Fail;
+    status_t retVal = kStatus_Fail;
     uint32_t needStop;
 
     switch (type)
     {
         case SRTM_I2C_TYPE_LPI2C:
             needStop = (flags & SRTM_I2C_FLAG_NEED_STOP) ? kLPI2C_TransferDefaultFlag : kLPI2C_TransferNoStopFlag;
-            retVal = BOARD_LPI2C_Send((LPI2C_Type *)base_addr, slaveAddr, 0, 0, buf, len, needStop);
+            retVal   = BOARD_LPI2C_Send((LPI2C_Type *)base_addr, slaveAddr, 0, 0, buf, len, needStop);
             break;
         case SRTM_I2C_TYPE_FLEXIO_I2C:
+        {
+            // flexio_i2c has no NoStop flag... print error if used?
+            flexio_i2c_master_transfer_t xfer = {
+                .direction    = kFLEXIO_I2C_Write,
+                .slaveAddress = slaveAddr,
+                // subaddress, subAddressSize, flags = 0,
+                .data     = buf,
+                .dataSize = len,
+            };
+
+            retVal = FLEXIO_I2C_MasterTransferNonBlocking((FLEXIO_I2C_Type *)base_addr, &flexio_i2c_handle, &xfer);
+            while ((!i2c_nakFlag) && (!i2c_completionFlag))
             {
-                // flexio_i2c has no NoStop flag... print error if used?
-                flexio_i2c_master_transfer_t xfer = {
-                    .direction = kFLEXIO_I2C_Write,
-                    .slaveAddress = slaveAddr,
-                    // subaddress, subAddressSize, flags = 0,
-                    .data = buf,
-                    .dataSize = len,
-                };
-
-                retVal = FLEXIO_I2C_MasterTransferNonBlocking((FLEXIO_I2C_Type *)base_addr, &flexio_i2c_handle, &xfer);
-                while ((!i2c_nakFlag) && (!i2c_completionFlag))
-                {
-                }
-                if (i2c_nakFlag) retVal = kStatus_FLEXIO_I2C_Nak;
-
-                i2c_nakFlag = false;
-                i2c_completionFlag = false;
             }
-            break;
+            if (i2c_nakFlag)
+                retVal = kStatus_FLEXIO_I2C_Nak;
+
+            i2c_nakFlag        = false;
+            i2c_completionFlag = false;
+        }
+        break;
         default:
             break;
     }
     return (retVal == kStatus_Success) ? SRTM_Status_Success : SRTM_Status_TransferFailed;
 }
 
-static srtm_status_t APP_SRTM_I2C_Read(srtm_i2c_adapter_t adapter,
-                                       uint32_t base_addr,
-                                       srtm_i2c_type_t type,
-                                       uint16_t slaveAddr,
-                                       uint8_t *buf,
-                                       uint16_t len,
-                                       uint16_t flags)
+static srtm_status_t APP_SRTM_I2C_Read(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
+                                       uint16_t slaveAddr, uint8_t *buf, uint16_t len, uint16_t flags)
 {
-    status_t retVal   = kStatus_Fail;
+    status_t retVal = kStatus_Fail;
     uint32_t needStop;
 
     switch (type)
     {
         case SRTM_I2C_TYPE_LPI2C:
             needStop = (flags & SRTM_I2C_FLAG_NEED_STOP) ? kLPI2C_TransferDefaultFlag : kLPI2C_TransferNoStopFlag;
-            retVal = BOARD_LPI2C_Receive((LPI2C_Type *)base_addr, slaveAddr, 0, 0, buf, len, needStop);
+            retVal   = BOARD_LPI2C_Receive((LPI2C_Type *)base_addr, slaveAddr, 0, 0, buf, len, needStop);
             break;
         case SRTM_I2C_TYPE_FLEXIO_I2C:
+        {
+            // flexio_i2c has no NoStop flag... print error if used?
+            flexio_i2c_master_transfer_t xfer = {
+                .direction    = kFLEXIO_I2C_Read,
+                .slaveAddress = slaveAddr,
+                // subaddress, subAddressSize, flags = 0,
+                .data     = buf,
+                .dataSize = len,
+            };
+
+            retVal = FLEXIO_I2C_MasterTransferNonBlocking((FLEXIO_I2C_Type *)base_addr, &flexio_i2c_handle, &xfer);
+            while ((!i2c_nakFlag) && (!i2c_completionFlag))
             {
-                // flexio_i2c has no NoStop flag... print error if used?
-                flexio_i2c_master_transfer_t xfer = {
-                    .direction = kFLEXIO_I2C_Read,
-                    .slaveAddress = slaveAddr,
-                    // subaddress, subAddressSize, flags = 0,
-                    .data = buf,
-                    .dataSize = len,
-                };
-
-                retVal = FLEXIO_I2C_MasterTransferNonBlocking((FLEXIO_I2C_Type *)base_addr, &flexio_i2c_handle, &xfer);
-                while ((!i2c_nakFlag) && (!i2c_completionFlag))
-                {
-                }
-                if (i2c_nakFlag) retVal = kStatus_FLEXIO_I2C_Nak;
-
-                i2c_nakFlag = false;
-                i2c_completionFlag = false;
             }
-            break;
+            if (i2c_nakFlag)
+                retVal = kStatus_FLEXIO_I2C_Nak;
+
+            i2c_nakFlag        = false;
+            i2c_completionFlag = false;
+        }
+        break;
         default:
             break;
     }
     return (retVal == kStatus_Success) ? SRTM_Status_Success : SRTM_Status_TransferFailed;
 }
 
-static srtm_status_t APP_SRTM_ADC_Get(struct adc_handle *handle,
-                                      size_t idx,
-                                      uint16_t *value)
+static srtm_status_t APP_SRTM_ADC_Get(struct adc_handle *handle, size_t idx, uint16_t *value)
 {
     lpadc_conv_result_t resultConfig;
 
@@ -2192,8 +2152,8 @@ static void APP_SRTM_DoSetWakeupPin(srtm_dispatcher_t dispatcher, void *param1, 
         else
         {
             /* Restore CA35 settings */
-            APP_IO_ConfInput(inputIdx, suspendContext.io.data[inputIdx].event,
-                             suspendContext.io.data[inputIdx].wakeup, IO_PINCTRL_UNSET);
+            APP_IO_ConfInput(inputIdx, suspendContext.io.data[inputIdx].event, suspendContext.io.data[inputIdx].wakeup,
+                             IO_PINCTRL_UNSET);
         }
     }
 }

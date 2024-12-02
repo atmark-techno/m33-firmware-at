@@ -54,12 +54,12 @@ const struct remote_resource_table resources = {
         0,
         0,
         NUM_VRINGS,
-        {0, 0},
+        { 0, 0 },
     },
 
     /* Vring rsc entry - part of vdev rsc entry */
-    {VDEV0_VRING_BASE, RL_VRING_ALIGN_M33_A35_COM, RL_BUFFER_COUNT(0), 0, 0},
-    {VDEV0_VRING_BASE + RL_VRING_SIZE_M33_A35_COM, RL_VRING_ALIGN_M33_A35_COM, RL_BUFFER_COUNT(0), 1, 0},
+    { VDEV0_VRING_BASE, RL_VRING_ALIGN_M33_A35_COM, RL_BUFFER_COUNT(0), 0, 0 },
+    { VDEV0_VRING_BASE + RL_VRING_SIZE_M33_A35_COM, RL_VRING_ALIGN_M33_A35_COM, RL_BUFFER_COUNT(0), 1, 0 },
 
     /* SRTM virtio device entry */
     {
@@ -71,12 +71,12 @@ const struct remote_resource_table resources = {
         0,
         0,
         NUM_VRINGS,
-        {0, 0},
+        { 0, 0 },
     },
 
     /* Vring rsc entry - part of vdev rsc entry */
-    {VDEV1_VRING_BASE, RL_VRING_ALIGN_M33_A35_COM, RL_BUFFER_COUNT(1), 2, 0},
-    {VDEV1_VRING_BASE + RL_VRING_SIZE_M33_A35_COM, RL_VRING_ALIGN_M33_A35_COM, RL_BUFFER_COUNT(1), 3, 0},
+    { VDEV1_VRING_BASE, RL_VRING_ALIGN_M33_A35_COM, RL_BUFFER_COUNT(1), 2, 0 },
+    { VDEV1_VRING_BASE + RL_VRING_SIZE_M33_A35_COM, RL_VRING_ALIGN_M33_A35_COM, RL_BUFFER_COUNT(1), 3, 0 },
 };
 
 void copyResourceTable(void)

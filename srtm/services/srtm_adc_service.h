@@ -30,7 +30,8 @@
 #define SRTM_DEBUG_VERBOSE_LEVEL SRTM_DEBUG_VERBOSE_NONE
 #endif
 
-struct adc_handle {
+struct adc_handle
+{
     uint32_t chan;
     lpadc_sample_channel_mode_t side;
     lpadc_sample_scale_mode_t scale;
@@ -42,9 +43,7 @@ typedef struct _srtm_adc_adapter *srtm_adc_adapter_t;
 
 struct _srtm_adc_adapter
 {
-    srtm_status_t (*get)(struct adc_handle *handle,
-                         size_t idx,
-                         uint16_t *value);
+    srtm_status_t (*get)(struct adc_handle *handle, size_t idx, uint16_t *value);
     struct adc_handle *handles;
     size_t handles_count;
 };
@@ -56,7 +55,7 @@ SRTM_PACKED_BEGIN struct _srtm_adc_payload
 {
     uint8_t requestID;
     uint8_t idx;
-    uint8_t retCode;  /* used in response packet */
+    uint8_t retCode; /* used in response packet */
     uint16_t value;
 } SRTM_PACKED_END;
 

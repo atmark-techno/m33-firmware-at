@@ -27,11 +27,11 @@
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
-#define SYSTICK_SOURCE_CLOCK   (CLOCK_GetRtcOscFreq() / 32)
+#define SYSTICK_SOURCE_CLOCK (CLOCK_GetRtcOscFreq() / 32)
 #define SYSTICK_TICKLESS_CLOCK (CLOCK_GetRtcOscFreq() / 32)
 
 #define FLEXSPI_LUT_KEY_VAL (0x5AF05AF0UL)
-#define CUSTOM_LUT_LENGTH   (64U)
+#define CUSTOM_LUT_LENGTH (64U)
 
 void SysTick_Handler(void);
 
@@ -619,8 +619,8 @@ void LPM_SaveRegister(uint32_t *buf, uint32_t *index, uint32_t base, uint32_t be
     }
 }
 
-AT_QUICKACCESS_SECTION_CODE(void LPM_RestoreRegister(
-    uint32_t *buf, uint32_t *index, uint32_t base, uint32_t begin, uint32_t end, uint32_t bitmap))
+AT_QUICKACCESS_SECTION_CODE(void LPM_RestoreRegister(uint32_t *buf, uint32_t *index, uint32_t base, uint32_t begin,
+                                                     uint32_t end, uint32_t bitmap))
 {
     uint32_t offset = begin;
     uint32_t tmp;
@@ -740,7 +740,7 @@ bool LPM_Suspend()
         "loop:\n"
         "PUSH    {R4-R11, LR}\n" /* #1 Save core registers to current stack */
 
-        "MRS     R0, PSP\n"      /* #2 Save PSP register to global variable s_psp */
+        "MRS     R0, PSP\n" /* #2 Save PSP register to global variable s_psp */
         "LDR     R1, =s_psp\n"
         "STR     R0, [R1]\n"
 
@@ -793,9 +793,9 @@ AT_QUICKACCESS_SECTION_CODE(bool LPM_Resume(void))
     SIM_SEC->DGO_CTRL0 =
         (SIM_SEC->DGO_CTRL0 & ~(SIM_SEC_DGO_CTRL0_UPDATE_DGO_GP0_MASK)) | SIM_SEC_DGO_CTRL0_WR_ACK_DGO_GP0_MASK;
 
-    LPM_ModuleStateRestore();           /* #6 Restore peripheral setting */
-                                        //__WFI(); //pass
-    LPM_NvicStateRestore();             /* #5 Restore NVIC setting */
+    LPM_ModuleStateRestore(); /* #6 Restore peripheral setting */
+                              //__WFI(); //pass
+    LPM_NvicStateRestore();   /* #5 Restore NVIC setting */
 
     CACHE64_EnableCache(CACHE64_CTRL0); /* enable code bus cache(I-Cache) */
 
@@ -884,14 +884,9 @@ bool LPM_SystemPowerDown(void)
     return status;
 }
 
-AT_QUICKACCESS_SECTION_CODE(status_t flexspi_nor_exec_op(FLEXSPI_Type *base,
-                                                         uint32_t deviceAddr,
-                                                         flexspi_port_t port,
-                                                         flexspi_command_type_t cmdType,
-                                                         uint8_t seqIndex,
-                                                         uint8_t seqNumber,
-                                                         uint32_t *data,
-                                                         size_t dataSize))
+AT_QUICKACCESS_SECTION_CODE(status_t flexspi_nor_exec_op(FLEXSPI_Type *base, uint32_t deviceAddr, flexspi_port_t port,
+                                                         flexspi_command_type_t cmdType, uint8_t seqIndex,
+                                                         uint8_t seqNumber, uint32_t *data, size_t dataSize))
 {
     flexspi_transfer_t flashXfer;
 
@@ -908,7 +903,7 @@ AT_QUICKACCESS_SECTION_CODE(status_t flexspi_nor_exec_op(FLEXSPI_Type *base,
 
 AT_QUICKACCESS_SECTION_CODE(bool LPM_SystemDeepPowerDown(void))
 {
-    uint32_t tempLUT[4] = {0};
+    uint32_t tempLUT[4] = { 0 };
     status_t status     = kStatus_Fail;
 
     /* Unlock and disabled in powerdown and deep sleep */

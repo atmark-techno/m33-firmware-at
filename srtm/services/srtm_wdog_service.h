@@ -31,8 +31,7 @@
 
 typedef srtm_status_t (*srtm_wdog_service_enable_t)(bool enabled, uint16_t timeout);
 typedef srtm_status_t (*srtm_wdog_service_ping_t)(void);
-//typedef srtm_status_t (*srtm_wdog_service_disable_t)(void);
-
+// typedef srtm_status_t (*srtm_wdog_service_disable_t)(void);
 
 /*******************************************************************************
  * API
@@ -46,8 +45,7 @@ extern "C" {
  *
  * @return SRTM service handle on success and NULL on failure.
  */
-srtm_service_t SRTM_WdogService_Create(srtm_wdog_service_enable_t enableCb,
-                                       srtm_wdog_service_ping_t pingCb);
+srtm_service_t SRTM_WdogService_Create(srtm_wdog_service_enable_t enableCb, srtm_wdog_service_ping_t pingCb);
 
 /*!
  * @brief Notify WDOG service of imminent timeout

@@ -38,13 +38,13 @@
 /*******************************************************************************
  * Struct Definitions
  ******************************************************************************/
-#define RPMSG_LITE_LINK_ID            (RL_PLATFORM_IMX8ULP_M33_A35_USER_LINK_ID)
-#define RPMSG_LITE_SHMEM_BASE         (VDEV1_VRING_BASE)
+#define RPMSG_LITE_LINK_ID (RL_PLATFORM_IMX8ULP_M33_A35_USER_LINK_ID)
+#define RPMSG_LITE_SHMEM_BASE (VDEV1_VRING_BASE)
 /* Communicate with linux/drivers/tty/serial/imx_rpmsg.c */
 #define RPMSG_LITE_NS_ANNOUNCE_STRING "rpmsg-tty-channel"
 #define RPMSG_LITE_MASTER_IS_LINUX
 
-#define APP_DEBUG_UART_BAUDRATE       (115200U)             /* Debug console baud rate. */
+#define APP_DEBUG_UART_BAUDRATE (115200U)                   /* Debug console baud rate. */
 #define APP_DEBUG_UART_DEFAULT_CLKSRC kCLOCK_IpSrcSircAsync /* SCG SIRC clock. */
 #ifndef LOCAL_EPT_ADDR
 #define LOCAL_EPT_ADDR (30)
@@ -80,7 +80,7 @@ extern void UPOWER_InitBuck2Buck3Table(void);
 static uint32_t s_wakeupTimeout;           /* Wakeup timeout. (Unit: Second) */
 static app_wakeup_source_t s_wakeupSource; /* Wakeup source.                 */
 static SemaphoreHandle_t s_wakeupSig;
-static const char *s_modeNames[] = {"ACTIVE", "WAIT", "STOP", "Sleep", "Deep Sleep", "Power Down", "Deep Power Down"};
+static const char *s_modeNames[] = { "ACTIVE", "WAIT", "STOP", "Sleep", "Deep Sleep", "Power Down", "Deep Power Down" };
 extern lpm_ad_power_mode_e AD_CurrentMode;
 extern bool option_v_boot_flag;
 extern lpm_rtd_power_mode_e s_curMode;
@@ -88,7 +88,7 @@ extern lpm_rtd_power_mode_e s_lastMode;
 extern pca9460_buck3ctrl_t buck3_ctrl;
 extern pca9460_ldo1_cfg_t ldo1_cfg;
 extern bool wake_acore_flag;
-rtd_mode_and_irq_allow_t current_state = {LPM_PowerModeActive, LPM_PowerModeActive, NotAvail_IRQn, RTD_GIVE_SIG_YES};
+rtd_mode_and_irq_allow_t current_state = { LPM_PowerModeActive, LPM_PowerModeActive, NotAvail_IRQn, RTD_GIVE_SIG_YES };
 // clang-format off
 /*
  * For some system low power combine, such as APD->PD, RTD->PD, use GPIO as RTD wakeup source, it will trigger WUU + GPIO irq handler in RTD side, release twice Semaphore Sig.
@@ -183,7 +183,6 @@ mode_combi_t mode_combi_array_for_dual_or_lp_boot[] = {
 };
 // clang-format on
 
-
 /*******************************************************************************
  * Function Code
  ******************************************************************************/
@@ -194,7 +193,8 @@ extern pca9460_ldo1_cfg_t ldo1_cfg;
 static uint32_t iomuxBackup[25 + 16 + 24]; /* Backup 25 PTA, 16 PTB and 24 PTC IOMUX registers */
 static uint32_t gpioICRBackup[25 + 16 + 24];
 
-typedef struct {
+typedef struct
+{
     uint32_t pdor;
     uint32_t pddr;
 } gpioOutputConfig_t;
@@ -202,7 +202,7 @@ static gpioOutputConfig_t gpioOutputBackup[3]; /* Backup PTA, PTB and PTC Output
 
 static void PinMuxPrepareSuspend(uint8_t gpioIdx, uint8_t pinIdx)
 {
-    uint8_t wuuIndex = APP_IO_GetWUUPin(gpioIdx, pinIdx);
+    uint8_t wuuIndex      = APP_IO_GetWUUPin(gpioIdx, pinIdx);
     __IO uint32_t *IOMUXC = &(gpioIdx == 0 ? IOMUXC0->PCR0_IOMUXCARRAY0 : IOMUXC0->PCR0_IOMUXCARRAY1)[pinIdx];
 
     if (wuuIndex == 255)
@@ -212,9 +212,9 @@ static void PinMuxPrepareSuspend(uint8_t gpioIdx, uint8_t pinIdx)
     }
 
     // WUU_PEx_WUPEx_SHIFT is exactly WUU (index * 2)
-    uint32_t mask = 3 << (wuuIndex * 2 % 32);
+    uint32_t mask     = 3 << (wuuIndex * 2 % 32);
     __IO uint32_t *PE = wuuIndex < 16 ? &WUU0->PE1 : &WUU0->PE2;
-    uint32_t setting = *PE & mask;
+    uint32_t setting  = *PE & mask;
     if (!setting)
     {
         *IOMUXC = 0;
@@ -361,10 +361,10 @@ void APP_DisableGPIO(void)
     {
         GPIOA->ICR[i] = 0; /* Disable interrupts */
 
-                           /*
-                            * Skip PTA20 ~ 23(JTAG pins)[define SKIP_JTAG_PINS as 1] if want to debug code with JTAG before entering deep
-                            * power down mode
-                            */
+        /*
+         * Skip PTA20 ~ 23(JTAG pins)[define SKIP_JTAG_PINS as 1] if want to debug code with JTAG before entering deep
+         * power down mode
+         */
 #if SKIP_JTAG_PINS
         if (i < 20 || i > 23)
 #endif
@@ -376,9 +376,9 @@ void APP_DisableGPIO(void)
     /* Disable PTB and set PTB to Analog/HiZ state to save power */
     for (i = 0; i <= 15; i++)
     {
-        if ((i != 10) && (i != 11))            /* PTB10 and PTB11 is used as i2c function by upower */
+        if ((i != 10) && (i != 11)) /* PTB10 and PTB11 is used as i2c function by upower */
         {
-            GPIOB->ICR[i]                 = 0; /* Disable interrupts */
+            GPIOB->ICR[i] = 0; /* Disable interrupts */
             PinMuxPrepareSuspend(1, i);
         }
     }
@@ -787,21 +787,13 @@ static void APP_ClearWakeupConfig(lpm_rtd_power_mode_e targetMode)
     }
 }
 
-static void APP_CreateTask(void)
-{
-}
+static void APP_CreateTask(void) {}
 
-static void APP_SuspendTask(void)
-{
-}
+static void APP_SuspendTask(void) {}
 
-static void APP_ResumeTask(void)
-{
-}
+static void APP_ResumeTask(void) {}
 
-static void APP_DestroyTask(void)
-{
-}
+static void APP_DestroyTask(void) {}
 
 static void APP_RpmsgMonitor(struct rpmsg_lite_instance *rpmsgHandle, bool ready, void *rpmsgMonitorParam)
 {
@@ -832,7 +824,7 @@ void PowerModeSwitchTask(void *pvParameters)
 
     /* Setup LPTMR. */
     LPTMR_GetDefaultConfig(&lptmrConfig);
-    lptmrConfig.prescalerClockSource = kLPTMR_PrescalerClock_1;  /* Use RTC 1KHz as clock source. */
+    lptmrConfig.prescalerClockSource = kLPTMR_PrescalerClock_1; /* Use RTC 1KHz as clock source. */
     lptmrConfig.bypassPrescaler      = false;
     lptmrConfig.value                = kLPTMR_Prescale_Glitch_3; /* Divide clock source by 16. */
     LPTMR_Init(LPTMR1, &lptmrConfig);
@@ -1039,14 +1031,16 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
     BOARD_ResumeClockInit();
 }
 
-void PMIC_Reset(void) {
+void PMIC_Reset(void)
+{
     UPOWER_SetPmicReg(9 /* SW_RST */, 0x14 /* Cold reset */);
     /* full poweroff actually takes 16x T OFF_STEP (default 8ms),
      * just wait a while to be sure it should have worked,
      * and warn if it failed. */
     SDK_DelayAtLeastUs(250 * 1000, SDK_DEVICE_MAXIMUM_CPU_CLOCK_FREQUENCY);
     PRINTF("Reset failed?!!\r\n");
-    while (1);
+    while (1)
+        ;
 }
 
 /*! @brief Main function */
@@ -1059,20 +1053,21 @@ int main(void)
 
     /* The default 1.0V settings in normal mode might go below 1.0,
      * so set them to 1.05V early on */
-    if (UPOWER_ChngPmicVoltage(PMIC_BUCK2, 1050*1000))
+    if (UPOWER_ChngPmicVoltage(PMIC_BUCK2, 1050 * 1000))
     {
         PRINTF("failed to set PMIC_BUCK2 voltage to 1.05 [V]\r\n");
     }
-    if (UPOWER_ChngPmicVoltage(PMIC_BUCK3, 1050*1000))
+    if (UPOWER_ChngPmicVoltage(PMIC_BUCK3, 1050 * 1000))
     {
         PRINTF("failed to set PMIC_BUCK3 voltage to 1.05 [V]\r\n");
     }
 
     /* if we didn't reset from power on also reset pmic */
-    if (!(CMC_RTD->SRS & CMC_SRS_POR_MASK)) {
-            PRINTF("Reset cause not POR (%x), resetting PMIC\r\n", CMC_RTD->SRS);
-            /* XXX try to remember somewhere we failed for uboot to log wdt... */
-            PMIC_Reset();
+    if (!(CMC_RTD->SRS & CMC_SRS_POR_MASK))
+    {
+        PRINTF("Reset cause not POR (%x), resetting PMIC\r\n", CMC_RTD->SRS);
+        /* XXX try to remember somewhere we failed for uboot to log wdt... */
+        PMIC_Reset();
     }
 
     UPOWER_PowerOnMemPart(0U, (uint32_t)kUPOWER_MP1_DMA0);
@@ -1080,7 +1075,7 @@ int main(void)
     CLOCK_SetIpSrcDiv(kCLOCK_Tpm0, kCLOCK_Pcc1BusIpSrcCm33Bus, 1U, 0U);
     CLOCK_SetIpSrcDiv(kCLOCK_Lpi2c0, kCLOCK_Pcc1BusIpSrcCm33Bus, 0U, 0U);
     CLOCK_SetIpSrcDiv(kCLOCK_Lpi2c1, kCLOCK_Pcc1BusIpSrcCm33Bus, 0U, 0U);
-    //CLOCK_SetIpSrcDiv(kCLOCK_Lpi2c2, kCLOCK_Pcc2BusIpSrcFusionDspBus, 0U, 0U); // Secure Element
+    // CLOCK_SetIpSrcDiv(kCLOCK_Lpi2c2, kCLOCK_Pcc2BusIpSrcFusionDspBus, 0U, 0U); // Secure Element
     /* Use Pll1Pfd2Div clock source 12.288MHz. */
     CLOCK_SetIpSrc(kCLOCK_Lpuart0, kCLOCK_Pcc1BusIpSrcSysOscDiv2);
 
@@ -1094,7 +1089,7 @@ int main(void)
 
     RESET_PeripheralReset(kRESET_Lpi2c0);
     RESET_PeripheralReset(kRESET_Lpi2c1);
-    //RESET_PeripheralReset(kRESET_Lpi2c2); // Secure Element
+    // RESET_PeripheralReset(kRESET_Lpi2c2); // Secure Element
     RESET_PeripheralReset(kRESET_Tpm0);
     RESET_PeripheralReset(kRESET_Lpuart0);
 

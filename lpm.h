@@ -17,9 +17,9 @@
 #define NOR_CMD_LUT_SEQ_IDX_CONFIG 6
 #endif
 
-#define SYSTICK_BASE       LPTMR0
-#define SYSTICK_IRQn       LPTMR0_IRQn
-#define SYSTICK_HANDLER    LPTMR0_IRQHandler
+#define SYSTICK_BASE LPTMR0
+#define SYSTICK_IRQn LPTMR0_IRQn
+#define SYSTICK_HANDLER LPTMR0_IRQHandler
 #define SYSTICK_CLOCK_NAME kCLOCK_Lptmr0
 
 #define IN_REG_CFG(v, m)          \
@@ -39,15 +39,15 @@
     {                                                                          \
         .mon_hvd_en = (hvd_en), .mon_lvd_en = (lvd_en), .mon_lvdlvl = (lvdlvl) \
     }
-#define BIAS_CFG(m, n, p, mbias) \
-    {                            \
+#define BIAS_CFG(m, n, p, mbias)   \
+    {                              \
         .dombias_cfg =           \
             {                    \
                 .mode = (m),     \
                 .rbbn = (n),     \
                 .rbbp = (p),     \
             },                   \
-        .membias_cfg = {mbias},  \
+        .membias_cfg = {mbias}, \
     }
 #define PWRSYS_LPM_CFG(m) \
     {                     \

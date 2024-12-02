@@ -42,18 +42,18 @@ typedef StaticSemaphore_t srtm_mutex_buf_t;
  * SRTM_DEBUG_VERBOSE_INFO
  * SRTM_DEBUG_VERBOSE_DEBUG
  */
-#define SRTM_DEBUG_MESSAGE_FUNC  DbgConsole_Printf
+#define SRTM_DEBUG_MESSAGE_FUNC DbgConsole_Printf
 #define SRTM_DEBUG_VERBOSE_LEVEL SRTM_DEBUG_VERBOSE_WARN
 
 #define SRTM_DEBUG_COMMUNICATION (0)
 
 /* Switch to disable XXXXX service debugging messages. */
-#define SRTM_I2C_SERVICE_DEBUG_OFF    (0)
-#define SRTM_IO_SERVICE_DEBUG_OFF     (0)
-#define SRTM_LFCL_SERVICE_DEBUG_OFF   (0)
-#define SRTM_PWM_SERVICE_DEBUG_OFF    (0)
-#define SRTM_RTC_SERVICE_DEBUG_OFF    (0)
-#define SRTM_PMIC_SERVICE_DEBUG_OFF   (0)
+#define SRTM_I2C_SERVICE_DEBUG_OFF (0)
+#define SRTM_IO_SERVICE_DEBUG_OFF (0)
+#define SRTM_LFCL_SERVICE_DEBUG_OFF (0)
+#define SRTM_PWM_SERVICE_DEBUG_OFF (0)
+#define SRTM_RTC_SERVICE_DEBUG_OFF (0)
+#define SRTM_PMIC_SERVICE_DEBUG_OFF (0)
 
 #endif /* SDK_OS_FREE_RTOS */
 

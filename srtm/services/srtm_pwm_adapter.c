@@ -21,35 +21,30 @@
 #define SRTM_PWM_MAX_CHANNEL (6U)
 #endif
 
-#define PWM_ENABLE            (1U)
-#define PWM_POLARITY_NORMAL   (0U)
+#define PWM_ENABLE (1U)
+#define PWM_POLARITY_NORMAL (0U)
 #define PWM_POLARITY_INVERSED (1U)
-#define SECOND_TO_NANOSECOND  (1000000000ULL)
+#define SECOND_TO_NANOSECOND (1000000000ULL)
 
 typedef struct _srtm_hal_pwm_setup_config
 {
     hal_pwm_setup_config_t pwmConfig;
     uint64_t period;
     uint64_t dutyCycle;
-} *srtm_hal_pwm_setup_config_t;
+} * srtm_hal_pwm_setup_config_t;
 
 typedef struct _srtm_hal_pwm_adapter
 {
     struct _srtm_pwm_adapter adapter;
     hal_pwm_handle_t halPwmHandle[SRTM_PWM_MAX_CHIP_NUM];
     struct _srtm_hal_pwm_setup_config halPwmConfig[SRTM_PWM_MAX_CHIP_NUM][SRTM_PWM_MAX_CHANNEL];
-} *srtm_hal_pwm_adapter_t;
+} * srtm_hal_pwm_adapter_t;
 
 /*******************************************************************************
  * Code
  ******************************************************************************/
-static srtm_status_t setPwm(srtm_hal_pwm_adapter_t adapter,
-                            uint8_t chipId,
-                            uint8_t channelId,
-                            uint64_t period,
-                            uint64_t dutyCycle,
-                            uint8_t polarity,
-                            uint8_t enable)
+static srtm_status_t setPwm(srtm_hal_pwm_adapter_t adapter, uint8_t chipId, uint8_t channelId, uint64_t period,
+                            uint64_t dutyCycle, uint8_t polarity, uint8_t enable)
 {
     uint8_t dutyCyclePercent;
     uint32_t pwmFreq_Hz = SECOND_TO_NANOSECOND / period;
@@ -83,13 +78,8 @@ static srtm_status_t setPwm(srtm_hal_pwm_adapter_t adapter,
                SRTM_Status_Error;
 }
 
-static void getPwm(srtm_hal_pwm_adapter_t adapter,
-                   uint8_t chipId,
-                   uint8_t channelId,
-                   uint64_t *period,
-                   uint64_t *dutyCycle,
-                   uint8_t *polarity,
-                   uint8_t *enable)
+static void getPwm(srtm_hal_pwm_adapter_t adapter, uint8_t chipId, uint8_t channelId, uint64_t *period,
+                   uint64_t *dutyCycle, uint8_t *polarity, uint8_t *enable)
 {
     if (adapter->halPwmConfig[chipId][channelId].pwmConfig.level != kHAL_PwmNoPwmSignal)
     {
@@ -109,13 +99,8 @@ static void getPwm(srtm_hal_pwm_adapter_t adapter,
     *dutyCycle = adapter->halPwmConfig[chipId][channelId].dutyCycle;
 }
 
-static srtm_status_t SRTM_PwmAdapter_GetPwm(srtm_pwm_adapter_t adapter,
-                                            uint8_t chipId,
-                                            uint8_t channelId,
-                                            uint64_t *period,
-                                            uint64_t *dutyCycle,
-                                            uint8_t *polarity,
-                                            uint8_t *enable)
+static srtm_status_t SRTM_PwmAdapter_GetPwm(srtm_pwm_adapter_t adapter, uint8_t chipId, uint8_t channelId,
+                                            uint64_t *period, uint64_t *dutyCycle, uint8_t *polarity, uint8_t *enable)
 {
     srtm_hal_pwm_adapter_t handle = (srtm_hal_pwm_adapter_t)(void *)adapter;
 
@@ -142,13 +127,8 @@ static srtm_status_t SRTM_PwmAdapter_GetPwm(srtm_pwm_adapter_t adapter,
     return SRTM_Status_Success;
 }
 
-static srtm_status_t SRTM_PwmAdapter_SetPwm(srtm_pwm_adapter_t adapter,
-                                            uint8_t chipId,
-                                            uint8_t channelId,
-                                            uint64_t period,
-                                            uint64_t dutyCycle,
-                                            uint8_t polarity,
-                                            uint8_t enable)
+static srtm_status_t SRTM_PwmAdapter_SetPwm(srtm_pwm_adapter_t adapter, uint8_t chipId, uint8_t channelId,
+                                            uint64_t period, uint64_t dutyCycle, uint8_t polarity, uint8_t enable)
 {
     srtm_hal_pwm_adapter_t handle = (srtm_hal_pwm_adapter_t)(void *)adapter;
 

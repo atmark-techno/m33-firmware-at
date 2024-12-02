@@ -39,20 +39,10 @@ typedef struct _srtm_pwm_adapter *srtm_pwm_adapter_t;
  */
 struct _srtm_pwm_adapter
 {
-    srtm_status_t (*getPwm)(srtm_pwm_adapter_t adapter,
-                            uint8_t chipId,
-                            uint8_t channelId,
-                            uint64_t *period,
-                            uint64_t *dutyCycle,
-                            uint8_t *polarity,
-                            uint8_t *enable);
-    srtm_status_t (*setPwm)(srtm_pwm_adapter_t adapter,
-                            uint8_t chipId,
-                            uint8_t channelId,
-                            uint64_t period,
-                            uint64_t dutyCycle,
-                            uint8_t polarity,
-                            uint8_t enable);
+    srtm_status_t (*getPwm)(srtm_pwm_adapter_t adapter, uint8_t chipId, uint8_t channelId, uint64_t *period,
+                            uint64_t *dutyCycle, uint8_t *polarity, uint8_t *enable);
+    srtm_status_t (*setPwm)(srtm_pwm_adapter_t adapter, uint8_t chipId, uint8_t channelId, uint64_t period,
+                            uint64_t dutyCycle, uint8_t polarity, uint8_t enable);
 };
 
 /**

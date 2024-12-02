@@ -32,8 +32,8 @@
 
 #define SRTM_IO_VERSION (0x0300U)
 
-#define SRTM_IO_RETURN_CODE_SUCCESS     (0x0U)
-#define SRTM_IO_RETURN_CODE_FAIL        (0x1U)
+#define SRTM_IO_RETURN_CODE_SUCCESS (0x0U)
+#define SRTM_IO_RETURN_CODE_FAIL (0x1U)
 #define SRTM_IO_RETURN_CODE_UNSUPPORTED (0x2U)
 
 #define SRTM_IO_NTF_INPUT_EVENT (0x00U)
@@ -48,41 +48,46 @@ typedef struct _srtm_io_service
     srtm_io_service_output_set_t outputSet;
     int pin_count;
     srtm_channel_t channel;
-} *srtm_io_service_t;
+} * srtm_io_service_t;
 
 SRTM_PACKED_BEGIN struct _srtm_io_payload
 {
     uint8_t request_id;
     uint8_t pin_idx;
     uint8_t port_idx;
-    union {
-        SRTM_PACKED_BEGIN struct {
+    union
+    {
+        SRTM_PACKED_BEGIN struct
+        {
             uint8_t event;
             uint8_t wakeup;
             uint32_t pinctrl;
         } SRTM_PACKED_END input_init;
-        SRTM_PACKED_BEGIN struct {
+        SRTM_PACKED_BEGIN struct
+        {
             uint8_t value;
             uint32_t pinctrl;
         } SRTM_PACKED_END output_init;
         /* no arg for input_get */
-        SRTM_PACKED_BEGIN struct {
+        SRTM_PACKED_BEGIN struct
+        {
             uint8_t value;
         } SRTM_PACKED_END output_set;
-        SRTM_PACKED_BEGIN struct {
+        SRTM_PACKED_BEGIN struct
+        {
             uint8_t retcode;
             uint8_t value; /* only valid for input_get */
         } SRTM_PACKED_END reply;
     };
 } SRTM_PACKED_END;
 
-enum gpio_rpmsg_header_cmd {
+enum gpio_rpmsg_header_cmd
+{
     GPIO_RPMSG_INPUT_INIT,
     GPIO_RPMSG_OUTPUT_INIT,
     GPIO_RPMSG_INPUT_GET,
     GPIO_RPMSG_OUTPUT_SET,
 };
-
 
 /*******************************************************************************
  * Prototypes
@@ -105,7 +110,7 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
     struct _srtm_io_payload *payload;
     srtm_response_t response;
     uint8_t request_id = 0;
-    uint16_t ioId = 0U;
+    uint16_t ioId      = 0U;
     uint32_t len;
     srtm_io_value_t value = SRTM_IoValueLow;
 
@@ -116,20 +121,20 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
     channel = SRTM_CommMessage_GetChannel(request);
     assert(channel);
     command = SRTM_CommMessage_GetCommand(request);
-    payload = (struct _srtm_io_payload*)SRTM_CommMessage_GetPayload(request);
+    payload = (struct _srtm_io_payload *)SRTM_CommMessage_GetPayload(request);
     len     = SRTM_CommMessage_GetPayloadLen(request);
 
     status = SRTM_Service_CheckVersion(service, request, SRTM_IO_VERSION);
     if ((status != SRTM_Status_Success) || (payload == NULL) || (len != sizeof(*payload)))
     {
         /* Either version mismatch or empty payload is not supported */
-        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: format error, len %d (want %d)!\r\n",
-                           __func__, len, sizeof(*payload));
+        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: format error, len %d (want %d)!\r\n", __func__, len,
+                           sizeof(*payload));
         retCode = SRTM_IO_RETURN_CODE_UNSUPPORTED;
         goto out;
     }
     request_id = payload->request_id;
-    ioId = (payload->port_idx << 8) | payload->pin_idx;
+    ioId       = (payload->port_idx << 8) | payload->pin_idx;
     /* Record channel for further input event */
     handle->channel = channel;
     switch (command)
@@ -137,41 +142,34 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
         case GPIO_RPMSG_INPUT_INIT:
             if (handle->inputInit != NULL)
             {
-                status = handle->inputInit(service, channel->core, ioId,
-                                         payload->input_init.event,
-                                         payload->input_init.wakeup,
-                                         payload->input_init.pinctrl);
-                retCode =
-                    status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCCESS : SRTM_IO_RETURN_CODE_FAIL;
+                status  = handle->inputInit(service, channel->core, ioId, payload->input_init.event,
+                                            payload->input_init.wakeup, payload->input_init.pinctrl);
+                retCode = status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCCESS : SRTM_IO_RETURN_CODE_FAIL;
             }
             else
             {
-                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
-                                   "%s: Command input init not allowed!\r\n", __func__);
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Command input init not allowed!\r\n", __func__);
                 retCode = SRTM_IO_RETURN_CODE_FAIL;
             }
             break;
         case GPIO_RPMSG_OUTPUT_INIT:
             if (handle->outputInit != NULL)
             {
-                status = handle->outputInit(service, channel->core, ioId,
-                        payload->output_init.value, payload->output_init.pinctrl);
-                retCode =
-                    status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCCESS : SRTM_IO_RETURN_CODE_FAIL;
+                status  = handle->outputInit(service, channel->core, ioId, payload->output_init.value,
+                                             payload->output_init.pinctrl);
+                retCode = status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCCESS : SRTM_IO_RETURN_CODE_FAIL;
             }
             else
             {
-                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
-                                   "%s: Command output init not allowed!\r\n", __func__);
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Command output init not allowed!\r\n", __func__);
                 retCode = SRTM_IO_RETURN_CODE_FAIL;
             }
             break;
         case GPIO_RPMSG_INPUT_GET:
             if (handle->inputGet)
             {
-                status = handle->inputGet(service, channel->core, ioId, &value);
-                retCode =
-                    status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCCESS : SRTM_IO_RETURN_CODE_FAIL;
+                status  = handle->inputGet(service, channel->core, ioId, &value);
+                retCode = status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCCESS : SRTM_IO_RETURN_CODE_FAIL;
             }
             else
             {
@@ -183,14 +181,12 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
         case GPIO_RPMSG_OUTPUT_SET:
             if (handle->outputSet != NULL)
             {
-                status = handle->outputSet(service, channel->core, ioId, payload->output_set.value);
-                retCode =
-                    status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCCESS : SRTM_IO_RETURN_CODE_FAIL;
+                status  = handle->outputSet(service, channel->core, ioId, payload->output_set.value);
+                retCode = status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCCESS : SRTM_IO_RETURN_CODE_FAIL;
             }
             else
             {
-                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
-                                   "%s: Command ouput set not allowed!\r\n", __func__);
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Command ouput set not allowed!\r\n", __func__);
                 retCode = SRTM_IO_RETURN_CODE_FAIL;
             }
             break;
@@ -201,19 +197,18 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
     }
 
 out:
-    response = SRTM_Response_Create(channel, SRTM_IO_CATEGORY, SRTM_IO_VERSION,
-                                    command, sizeof(*payload));
+    response = SRTM_Response_Create(channel, SRTM_IO_CATEGORY, SRTM_IO_VERSION, command, sizeof(*payload));
     if (!response)
     {
         return SRTM_Status_OutOfMemory;
     }
 
-    payload = (struct _srtm_io_payload*)SRTM_CommMessage_GetPayload(response);
-    payload->request_id = request_id;
-    payload->pin_idx = (uint8_t)ioId;
-    payload->port_idx = (uint8_t)(ioId >> 8U);
+    payload                = (struct _srtm_io_payload *)SRTM_CommMessage_GetPayload(response);
+    payload->request_id    = request_id;
+    payload->pin_idx       = (uint8_t)ioId;
+    payload->port_idx      = (uint8_t)(ioId >> 8U);
     payload->reply.retcode = retCode;
-    payload->reply.value = value; /* Only used in GPIO_RPMSG_INPUT_GET */
+    payload->reply.value   = value; /* Only used in GPIO_RPMSG_INPUT_GET */
 
     /* Now the response is ready */
     return SRTM_Dispatcher_DeliverResponse(service->dispatcher, response);
@@ -227,10 +222,8 @@ static srtm_status_t SRTM_IoService_Notify(srtm_service_t service, srtm_notifica
     return SRTM_Status_ServiceNotFound;
 }
 
-srtm_service_t SRTM_IoService_Create(int pin_count,
-                                     srtm_io_service_input_init_t inputInit,
-                                     srtm_io_service_output_init_t outputInit,
-                                     srtm_io_service_input_get_t inputGet,
+srtm_service_t SRTM_IoService_Create(int pin_count, srtm_io_service_input_init_t inputInit,
+                                     srtm_io_service_output_init_t outputInit, srtm_io_service_input_get_t inputGet,
                                      srtm_io_service_output_set_t outputSet)
 {
     srtm_io_service_t handle;
@@ -240,11 +233,11 @@ srtm_service_t SRTM_IoService_Create(int pin_count,
     handle = (srtm_io_service_t)SRTM_Heap_Malloc(sizeof(struct _srtm_io_service));
     assert(handle);
 
-    handle->pin_count = pin_count;
-    handle->inputInit = inputInit;
+    handle->pin_count  = pin_count;
+    handle->inputInit  = inputInit;
     handle->outputInit = outputInit;
-    handle->inputGet = inputGet;
-    handle->outputSet = outputSet;
+    handle->inputGet   = inputGet;
+    handle->outputSet  = outputSet;
 
     SRTM_List_Init(&handle->service.node);
     handle->service.dispatcher = NULL;
@@ -293,22 +286,19 @@ srtm_status_t SRTM_IoService_NotifyInputEvent(srtm_service_t service, uint16_t i
     if (handle->channel)
     {
         struct _srtm_io_payload *payload;
-        srtm_notification_t notif = SRTM_Notification_Create(
-                    NULL, SRTM_IO_CATEGORY, SRTM_IO_VERSION,
-                    SRTM_IO_NTF_INPUT_EVENT, sizeof(*payload));
-        if (!notif) {
-            SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR,
-                            "%s: alloc notification failed.\r\n", __func__);
+        srtm_notification_t notif = SRTM_Notification_Create(NULL, SRTM_IO_CATEGORY, SRTM_IO_VERSION,
+                                                             SRTM_IO_NTF_INPUT_EVENT, sizeof(*payload));
+        if (!notif)
+        {
+            SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR, "%s: alloc notification failed.\r\n", __func__);
             return SRTM_Status_OutOfMemory;
         }
-        payload = (struct _srtm_io_payload*)SRTM_CommMessage_GetPayload(notif);
-        payload->pin_idx = (uint8_t)ioId;
+        payload           = (struct _srtm_io_payload *)SRTM_CommMessage_GetPayload(notif);
+        payload->pin_idx  = (uint8_t)ioId;
         payload->port_idx = (uint8_t)(ioId >> 8U);
-        notif->channel = handle->channel;
+        notif->channel    = handle->channel;
         SRTM_Dispatcher_DeliverNotification(handle->service.dispatcher, notif);
     }
-
-
 
     return SRTM_Status_Success;
 }

@@ -24,8 +24,8 @@
 
 #define SRTM_PWM_VERSION (0x0100U)
 
-#define SRTM_PWM_RETURN_CODE_SUCEESS     (0x0U)
-#define SRTM_PWM_RETURN_CODE_FAIL        (0x1U)
+#define SRTM_PWM_RETURN_CODE_SUCEESS (0x0U)
+#define SRTM_PWM_RETURN_CODE_FAIL (0x1U)
 #define SRTM_PWM_RETURN_CODE_UNSUPPORTED (0x2U)
 
 #define SRTM_PWM_CMD_GET (0x0U)
@@ -36,7 +36,7 @@ typedef struct _srtm_pwm_service
 {
     struct _srtm_service service;
     srtm_pwm_adapter_t adapter;
-} *srtm_pwm_service_t;
+} * srtm_pwm_service_t;
 
 /*******************************************************************************
  * Code

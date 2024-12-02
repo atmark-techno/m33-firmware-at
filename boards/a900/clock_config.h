@@ -37,15 +37,15 @@
  * ND: Nominal Drive Mode(1.0 V)
  * UD: Under Drive Mode(0.9 V)
  */
-#define CM33_CORE_MAX_FREQ_OD     (FREQ_216_MHZ)
-#define CM33_CORE_MAX_FREQ_ND     (FREQ_160_MHZ)
-#define CM33_CORE_MAX_FREQ_UD     (FREQ_38_4_MHZ)
-#define CM33_BUS_MAX_FREQ_OD      (FREQ_108_MHZ)
-#define CM33_BUS_MAX_FREQ_ND      (FREQ_65_MHZ)
-#define CM33_BUS_MAX_FREQ_UD      (FREQ_20_MHZ)
-#define CM33_SLOW_MAX_FREQ_OD     (FREQ_24_MHZ)
-#define CM33_SLOW_MAX_FREQ_ND     (FREQ_20_MHZ)
-#define CM33_SLOW_MAX_FREQ_UD     (FREQ_12_5_MHZ)
+#define CM33_CORE_MAX_FREQ_OD (FREQ_216_MHZ)
+#define CM33_CORE_MAX_FREQ_ND (FREQ_160_MHZ)
+#define CM33_CORE_MAX_FREQ_UD (FREQ_38_4_MHZ)
+#define CM33_BUS_MAX_FREQ_OD (FREQ_108_MHZ)
+#define CM33_BUS_MAX_FREQ_ND (FREQ_65_MHZ)
+#define CM33_BUS_MAX_FREQ_UD (FREQ_20_MHZ)
+#define CM33_SLOW_MAX_FREQ_OD (FREQ_24_MHZ)
+#define CM33_SLOW_MAX_FREQ_ND (FREQ_20_MHZ)
+#define CM33_SLOW_MAX_FREQ_UD (FREQ_12_5_MHZ)
 
 /*! @brief buck2 pmic voltage. */
 /* 1.1 V */
@@ -82,10 +82,10 @@ void BOARD_BootClockRUN(void);
 
 void BOARD_ResumeClockInit(void);
 
-void BOARD_CalculateDivider(uint32_t src_freq, uint32_t dest_freq, int * divider);
+void BOARD_CalculateDivider(uint32_t src_freq, uint32_t dest_freq, int *divider);
 
-drive_mode_e BOARD_CalculateCoreClkDivider(cgc_rtd_sys_clk_src_t clk_src, int *core_clk_divider, int *bus_clk_divider, int *slow_clk_divider, drive_mode_e drive_mode);
-
+drive_mode_e BOARD_CalculateCoreClkDivider(cgc_rtd_sys_clk_src_t clk_src, int *core_clk_divider, int *bus_clk_divider,
+                                           int *slow_clk_divider, drive_mode_e drive_mode);
 
 void BOARD_InitPlls(void);
 drive_mode_e BOARD_SwitchToFROClk(drive_mode_e drive_mode);

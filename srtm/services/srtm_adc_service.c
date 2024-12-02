@@ -24,8 +24,8 @@
 
 #define SRTM_ADC_VERSION (0x0100U)
 
-#define SRTM_ADC_RETURN_CODE_SUCCESS     (0x0U)
-#define SRTM_ADC_RETURN_CODE_FAIL        (0x1U)
+#define SRTM_ADC_RETURN_CODE_SUCCESS (0x0U)
+#define SRTM_ADC_RETURN_CODE_FAIL (0x1U)
 #define SRTM_ADC_RETURN_CODE_UNSUPPORTED (0x2U)
 
 #define SRTM_ADC_CMD_GET (0x0U)
@@ -35,7 +35,7 @@ typedef struct _srtm_adc_service
 {
     struct _srtm_service service;
     srtm_adc_adapter_t adapter;
-} *srtm_adc_service_t;
+} * srtm_adc_service_t;
 
 /*******************************************************************************
  * Code
@@ -76,31 +76,29 @@ static srtm_status_t SRTM_AdcService_Request(srtm_service_t service, srtm_reques
     status = SRTM_Service_CheckVersion(service, request, SRTM_ADC_VERSION);
     if ((status != SRTM_Status_Success) || (adcReq == NULL) || (payloadLen != sizeof(struct _srtm_adc_payload)))
     {
-        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s format error %d / %d / %d / %d!\r\n",
-                           __func__, status, adcReq == NULL, payloadLen, sizeof(struct _srtm_adc_payload));
+        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s format error %d / %d / %d / %d!\r\n", __func__, status,
+                           adcReq == NULL, payloadLen, sizeof(struct _srtm_adc_payload));
         adcResp->retCode = SRTM_ADC_RETURN_CODE_UNSUPPORTED;
     }
     else if (adcReq->idx >= adapter->handles_count)
     {
-        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "ADC cmd 0x%x idx out of range (0x%x / 0x%x)\r\n",
-                           command, adcReq->idx, adapter->handles_count);
+        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "ADC cmd 0x%x idx out of range (0x%x / 0x%x)\r\n", command,
+                           adcReq->idx, adapter->handles_count);
         adcResp->retCode = SRTM_ADC_RETURN_CODE_FAIL;
     }
     else
     {
-        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO,
-                           "SRTM receive ADC request: cmd = 0x%x, idx = 0x%x\r\n",
-                           command, adcReq->idx);
+        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "SRTM receive ADC request: cmd = 0x%x, idx = 0x%x\r\n", command,
+                           adcReq->idx);
         adcResp->requestID = adcReq->requestID;
         switch (command)
         {
             case SRTM_ADC_CMD_GET:
                 assert(adapter->get);
 
-                status           = adapter->get(&adapter->handles[adcReq->idx], adcResp->idx, &value);
-                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_DEBUG,
-                                   "Got ADC value %d\r\n", value);
-                adcResp->value   = value;
+                status = adapter->get(&adapter->handles[adcReq->idx], adcResp->idx, &value);
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_DEBUG, "Got ADC value %d\r\n", value);
+                adcResp->value = value;
                 adcResp->retCode =
                     status == SRTM_Status_Success ? SRTM_ADC_RETURN_CODE_SUCCESS : SRTM_ADC_RETURN_CODE_FAIL;
                 break;

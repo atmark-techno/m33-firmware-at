@@ -60,7 +60,7 @@
 //! is set.
 //! Refer to the rpmsg_plaform.h for the used link IDs.
 #define RL_BUFFER_PAYLOAD_SIZE(link_id) (496U)
-#define RL_BUFFER_COUNT(link_id)        ((((link_id) == 0U) || ((link_id) == 1U)) ? 256U : 2U)
+#define RL_BUFFER_COUNT(link_id) ((((link_id) == 0U) || ((link_id) == 1U)) ? 256U : 2U)
 
 #endif /* !(defined(RL_ALLOW_CUSTOM_SHMEM_CONFIG) && (RL_ALLOW_CUSTOM_SHMEM_CONFIG == 1))*/
 

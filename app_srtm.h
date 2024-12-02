@@ -44,20 +44,20 @@ typedef enum
     APP_SRTM_StateShutdown,
 } app_srtm_state_t;
 
-#define APP_MS2TICK(ms)       ((ms + portTICK_PERIOD_MS - 1) / portTICK_PERIOD_MS)
+#define APP_MS2TICK(ms) ((ms + portTICK_PERIOD_MS - 1) / portTICK_PERIOD_MS)
 #define APP_DMA_IRQN(channel) (IRQn_Type)((uint32_t)DMA0_0_IRQn + channel)
 
 /* Task priority definition, bigger number stands for higher priority */
-#define APP_SRTM_MONITOR_TASK_PRIO    (4U)
+#define APP_SRTM_MONITOR_TASK_PRIO (4U)
 #define APP_SRTM_DISPATCHER_TASK_PRIO (3U)
 
 /* IRQ handler priority definition, bigger number stands for lower priority */
-#define APP_LPI2C_IRQ_PRIO      (5U)
-#define APP_LPUART_IRQ_PRIO     (5U)
-#define APP_GPIO_IRQ_PRIO       (5U)
-#define APP_WUU_IRQ_PRIO        (5U)
-#define APP_CMC1_IRQ_PRIO       (5U)
-#define APP_BBNSM_IRQ_PRIO      (5U)
+#define APP_LPI2C_IRQ_PRIO (5U)
+#define APP_LPUART_IRQ_PRIO (5U)
+#define APP_GPIO_IRQ_PRIO (5U)
+#define APP_WUU_IRQ_PRIO (5U)
+#define APP_CMC1_IRQ_PRIO (5U)
+#define APP_BBNSM_IRQ_PRIO (5U)
 
 /* Define the timeout ms to polling the A Core link up status */
 #define APP_LINKUP_TIMER_PERIOD_MS (10U)
@@ -70,24 +70,24 @@ typedef enum
 #define APP_RTC_ALM_EVT_TIMER_PERIOD_MS (50U)
 
 #define RPMSG_LITE_SRTM_SHMEM_BASE (VDEV0_VRING_BASE)
-#define RPMSG_LITE_SRTM_LINK_ID    (RL_PLATFORM_IMX8ULP_M33_A35_SRTM_LINK_ID)
+#define RPMSG_LITE_SRTM_LINK_ID (RL_PLATFORM_IMX8ULP_M33_A35_SRTM_LINK_ID)
 
-#define APP_SRTM_I2C_CHANNEL_NAME    "rpmsg-i2c-channel"
-#define APP_SRTM_IO_CHANNEL_NAME     "rpmsg-io-channel"
-#define APP_SRTM_PWM_CHANNEL_NAME    "rpmsg-pwm-channel"
-#define APP_SRTM_ADC_CHANNEL_NAME    "rpmsg-adc-channel"
-#define APP_SRTM_RTC_CHANNEL_NAME    "rpmsg-rtc-channel"
-#define APP_SRTM_LFCL_CHANNEL_NAME   "rpmsg-life-cycle-channel"
-#define APP_SRTM_WDOG_CHANNEL_NAME   "rpmsg-wdog-channel"
-#define APP_SRTM_TTY_CHANNEL_NAME    "rpmsg-tty-channel"
+#define APP_SRTM_I2C_CHANNEL_NAME "rpmsg-i2c-channel"
+#define APP_SRTM_IO_CHANNEL_NAME "rpmsg-io-channel"
+#define APP_SRTM_PWM_CHANNEL_NAME "rpmsg-pwm-channel"
+#define APP_SRTM_ADC_CHANNEL_NAME "rpmsg-adc-channel"
+#define APP_SRTM_RTC_CHANNEL_NAME "rpmsg-rtc-channel"
+#define APP_SRTM_LFCL_CHANNEL_NAME "rpmsg-life-cycle-channel"
+#define APP_SRTM_WDOG_CHANNEL_NAME "rpmsg-wdog-channel"
+#define APP_SRTM_TTY_CHANNEL_NAME "rpmsg-tty-channel"
 
 #define PEER_CORE_ID (1U)
 
 /* I2C service */
-#define LPI2C0_BAUDRATE              (400000)
+#define LPI2C0_BAUDRATE (400000)
 #define I2C_SOURCE_CLOCK_FREQ_LPI2C0 CLOCK_GetIpFreq(kCLOCK_Lpi2c0)
 
-#define LPI2C1_BAUDRATE              (100000)
+#define LPI2C1_BAUDRATE (100000)
 #define I2C_SOURCE_CLOCK_FREQ_LPI2C1 CLOCK_GetIpFreq(kCLOCK_Lpi2c1)
 
 #define I2C_SWITCH_NONE 1
@@ -95,42 +95,45 @@ typedef enum
 /* WUU module index */
 #define WUU_MODULE_LPTMR0 (0U)
 #define WUU_MODULE_LPTMR1 (1U)
-#define WUU_MODULE_CMP0   (2U)
-#define WUU_MODULE_CMP1   (3U)
+#define WUU_MODULE_CMP0 (2U)
+#define WUU_MODULE_CMP1 (3U)
 #define WUU_MODULE_UPOWER (4U)
 #define WUU_MODULE_TAMPER (5U)
-#define WUU_MODULE_NSRTC  (6U)
-#define WUU_MODULE_SRTC   (7U)
+#define WUU_MODULE_NSRTC (6U)
+#define WUU_MODULE_SRTC (7U)
 /* WUU wakeup event for internal module lptimer1  */
 #define LPTMR1_WUU_WAKEUP_EVENT (kWUU_InternalModuleInterrupt)
 
 /* GPIO */
 #define APP_IO_PINS_PER_CHIP 25U
-#define APP_IO_CHIPS         3U /* Only support GPIOA, GPIOB and GPIOC */
-#define APP_IO_NUM         (APP_IO_CHIPS * APP_IO_PINS_PER_CHIP)
+#define APP_IO_CHIPS 3U /* Only support GPIOA, GPIOB and GPIOC */
+#define APP_IO_NUM (APP_IO_CHIPS * APP_IO_PINS_PER_CHIP)
 #define APP_GPIO_IDX(ioId) ((uint8_t)(((uint16_t)ioId) >> 8U))
-#define APP_PIN_IDX(ioId)  ((uint8_t)ioId)
+#define APP_PIN_IDX(ioId) ((uint8_t)ioId)
 #define APP_IO_ID(gpio, pin) ((uint16_t)(((uint8_t)gpio << 8U) | (uint8_t)pin))
 #define APP_IO_IDX(gpio, pin) ((uint16_t)((uint8_t)gpio * APP_IO_PINS_PER_CHIP + (uint8_t)pin))
 
-static inline uint16_t APP_IO_GetIndex(uint16_t ioId) {
-	uint8_t gpio_idx = APP_GPIO_IDX(ioId);
-	uint8_t pin_idx = APP_PIN_IDX(ioId);
+static inline uint16_t APP_IO_GetIndex(uint16_t ioId)
+{
+    uint8_t gpio_idx = APP_GPIO_IDX(ioId);
+    uint8_t pin_idx  = APP_PIN_IDX(ioId);
 
-	if (gpio_idx > APP_IO_CHIPS)
-		return 0xffff;
-	if (pin_idx > APP_IO_PINS_PER_CHIP)
-		return 0xffff;
+    if (gpio_idx > APP_IO_CHIPS)
+        return 0xffff;
+    if (pin_idx > APP_IO_PINS_PER_CHIP)
+        return 0xffff;
 
-	return gpio_idx * APP_IO_PINS_PER_CHIP + pin_idx;
+    return gpio_idx * APP_IO_PINS_PER_CHIP + pin_idx;
 }
-static inline uint16_t APP_IO_GetId(uint8_t inputIdx) {
+static inline uint16_t APP_IO_GetId(uint8_t inputIdx)
+{
     if (inputIdx > APP_IO_NUM)
         return 0xffff;
     return ((inputIdx / APP_IO_PINS_PER_CHIP) << 8U) | (inputIdx % APP_IO_PINS_PER_CHIP);
 }
 extern const uint8_t wuuPins[];
-static inline uint8_t APP_IO_GetWUUPin(uint8_t gpio_idx, uint8_t pin_idx) {
+static inline uint8_t APP_IO_GetWUUPin(uint8_t gpio_idx, uint8_t pin_idx)
+{
     /* only PTA/PTB */
     if (gpio_idx > 2)
         return 255;
@@ -139,13 +142,13 @@ static inline uint8_t APP_IO_GetWUUPin(uint8_t gpio_idx, uint8_t pin_idx) {
     return wuuPins[APP_IO_IDX(gpio_idx, pin_idx)];
 }
 
-#define APP_GPIO_INT_SEL   (kRGPIO_InterruptOutput2)
+#define APP_GPIO_INT_SEL (kRGPIO_InterruptOutput2)
 
 /* XXX interrupts etc still hardcoded*/
-#define APP_PIN_PTA19      (0x0013U)          /* PTA19 use for it6161(mipi to hdmi converter ic) interrupt */
+#define APP_PIN_PTA19 (0x0013U) /* PTA19 use for it6161(mipi to hdmi converter ic) interrupt */
 #define APP_PIN_IT6161_INT (APP_PIN_PTA19)
 #define APP_INPUT_IT6161_INT (APP_IO_GetIndex(APP_PIN_IT6161_INT))
-#define APP_PIN_PTB4       (0x0104U)          /* PTB4 */
+#define APP_PIN_PTB4 (0x0104U) /* PTB4 */
 
 extern int32_t RPMsg_MU0_A_IRQHandler(void);
 

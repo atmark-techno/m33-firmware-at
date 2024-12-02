@@ -84,13 +84,13 @@ typedef struct _i2c_bus
     srtm_i2c_type_t type;
     uint8_t switch_idx;
     srtm_i2c_switch_channel switch_channel;
-} *i2c_bus_t;
+} * i2c_bus_t;
 
 typedef struct _i2c_switch
 {
     uint16_t slaveAddr;
     srtm_i2c_switch_channel cur_channel;
-} *i2c_switch_t;
+} * i2c_switch_t;
 
 typedef struct _i2c_bus_structure
 {
@@ -116,25 +116,12 @@ struct _srtm_i2c_adapter
     i2c_bus_structure_t bus_structure;
 
     /* Interfaces implemented by I2C adapter */
-    srtm_status_t (*read)(srtm_i2c_adapter_t adapter,
-                          uint32_t base_addr,
-                          srtm_i2c_type_t type,
-                          uint16_t slaveAddr,
-                          uint8_t *buf,
-                          uint16_t len,
-                          uint16_t flags);
-    srtm_status_t (*write)(srtm_i2c_adapter_t adapter,
-                           uint32_t base_addr,
-                           srtm_i2c_type_t type,
-                           uint16_t slaveAddr,
-                           uint8_t *buf,
-                           uint16_t len,
-                           uint16_t flags);
-    srtm_status_t (*switchchannel)(srtm_i2c_adapter_t adapter,
-                                   uint32_t base_addr,
-                                   srtm_i2c_type_t type,
-                                   uint16_t slaveAddr,
-                                   srtm_i2c_switch_channel channel);
+    srtm_status_t (*read)(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type, uint16_t slaveAddr,
+                          uint8_t *buf, uint16_t len, uint16_t flags);
+    srtm_status_t (*write)(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type, uint16_t slaveAddr,
+                           uint8_t *buf, uint16_t len, uint16_t flags);
+    srtm_status_t (*switchchannel)(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
+                                   uint16_t slaveAddr, srtm_i2c_switch_channel channel);
 };
 /*******************************************************************************
  * API

@@ -50,8 +50,8 @@ typedef enum _srtm_lfcl_event
 /**
  * @brief SRTM life cycle service callback function type.
  */
-typedef srtm_status_t (*srtm_lfcl_service_cb_t)(
-    srtm_service_t service, srtm_peercore_t core, srtm_lfcl_event_t event, void *eventParam, void *userParam);
+typedef srtm_status_t (*srtm_lfcl_service_cb_t)(srtm_service_t service, srtm_peercore_t core, srtm_lfcl_event_t event,
+                                                void *eventParam, void *userParam);
 
 /*******************************************************************************
  * API
