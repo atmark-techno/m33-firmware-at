@@ -430,18 +430,18 @@ void APP_PowerPostSwitchHook(lpm_rtd_power_mode_e targetMode, bool result)
 {
     if (LPM_PowerModeActive != targetMode)
     {
+        /* init clock first as apps use it indirectly */
+        BOARD_InitClock();
+
         if (LPM_PowerModePowerDown == targetMode || LPM_PowerModeDeepSleep == targetMode)
         {
             APP_Resume(result);
         }
 
-        /*
-         * Debug console RX pin was set to disable for current leakage, need to re-configure pinmux.
-         * Debug console TX pin was set to disable for current leakage, need to re-configure pinmux.
-         */
+        /* Reconfigure console pins after app resume as app remembered disabled pins
+         * TODO Ideally we should be able to make app suspend/resume skip these so we can
+         * get console back earlier */
         BOARD_InitConsolePins();
-
-        BOARD_InitClock(); /* initialize system osc for uart(using osc as clock source) */
         BOARD_InitDebugConsole();
     }
     PRINTF("== Power switch %s ==\r\n", result ? "OK" : "FAIL");
