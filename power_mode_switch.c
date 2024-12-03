@@ -328,8 +328,13 @@ static void APP_Resume(bool resume)
     GPIOA->PDDR = gpioOutputBackup[0].pddr;
     for (i = 0; i <= 24; i++)
     {
-        IOMUXC0->PCR0_IOMUXCARRAY0[i] = iomuxBackup[backupIndex];
-        GPIOA->ICR[i]                 = gpioICRBackup[backupIndex];
+#if SKIP_JTAG_PINS
+        if (i < 20 || i > 23)
+#endif
+        {
+            IOMUXC0->PCR0_IOMUXCARRAY0[i] = iomuxBackup[backupIndex];
+            GPIOA->ICR[i]                 = gpioICRBackup[backupIndex];
+        }
         backupIndex++;
     }
 
