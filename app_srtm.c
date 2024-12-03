@@ -204,6 +204,8 @@ static const srtm_io_event_t wuuPinModeEvents[] = {
 #define RS485_LPUART_CLK_FREQ CLOCK_GetIpFreq(kCLOCK_Lpuart0)
 #define APP_PIN_PTA17 (0x0011U)
 
+bool s_rs485LpuartSuspend;
+static TaskHandle_t s_rs485LpuartRxTask;
 static lpuart_rtos_handle_t s_rs485LpuartRtosHandle;
 static lpuart_handle_t s_rs485LpuartHandle;
 
@@ -1002,7 +1004,8 @@ static void tty_rx_task(void *pvParameters)
         do
         {
             LPUART_RTOS_Receive(&s_rs485LpuartRtosHandle, buf, maxlen, &recvlen);
-            // XXX log error?
+            if (s_rs485LpuartSuspend)
+                vTaskSuspend(NULL);
         } while (recvlen == 0);
 
         SRTM_TtyService_NotifySend(ttyService, notif, recvlen);
@@ -1012,9 +1015,12 @@ static void tty_rx_task(void *pvParameters)
 static int tty_tx(uint16_t len, uint8_t *buf)
 {
     int rc;
-    // not yet ready
+    // not yet ready (e.g. in suspend)
     if (!s_rs485LpuartRtosHandle.base)
+    {
+        PRINTF("rs485 write before device init\r\n");
         return kStatus_Fail;
+    }
 
     rc = LPUART_RTOS_Send(&s_rs485LpuartRtosHandle, buf, len);
     if (rc)
@@ -1046,7 +1052,10 @@ static void APP_SRTM_InitTtyService(void)
 
     ttyService = SRTM_TtyService_Create(tty_tx, tty_setbaud);
     SRTM_Dispatcher_RegisterService(disp, ttyService);
-    xTaskCreate(tty_rx_task, "rs485 rx task", 256U, NULL, tskIDLE_PRIORITY + 2U, NULL);
+    /* we need this task to be higher priority than HandleSuspendTask in main,
+     * in order to exit out of LPUART_RTOS_Receive safely as suspend deinits it */
+    BUILD_BUG_ON(RS485_RX_TASK_PRIORITY <= SUSPEND_TASK_PRIORITY);
+    xTaskCreate(tty_rx_task, "rs485 rx task", 256U, NULL, RS485_RX_TASK_PRIORITY, &s_rs485LpuartRxTask);
 }
 
 static void APP_SRTM_DoWakeup(void *param)
@@ -1940,9 +1949,19 @@ void APP_SRTM_StartCommunication(void)
     xSemaphoreGive(monSig);
 }
 
+void APP_SRTM_SuspendTask(void)
+{
+    s_rs485LpuartSuspend = true;
+}
+
+void APP_SRTM_ResumeTask(void)
+{
+    s_rs485LpuartSuspend = false;
+    vTaskResume(s_rs485LpuartRxTask);
+}
+
 void APP_SRTM_Suspend(void)
 {
-    // XXX checkme flush?
     LPUART_RTOS_Deinit(&s_rs485LpuartRtosHandle);
 }
 

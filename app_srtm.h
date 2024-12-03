@@ -50,6 +50,7 @@ typedef enum
 /* Task priority definition, bigger number stands for higher priority */
 #define APP_SRTM_MONITOR_TASK_PRIO (4U)
 #define APP_SRTM_DISPATCHER_TASK_PRIO (3U)
+#define RS485_RX_TASK_PRIORITY        (3U)
 
 /* IRQ handler priority definition, bigger number stands for lower priority */
 #define APP_LPI2C_IRQ_PRIO (5U)
@@ -189,6 +190,8 @@ void APP_SRTM_SetWakeupModule(uint32_t module, uint16_t event);
 /* Clear Internal modules' event */
 void APP_SRTM_ClrWakeupModule(uint32_t module, uint16_t event);
 
+void APP_SRTM_SuspendTask(void);
+void APP_SRTM_ResumeTask(void);
 void APP_SRTM_Suspend(void);
 void APP_SRTM_Resume(bool resume);
 

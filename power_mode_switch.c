@@ -18,6 +18,7 @@
 #include "fsl_upower.h"
 #include "fsl_mu.h"
 #include "fsl_debug_console.h"
+#include "build_bug.h"
 
 #include "pin_mux.h"
 #include "board.h"
@@ -57,12 +58,6 @@
 
 #define APP_LPTMR1_IRQ_PRIO (5U)
 
-typedef enum _app_wakeup_source
-{
-    kAPP_WakeupSourceLptmr, /*!< Wakeup by LPTMR.        */
-    kAPP_WakeupSourcePin    /*!< Wakeup by external pin. */
-} app_wakeup_source_t;
-
 /*******************************************************************************
  * Function Prototypes
  ******************************************************************************/
@@ -77,9 +72,13 @@ extern void UPOWER_InitBuck2Buck3Table(void);
 /*******************************************************************************
  * Variables
  ******************************************************************************/
+static TaskHandle_t mainTask;
 static uint32_t s_wakeupTimeout;           /* Wakeup timeout. (Unit: Second) */
 static app_wakeup_source_t s_wakeupSource; /* Wakeup source.                 */
 static SemaphoreHandle_t s_wakeupSig;
+static SemaphoreHandle_t handleSuspendSig;
+static lpm_rtd_power_mode_e suspendPowerMode;
+static app_wakeup_source_t suspendWakeupSource;
 static const char *s_modeNames[] = { "ACTIVE", "WAIT", "STOP", "Sleep", "Deep Sleep", "Power Down", "Deep Power Down" };
 extern lpm_ad_power_mode_e AD_CurrentMode;
 extern bool option_v_boot_flag;
@@ -400,6 +399,8 @@ void APP_PowerPreSwitchHook(lpm_rtd_power_mode_e targetMode)
 {
     if ((LPM_PowerModeActive != targetMode))
     {
+        PRINTF("Preparing for %s\r\n", s_modeNames[targetMode]);
+
         /* Wait for debug console output finished. */
         while (!(kLPUART_TransmissionCompleteFlag & LPUART_GetStatusFlags((LPUART_Type *)BOARD_DEBUG_UART_BASEADDR)))
         {
@@ -743,10 +744,10 @@ static uint32_t APP_GetWakeupTimeout(void)
 }
 
 /* Get wakeup timeout and wakeup source. */
-static void APP_GetWakeupConfig(void)
+static void APP_GetWakeupConfig(app_wakeup_source_t source)
 {
     /* Get wakeup source by user input. */
-    s_wakeupSource = kAPP_WakeupSourceLptmr;
+    s_wakeupSource = source;
 
     if (kAPP_WakeupSourceLptmr == s_wakeupSource)
     {
@@ -789,9 +790,17 @@ static void APP_ClearWakeupConfig(lpm_rtd_power_mode_e targetMode)
 
 static void APP_CreateTask(void) {}
 
-static void APP_SuspendTask(void) {}
+static void APP_SuspendTask(void)
+{
+    APP_SRTM_SuspendTask();
+    vTaskSuspend(mainTask);
+}
 
-static void APP_ResumeTask(void) {}
+static void APP_ResumeTask(void)
+{
+    APP_SRTM_ResumeTask();
+    vTaskResume(mainTask);
+}
 
 static void APP_DestroyTask(void) {}
 
@@ -805,6 +814,68 @@ static void APP_RpmsgMonitor(struct rpmsg_lite_instance *rpmsgHandle, bool ready
     {
         APP_DestroyTask();
     }
+}
+
+static void HandleSuspendTask(void *pvParameters)
+{
+    lpm_rtd_power_mode_e targetPowerMode;
+    app_wakeup_source_t source;
+
+    while (true)
+    {
+        xSemaphoreTake(handleSuspendSig, portMAX_DELAY);
+        targetPowerMode = suspendPowerMode;
+        source          = suspendWakeupSource;
+        PRINTF("HandleSuspendTask: target %d / %d\r\n", targetPowerMode, source);
+        if (targetPowerMode == s_curMode)
+        {
+            /* Same mode, skip it */
+            continue;
+        }
+        if (APP_GetModeAllowCombi(AD_CurrentMode, targetPowerMode) == MODE_COMBI_NO)
+        {
+            PRINTF("Not support the mode combination: %s + %s\r\n", APP_GetAdPwrModeName(AD_CurrentMode),
+                   APP_GetRtdPwrModeName(targetPowerMode));
+            continue;
+        }
+        if (!LPM_SetPowerMode(targetPowerMode))
+        {
+            PRINTF("Some task doesn't allow to enter mode %s\r\n", s_modeNames[targetPowerMode]);
+        }
+        else /* Idle task will handle the low power state. */
+        {
+            /* clear any previous wakeup we might have had */
+            xSemaphoreTake(s_wakeupSig, 0);
+
+            APP_SuspendTask();
+            APP_GetWakeupConfig(source);
+            APP_SetWakeupConfig(targetPowerMode);
+
+            PRINTF("Suspended tasks...\r\n");
+
+            // xSemaphoreTake(s_wakeupSig, portMAX_DELAY);
+            while (!xSemaphoreTake(s_wakeupSig, 5000))
+            {
+                PRINTF("not sleeping?\r\n");
+            }
+
+            PRINTF("Waking up...\r\n");
+            /* The call might be blocked by SRTM dispatcher task. Must be called after power mode reset. */
+            APP_ClearWakeupConfig(targetPowerMode);
+            APP_ResumeTask();
+        }
+
+        /*update Mode state*/
+        s_lastMode = s_curMode;
+        s_curMode  = LPM_PowerModeActive;
+    }
+}
+
+void APP_PowerModeSwitch(lpm_rtd_power_mode_e targetPowerMode, app_wakeup_source_t source)
+{
+    suspendPowerMode    = targetPowerMode;
+    suspendWakeupSource = source;
+    xSemaphoreGive(handleSuspendSig);
 }
 
 /* Power Mode Switch task */
@@ -910,31 +981,8 @@ void PowerModeSwitchTask(void *pvParameters)
         targetPowerMode = (lpm_rtd_power_mode_e)(ch - 'A');
         if (targetPowerMode <= LPM_PowerModeDeepPowerDown)
         {
-            if (targetPowerMode == s_curMode)
-            {
-                /* Same mode, skip it */
-                continue;
-            }
-            if (APP_GetModeAllowCombi(AD_CurrentMode, targetPowerMode) == MODE_COMBI_NO)
-            {
-                PRINTF("Not support the mode combination: %s + %s\r\n", APP_GetAdPwrModeName(AD_CurrentMode),
-                       APP_GetRtdPwrModeName(targetPowerMode));
-                continue;
-            }
-            if (!LPM_SetPowerMode(targetPowerMode))
-            {
-                PRINTF("Some task doesn't allow to enter mode %s\r\n", s_modeNames[targetPowerMode]);
-            }
-            else /* Idle task will handle the low power state. */
-            {
-                APP_SuspendTask();
-                APP_GetWakeupConfig();
-                APP_SetWakeupConfig(targetPowerMode);
-                xSemaphoreTake(s_wakeupSig, portMAX_DELAY);
-                /* The call might be blocked by SRTM dispatcher task. Must be called after power mode reset. */
-                APP_ClearWakeupConfig(targetPowerMode);
-                APP_ResumeTask();
-            }
+            /* prompt for timer and switch */
+            APP_PowerModeSwitch(targetPowerMode, kAPP_WakeupSourceLptmr);
         }
         else if ('W' == ch)
         {
@@ -974,9 +1022,6 @@ void PowerModeSwitchTask(void *pvParameters)
         {
             PRINTF("Invalid command %c[0x%x]\r\n", ch, ch);
         }
-        /*update Mode state*/
-        s_lastMode = s_curMode;
-        s_curMode  = LPM_PowerModeActive;
         PRINTF("\r\nNext loop\r\n");
     }
 }
@@ -1121,9 +1166,15 @@ int main(void)
 
     LPM_Init();
 
-    s_wakeupSig = xSemaphoreCreateBinary();
+    s_wakeupSig      = xSemaphoreCreateBinary();
+    handleSuspendSig = xSemaphoreCreateBinary();
 
-    xTaskCreate(PowerModeSwitchTask, "Main Task", 512U, NULL, tskIDLE_PRIORITY + 1U, NULL);
+    /* suspend task must have higher priority than main task to properly
+     * run and suspend main */
+    BUILD_BUG_ON(MAIN_TASK_PRIORITY >= SUSPEND_TASK_PRIORITY);
+    xTaskCreate(PowerModeSwitchTask, "Main Task", 512U, NULL, MAIN_TASK_PRIORITY, &mainTask);
+    /* fails with task size of 256 and async debug console... */
+    xTaskCreate(HandleSuspendTask, "HandleSuspendTask", 512U, NULL, SUSPEND_TASK_PRIORITY, NULL);
 
 #ifdef MCMGR_USED
     /* Initialize MCMGR before calling its API */

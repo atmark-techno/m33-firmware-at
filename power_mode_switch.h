@@ -18,6 +18,10 @@
         return (char *)#e
 #endif
 
+#define MAIN_TASK_PRIORITY    1
+#define SUSPEND_TASK_PRIORITY 2
+
+
 /* Power mode definition used in application. */
 typedef enum _app_power_mode
 {
@@ -29,6 +33,14 @@ typedef enum _app_power_mode
     kAPP_PowerModePowerDown,     /* Power Down mode. */
     kAPP_PowerModeDeepPowerDown, /* Deep Power Down mode */
 } app_power_mode_e;
+
+/* wakeup source for m core */
+typedef enum _app_wakeup_source
+{
+    kAPP_WakeupSourceLptmr, /*!< Wakeup by LPTMR.        */
+    kAPP_WakeupSourcePin    /*!< Wakeup by external pin. */
+} app_wakeup_source_t;
+
 
 typedef enum
 {
@@ -66,6 +78,7 @@ extern "C" {
 #endif
 
 void PMIC_Reset(void);
+void APP_PowerModeSwitch(lpm_rtd_power_mode_e targetPowerMode, app_wakeup_source_t source);
 
 #if defined(__cplusplus)
 }
