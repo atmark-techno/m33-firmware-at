@@ -1126,7 +1126,6 @@ int main(void)
     CLOCK_SetIpSrcDiv(kCLOCK_Lpi2c1, kCLOCK_Pcc1BusIpSrcCm33Bus, 0U, 0U);
     // CLOCK_SetIpSrcDiv(kCLOCK_Lpi2c2, kCLOCK_Pcc2BusIpSrcFusionDspBus, 0U, 0U); // Secure Element
     /* Use Pll1Pfd2Div clock source 12.288MHz. */
-    CLOCK_SetIpSrc(kCLOCK_Lpuart0, kCLOCK_Pcc1BusIpSrcSysOscDiv2);
 
     CLOCK_EnableClock(kCLOCK_Dma0Ch16);
     CLOCK_EnableClock(kCLOCK_Dma0Ch17);

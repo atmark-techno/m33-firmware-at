@@ -201,7 +201,7 @@ static const srtm_io_event_t wuuPinModeEvents[] = {
 #define RS485_LPUART LPUART0
 #define RS485_LPUART_IRQn LPUART0_IRQn
 #define RS485_LPUART_BAUDRATE (115200U)
-#define RS485_LPUART_CLK_FREQ CLOCK_GetIpFreq(kCLOCK_Lpuart0)
+#define RS485_LPUART_CLK kCLOCK_Lpuart0
 #define APP_PIN_PTA17 (0x0011U)
 
 bool s_rs485LpuartSuspend;
@@ -1032,7 +1032,7 @@ static int tty_tx(uint16_t len, uint8_t *buf)
 
 static int tty_setbaud(uint32_t baud)
 {
-    return LPUART_SetBaudRate(RS485_LPUART, baud, RS485_LPUART_CLK_FREQ);
+    return LPUART_SetBaudRate(RS485_LPUART, baud, CLOCK_GetIpFreq(RS485_LPUART_CLK));
 }
 
 static void APP_SRTM_InitTtyDevice(void)
@@ -1040,7 +1040,8 @@ static void APP_SRTM_InitTtyDevice(void)
     /* IRQ enable by lpuart but priority isn't set, set it now */
     NVIC_SetPriority(RS485_LPUART_IRQn, APP_LPUART_IRQ_PRIO);
 
-    s_rs485LpuartConfig.srcclk = RS485_LPUART_CLK_FREQ;
+    CLOCK_SetIpSrc(RS485_LPUART_CLK, kCLOCK_Pcc1BusIpSrcSysOscDiv2);
+    s_rs485LpuartConfig.srcclk = CLOCK_GetIpFreq(RS485_LPUART_CLK);
     LPUART_RTOS_Init(&s_rs485LpuartRtosHandle, &s_rs485LpuartHandle, &s_rs485LpuartConfig);
     LPUART_RTOS_SetRxTimeout(&s_rs485LpuartRtosHandle, 1, 0); /* short timeout to give data back asap */
     LPUART_RTOS_SetTxTimeout(&s_rs485LpuartRtosHandle, 0, 0); /* XXX no timeout, depends on baud rate */
