@@ -35,8 +35,9 @@ void BOARD_InitBootPins(void);
  * @brief Configures pin routing and optionally pin electrical features.
  *
  */
-void BOARD_InitLpuartPins(void); /*!< Function assigned for the core: Cortex-M33[cm33] */
-void BOARD_DeinitLpuartPins(void);
+void BOARD_InitConsolePins(void); /*!< Function assigned for the core: Cortex-M33[cm33] */
+void BOARD_DeinitConsolePins(void);
+void BOARD_InitRs485Pins(void); /*!< Function assigned for the core: Cortex-M33[cm33] */
 
 /*!
  * @brief Configures pin routing and optionally pin electrical features.

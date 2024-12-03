@@ -17,7 +17,8 @@
  * END ****************************************************************************************************************/
 void BOARD_InitBootPins(void)
 {
-    BOARD_InitLpuartPins();
+    BOARD_InitConsolePins();
+    BOARD_InitRs485Pins();
     BOARD_InitI2cPins();
     BOARD_InitPmicI2cPins();
     BOARD_InitTpmPins();
@@ -27,11 +28,11 @@ void BOARD_InitBootPins(void)
 
 /* FUNCTION ************************************************************************************************************
  *
- * Function Name : BOARD_InitLpuartPins
+ * Function Name : BOARD_InitConsolePins
  * Description   : Configures pin routing and optionally pin electrical features.
  *
  * END ****************************************************************************************************************/
-void BOARD_InitLpuartPins(void)
+void BOARD_InitConsolePins(void)
 { /*!< Function assigned for the core: Cortex-M33[cm33] */
     /*
      * LPUART1 is the debug console for RTD.
@@ -40,7 +41,18 @@ void BOARD_InitLpuartPins(void)
     IOMUXC_SetPinConfig(IOMUXC_PTA22_LPUART1_TX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
     IOMUXC_SetPinMux(IOMUXC_PTA23_LPUART1_RX, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA23_LPUART1_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+}
 
+void BOARD_DeinitConsolePins(void)
+{
+    IOMUXC_SetPinMux(IOMUXC_PTA22_LPUART1_TX, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA22_LPUART1_TX, 0U);
+    IOMUXC_SetPinMux(IOMUXC_PTA23_LPUART1_RX, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA23_LPUART1_RX, 0U);
+}
+
+void BOARD_InitRs485Pins(void)
+{
     /*
      * LPUART0 is connected to RS-485/RS-422 Transceivers(ISL83485IBZ).
      *
@@ -60,23 +72,6 @@ void BOARD_InitLpuartPins(void)
     IOMUXC_SetPinConfig(IOMUXC_PTA16_PTA16, IOMUXC_PCR_PE_MASK);
     IOMUXC_SetPinMux(IOMUXC_PTA17_PTA17, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA17_PTA17, IOMUXC_PCR_PE_MASK);
-}
-
-void BOARD_DeinitLpuartPins(void)
-{
-    IOMUXC_SetPinMux(IOMUXC_PTA22_LPUART1_TX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA22_LPUART1_TX, 0U);
-    IOMUXC_SetPinMux(IOMUXC_PTA23_LPUART1_RX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA23_LPUART1_RX, 0U);
-
-    IOMUXC_SetPinMux(IOMUXC_PTA18_LPUART0_TX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA18_LPUART0_TX, 0U);
-    IOMUXC_SetPinMux(IOMUXC_PTA15_LPUART0_RX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA15_LPUART0_RX, 0U);
-    IOMUXC_SetPinMux(IOMUXC_PTA16_PTA16, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA16_PTA16, 0U);
-    IOMUXC_SetPinMux(IOMUXC_PTA17_PTA17, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA17_PTA17, 0U);
 }
 
 /* FUNCTION ************************************************************************************************************

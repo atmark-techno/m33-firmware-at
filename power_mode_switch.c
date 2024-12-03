@@ -410,7 +410,7 @@ void APP_PowerPreSwitchHook(lpm_rtd_power_mode_e targetMode)
          * Debug console RX pin: Set to pinmux to analog.
          * Debug console TX pin: Set to pinmux to analog.
          */
-        BOARD_DeinitLpuartPins();
+        BOARD_DeinitConsolePins();
 
         if (LPM_PowerModePowerDown == targetMode || LPM_PowerModeDeepSleep == targetMode)
         {
@@ -439,7 +439,7 @@ void APP_PowerPostSwitchHook(lpm_rtd_power_mode_e targetMode, bool result)
          * Debug console RX pin was set to disable for current leakage, need to re-configure pinmux.
          * Debug console TX pin was set to disable for current leakage, need to re-configure pinmux.
          */
-        BOARD_InitLpuartPins();
+        BOARD_InitConsolePins();
 
         BOARD_InitClock(); /* initialize system osc for uart(using osc as clock source) */
         BOARD_InitDebugConsole();
