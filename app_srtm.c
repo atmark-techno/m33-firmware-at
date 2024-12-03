@@ -117,7 +117,6 @@ static srtm_status_t APP_SRTM_ADC_Get(struct adc_handle *handle, size_t idx, uin
 volatile app_srtm_state_t srtmState;
 bool option_v_boot_flag          = false;
 static bool need_reset_peer_core = false;
-bool wake_acore_flag             = true;
 
 pca9460_buck3ctrl_t buck3_ctrl;
 pca9460_ldo1_cfg_t ldo1_cfg;
@@ -390,29 +389,26 @@ void rtdCtxRestore(void)
 
 void APP_WakeupACore(void)
 {
-    if (wake_acore_flag)
+    if (UPOWER_ChngPmicVoltage(PMIC_LDO3, 3300 * 1000))
     {
-        if (UPOWER_ChngPmicVoltage(PMIC_LDO3, 3300 * 1000))
-        {
-            PRINTF("failed to set PMIC_LDO3 voltage to 3.3 [V]\r\n");
-        }
-        if (UPOWER_ChngPmicVoltage(PMIC_LSW2, 1800 * 1000))
-        {
-            PRINTF("failed to set PMIC_LSW2 voltage to 1.8 [V]\r\n");
-        }
-        if (UPOWER_ChngPmicVoltage(PMIC_LSW4, 1100 * 1000))
-        {
-            PRINTF("failed to set PMIC_LSW4 voltage to 1.1 [V]\r\n");
-        }
+        PRINTF("failed to set PMIC_LDO3 voltage to 3.3 [V]\r\n");
+    }
+    if (UPOWER_ChngPmicVoltage(PMIC_LSW2, 1800 * 1000))
+    {
+        PRINTF("failed to set PMIC_LSW2 voltage to 1.8 [V]\r\n");
+    }
+    if (UPOWER_ChngPmicVoltage(PMIC_LSW4, 1100 * 1000))
+    {
+        PRINTF("failed to set PMIC_LSW4 voltage to 1.1 [V]\r\n");
+    }
 
-        if (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL)
-        {
-            MU_SendMsg(MU0_MUA, 1, 0xFFFFFFFF); /* MCore wakeup ACore with mu interrupt, 1: RPMSG_MU_CHANNEL */
-        }
-        else
-        {
-            UPOWER_PowerOnADInPDMode();
-        }
+    if (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL)
+    {
+        MU_SendMsg(MU0_MUA, 1, 0xFFFFFFFF); /* MCore wakeup ACore with mu interrupt, 1: RPMSG_MU_CHANNEL */
+    }
+    else
+    {
+        UPOWER_PowerOnADInPDMode();
     }
 }
 
@@ -481,16 +477,6 @@ void APP_SRTM_ShutdownCA35(void)
     SRTM_Dispatcher_PostProc(disp, proc);
 }
 
-/* WUU interrupt handler. */
-void WUU0_IRQHandler(void)
-{
-    /* If application has handler */
-    if (irqHandler)
-    {
-        irqHandler(WUU0_IRQn, irqHandlerParam);
-    }
-}
-
 static void APP_HandleGPIOHander(uint8_t gpioIdx)
 {
     RGPIO_Type *gpio = gpios[gpioIdx];
@@ -524,61 +510,31 @@ static void APP_HandleGPIOHander(uint8_t gpioIdx)
 
 void GPIOA_INT0_IRQHandler(void)
 {
-    /* If application has handler */
-    if (irqHandler)
-    {
-        irqHandler(GPIOA_INT0_IRQn, irqHandlerParam);
-    }
     APP_HandleGPIOHander(0U);
 }
 
 void GPIOA_INT1_IRQHandler(void)
 {
-    /* If application has handler */
-    if (irqHandler)
-    {
-        irqHandler(GPIOA_INT1_IRQn, irqHandlerParam);
-    }
     APP_HandleGPIOHander(0U);
 }
 
 void GPIOB_INT0_IRQHandler(void)
 {
-    /* If application has handler */
-    if (irqHandler)
-    {
-        irqHandler(GPIOB_INT0_IRQn, irqHandlerParam);
-    }
     APP_HandleGPIOHander(1U);
 }
 
 void GPIOB_INT1_IRQHandler(void)
 {
-    /* If application has handler */
-    if (irqHandler)
-    {
-        irqHandler(GPIOB_INT1_IRQn, irqHandlerParam);
-    }
     APP_HandleGPIOHander(1U);
 }
 
 void GPIOC_INT0_IRQHandler(void)
 {
-    /* If application has handler */
-    if (irqHandler)
-    {
-        irqHandler(GPIOC_INT0_IRQn, irqHandlerParam);
-    }
     APP_HandleGPIOHander(2U);
 }
 
 void GPIOC_INT1_IRQHandler(void)
 {
-    /* If application has handler */
-    if (irqHandler)
-    {
-        irqHandler(GPIOC_INT1_IRQn, irqHandlerParam);
-    }
     APP_HandleGPIOHander(2U);
 }
 
@@ -604,12 +560,6 @@ void BBNSM_IRQHandler(void)
 {
     BaseType_t reschedule = pdFALSE;
     uint32_t status       = BBNSM_GetStatusFlags(BBNSM);
-
-    /* If application has handler */
-    if (irqHandler)
-    {
-        irqHandler(BBNSM_IRQn, irqHandlerParam);
-    }
 
     /*
      * Process RTC alarm if present.

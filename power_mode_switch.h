@@ -55,21 +55,6 @@ typedef struct
     allow_combi_e allow_combi; /* Allow Combination */
 } mode_combi_t;
 
-typedef enum _allos_give_sig
-{
-    RTD_GIVE_SIG_NO  = 0,
-    RTD_GIVE_SIG_YES = 1,
-} allow_give_sig_e;
-
-typedef struct rtd_mode_and_irq_allow
-{
-    lpm_rtd_power_mode_e current_rtd_mode; /* current mode of rtd */
-    lpm_rtd_power_mode_e last_rtd_mode;    /* last mode of rtd */
-    IRQn_Type irq_num;                     /* irq number */
-    allow_give_sig_e give_semaphore_flag;  /* whether give semaphore for power mode switch in freertos task, true: give
-                                  semaphore,  false: not give semaphore */
-} rtd_mode_and_irq_allow_t;
-
 /*******************************************************************************
  * API
  ******************************************************************************/

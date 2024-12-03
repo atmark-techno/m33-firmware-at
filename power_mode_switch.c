@@ -87,32 +87,7 @@ extern lpm_rtd_power_mode_e s_curMode;
 extern lpm_rtd_power_mode_e s_lastMode;
 extern pca9460_buck3ctrl_t buck3_ctrl;
 extern pca9460_ldo1_cfg_t ldo1_cfg;
-extern bool wake_acore_flag;
-rtd_mode_and_irq_allow_t current_state = { LPM_PowerModeActive, LPM_PowerModeActive, NotAvail_IRQn, RTD_GIVE_SIG_YES };
 // clang-format off
-/*
- * For some system low power combine, such as APD->PD, RTD->PD, use GPIO as RTD wakeup source, it will trigger WUU + GPIO irq handler in RTD side, release twice Semaphore Sig.
- * In below mode_combi_array_for_give_sig table, use current_rtd_mode and irq_num to judge whether RTD give semaphore sig.
- * Use current_rtd_mode and last_rtd_mode to judge whether RTD can wakeup APD.
- */
-rtd_mode_and_irq_allow_t mode_combi_array_for_give_sig[] = {
-  {LPM_PowerModeActive, LPM_PowerModeActive, NotAvail_IRQn, RTD_GIVE_SIG_YES},
-  {LPM_PowerModeDeepSleep, LPM_PowerModeActive, WUU0_IRQn, RTD_GIVE_SIG_YES},
-  {LPM_PowerModePowerDown, LPM_PowerModeActive, WUU0_IRQn, RTD_GIVE_SIG_YES},
-  {LPM_PowerModeDeepPowerDown, LPM_PowerModeActive, WUU0_IRQn, RTD_GIVE_SIG_YES},
-
-  {LPM_PowerModeWait, LPM_PowerModeActive, LPTMR1_IRQn, RTD_GIVE_SIG_YES},
-  {LPM_PowerModeStop, LPM_PowerModeActive, LPTMR1_IRQn, RTD_GIVE_SIG_YES},
-  {LPM_PowerModeSleep, LPM_PowerModeActive, LPTMR1_IRQn, RTD_GIVE_SIG_YES},
-  {LPM_PowerModeDeepSleep, LPM_PowerModeActive, LPTMR1_IRQn, RTD_GIVE_SIG_YES},
-  {LPM_PowerModePowerDown, LPM_PowerModeActive, LPTMR1_IRQn, RTD_GIVE_SIG_YES},
-
-  {LPM_PowerModeWait, LPM_PowerModeActive, GPIOB_INT0_IRQn, RTD_GIVE_SIG_YES},
-  {LPM_PowerModeStop, LPM_PowerModeActive, GPIOB_INT0_IRQn, RTD_GIVE_SIG_YES},
-  {LPM_PowerModeSleep, LPM_PowerModeActive, GPIOB_INT0_IRQn, RTD_GIVE_SIG_YES},
-  {LPM_PowerModeDeepSleep, LPM_PowerModeActive, GPIOB_INT0_IRQn, RTD_GIVE_SIG_YES},
-};
-
 mode_combi_t mode_combi_array_for_single_boot[] = {
     {LPM_PowerModeActive, AD_ACT, MODE_COMBI_YES},
     {LPM_PowerModeWait, AD_ACT, MODE_COMBI_YES},
@@ -581,25 +556,8 @@ static void APP_ShowModeCombi(void)
     PRINTF("###############################################\r\n");
 }
 
-static allow_give_sig_e APP_AllowGiveSig(lpm_rtd_power_mode_e current_mode, uint32_t irq)
-{
-    int i                  = 0;
-    allow_give_sig_e allow = false;
-
-    for (i = 0; i < ARRAY_SIZE(mode_combi_array_for_give_sig); i++)
-    {
-        if ((current_mode == mode_combi_array_for_give_sig[i].current_rtd_mode) &&
-            (irq == mode_combi_array_for_give_sig[i].irq_num))
-        {
-            allow = mode_combi_array_for_give_sig[i].give_semaphore_flag;
-            break;
-        }
-    }
-    return allow;
-}
-
 /* WUU0 interrupt handler. */
-void APP_WUU0_IRQHandler(void)
+void WUU0_IRQHandler(void)
 {
     /* "really" wake up for LPTMR1 alarm or GPIO.
      * If only LPTRM0 (SYSTICK) then we'll sleep again */
@@ -651,66 +609,10 @@ void LPTMR1_IRQHandler(void)
         wakeup = true;
     }
 
-    current_state.give_semaphore_flag = APP_AllowGiveSig(s_curMode, LPTMR1_IRQn);
-    if (!current_state.give_semaphore_flag)
-    {
-        /* skip give semaphore */
-        return;
-    }
-
     if (wakeup)
     {
         xSemaphoreGiveFromISR(s_wakeupSig, NULL);
         portYIELD_FROM_ISR(pdTRUE);
-    }
-}
-
-/*
- * Wakeup RTD: lptimer or button(sw8).
- *
- *              |APD at PD: option(W), sw6(on/off), sw7, sw8.
- * Wakeup APD:  |
- *              |APD at DPD: option(W), sw6(on/off).
- *
- * RTD Wait/Stop/Sleep mode: sw8 will trigger two GPIO interrupt(kRGPIO_FlagEitherEdge) determined by APD IO service.
- * RTD DSL/PD/DPD mode: sw8 will trigger one WUU + one GPIO interrupt.
- */
-static void APP_IRQDispatcher(IRQn_Type irq, void *param)
-{
-    /* ensure that only RTD/APD is woken up at a time button */
-    current_state.last_rtd_mode       = current_state.current_rtd_mode;
-    current_state.current_rtd_mode    = s_curMode;
-    current_state.irq_num             = irq;
-    current_state.give_semaphore_flag = RTD_GIVE_SIG_YES;
-
-    if (current_state.current_rtd_mode == current_state.last_rtd_mode ||
-        irq == BBNSM_IRQn) /* Always set the wake_acore_flag to true for the interrupt from BBNSM */
-    {
-        /*
-         * RTD don't update low power state by using button wakeup APD.
-         * so only when the last state is same with current state, button sw8 can wakeup APD.
-         */
-        wake_acore_flag = true;
-    }
-    else
-    {
-        wake_acore_flag = false;
-    }
-
-    current_state.give_semaphore_flag = APP_AllowGiveSig(s_curMode, irq);
-
-    if (!current_state.give_semaphore_flag)
-    {
-        /* skip give semaphore */
-        return;
-    }
-    switch (irq)
-    {
-        case WUU0_IRQn:
-            APP_WUU0_IRQHandler();
-            break;
-        default:
-            break;
     }
 }
 
@@ -900,12 +802,9 @@ void PowerModeSwitchTask(void *pvParameters)
     uint8_t ch;
     status_t st;
 
-    /* As IRQ handler main entry locates in app_srtm.c to support services, here need an entry to handle application
-     * IRQ events.
-     */
-    APP_SRTM_SetIRQHandler(APP_IRQDispatcher, NULL);
     /* Add Systick as Power Down wakeup source, depending on SYSTICK_WUU_WAKEUP_EVENT value. */
     APP_SRTM_SetWakeupModule(WUU_MODULE_SYSTICK, SYSTICK_WUU_WAKEUP_EVENT);
+    NVIC_SetPriority(WUU0_IRQn, APP_WUU_IRQ_PRIO);
 
     /* Setup LPTMR. */
     LPTMR_GetDefaultConfig(&lptmrConfig);
@@ -1002,10 +901,6 @@ void PowerModeSwitchTask(void *pvParameters)
         }
         else if ('W' == ch)
         {
-            if (!wake_acore_flag)
-            {
-                wake_acore_flag = true;
-            }
             APP_SRTM_WakeupCA35();
         }
         else if ('T' == ch)
