@@ -1482,6 +1482,9 @@ int32_t MU0_A_IRQHandler(void)
             AD_CurrentMode = AD_PD;      /* AD entered Power Down Mode */
         }
         AD_WillEnterMode = AD_ACT;
+
+        /* make m33 core sleep */
+        APP_PowerModeSwitch(LPM_PowerModePowerDown, kAPP_WakeupSourcePin);
     }
 
     return RPMsg_MU0_A_IRQHandler();

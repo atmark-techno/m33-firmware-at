@@ -76,6 +76,7 @@ extern void UPOWER_InitBuck2Buck3Table(void);
 static TaskHandle_t mainTask;
 static uint32_t s_wakeupTimeout;           /* Wakeup timeout. (Unit: Second) */
 static app_wakeup_source_t s_wakeupSource; /* Wakeup source.                 */
+static bool sleepWithLinux = true;
 static SemaphoreHandle_t s_wakeupSig;
 static SemaphoreHandle_t handleSuspendSig;
 static lpm_rtd_power_mode_e suspendPowerMode;
@@ -741,6 +742,11 @@ static void HandleSuspendTask(void *pvParameters)
         xSemaphoreTake(handleSuspendSig, portMAX_DELAY);
         targetPowerMode = suspendPowerMode;
         source          = suspendWakeupSource;
+        if (source == kAPP_WakeupSourcePin && !sleepWithLinux)
+        {
+            PRINTF("Not sleeping with linux\r\n");
+            continue;
+        }
         PRINTF("HandleSuspendTask: target %d / %d\r\n", targetPowerMode, source);
         if (targetPowerMode == s_curMode)
         {
@@ -879,6 +885,8 @@ void PowerModeSwitchTask(void *pvParameters)
             "Press  N for supporting Deep Sleep Mode(Pls set it when the option IMX8ULP_DSL_SUPPORT of TF-A is "
             "enabled) of Linux. support_dsl_for_apd = %d\r\n",
             APP_SRTM_GetSupportDSLForApd());
+        PRINTF("Press  Z to toggle sleep with linux.\r\n");
+        PRINTF("Press  R to force reset\r\n");
         PRINTF("\r\nWaiting for power mode select..\r\n\r\n");
 
         /* Wait for user response */
@@ -928,6 +936,21 @@ void PowerModeSwitchTask(void *pvParameters)
         {
             PRINTF("Warning: Pls ensure that the option IMX8ULP_DSL_SUPPORT is enabled in TF-A\r\n");
             APP_SRTM_SetSupportDSLForApd(true);
+        }
+        else if ('Z' == ch)
+        {
+            sleepWithLinux = !sleepWithLinux;
+            PRINTF("Sleep with linux: %s\r\n", sleepWithLinux ? "true" : "false");
+        }
+        else if ('R' == ch)
+        {
+            PRINTF("confirm? y/N\r\n");
+            ch = GETCHAR();
+            if ('y' == ch || 'Y' == ch)
+            {
+                PRINTF("Cold reset\r\n");
+                PMIC_Reset();
+            }
         }
         else
         {
