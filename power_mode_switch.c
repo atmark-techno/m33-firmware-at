@@ -183,6 +183,13 @@ mode_combi_t mode_combi_array_for_dual_or_lp_boot[] = {
 };
 // clang-format on
 
+void HardFault_Handler(void)
+{
+    /* we don't know if it's safe to print something in console here, just reset in doubt..
+     * Ideally try to store a flag in something that survives reset (rtc?) and use that? */
+    PMIC_Reset();
+}
+
 /*******************************************************************************
  * Function Code
  ******************************************************************************/
