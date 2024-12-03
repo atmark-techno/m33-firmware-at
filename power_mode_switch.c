@@ -30,6 +30,7 @@
 #include "fsl_rgpio.h"
 #include "fsl_wuu.h"
 #include "fsl_lpuart.h"
+#include "lpuart.h"
 
 #include "fsl_iomuxc.h"
 #include "fsl_reset.h"
@@ -885,6 +886,7 @@ void PowerModeSwitchTask(void *pvParameters)
     lpm_rtd_power_mode_e targetPowerMode;
     uint32_t freq = 0U;
     uint8_t ch;
+    status_t st;
 
     /* As IRQ handler main entry locates in app_srtm.c to support services, here need an entry to handle application
      * IRQ events.
@@ -971,8 +973,10 @@ void PowerModeSwitchTask(void *pvParameters)
         /* Wait for user response */
         do
         {
-            ch = GETCHAR();
-        } while ((ch == '\r') || (ch == '\n'));
+            /* use 'times' variant to re-init transfer regularly,
+             * needed for when we deinit/reinit console in another task */
+            st = LPUART_ReadBlockingTimes((LPUART_Type *)BOARD_DEBUG_UART_BASEADDR, &ch, 1, 100);
+        } while (st != kStatus_Success || ch == '\r' || ch == '\n');
 
         if ((ch >= 'a') && (ch <= 'z'))
         {
