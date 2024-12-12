@@ -29,6 +29,7 @@
 
 #include "app_srtm.h"
 #include "board.h"
+#include "pin_mux.h"
 #include "build_bug.h"
 #include "fsl_mu.h"
 #include "fsl_debug_console.h"
@@ -202,8 +203,10 @@ static const srtm_io_event_t wuuPinModeEvents[] = {
 #define RS485_LPUART_BAUDRATE (115200U)
 #define RS485_LPUART_CLK kCLOCK_Lpuart0
 #define APP_PIN_PTA17 (0x0011U)
+#define APP_PIN_PTA15 (0x000fU) /* LPUART0_RX: Used for data receive wakeup */
 
 bool s_rs485LpuartSuspend;
+bool s_rs485LpuartWakeupSource;
 static TaskHandle_t s_rs485LpuartRxTask;
 static lpuart_rtos_handle_t s_rs485LpuartRtosHandle;
 static lpuart_handle_t s_rs485LpuartHandle;
@@ -1004,6 +1007,11 @@ static int tty_setbaud(uint32_t baud)
     return LPUART_SetBaudRate(RS485_LPUART, baud, CLOCK_GetIpFreq(RS485_LPUART_CLK));
 }
 
+static void tty_setwake(bool enable)
+{
+    s_rs485LpuartWakeupSource = enable;
+}
+
 static void APP_SRTM_InitTtyDevice(void)
 {
     /* IRQ enable by lpuart but priority isn't set, set it now */
@@ -1020,7 +1028,7 @@ static void APP_SRTM_InitTtyService(void)
 {
     APP_SRTM_InitTtyDevice();
 
-    ttyService = SRTM_TtyService_Create(tty_tx, tty_setbaud);
+    ttyService = SRTM_TtyService_Create(tty_tx, tty_setbaud, tty_setwake);
     SRTM_Dispatcher_RegisterService(disp, ttyService);
     /* we need this task to be higher priority than HandleSuspendTask in main,
      * in order to exit out of LPUART_RTOS_Receive safely as suspend deinits it */
@@ -1936,6 +1944,16 @@ void APP_SRTM_ResumeTask(void)
 void APP_SRTM_Suspend(void)
 {
     LPUART_RTOS_Deinit(&s_rs485LpuartRtosHandle);
+
+    if (s_rs485LpuartWakeupSource)
+    {
+        APP_IO_ConfInput(APP_IO_GetIndex(APP_PIN_PTA15), SRTM_IoEventFallingEdge, s_rs485LpuartWakeupSource,
+                         IO_PINCTRL_UNSET);
+        /* This runs after APP_Suspend() that does this for other IOs,
+         * so set pinmux to wuu manually and restore is handled by
+         * APP_Resume() */
+        IOMUXC_SetPinMux(IOMUXC_PTA15_WUU0_P12, 0U);
+    }
 }
 
 void APP_SRTM_Resume(bool resume)

@@ -38,6 +38,7 @@ typedef struct _srtm_tty_service
     struct _srtm_service service;
     srtm_tty_service_tx_t tx;
     srtm_tty_service_set_baud_t setBaud;
+    srtm_tty_service_set_wake_t setWake;
     srtm_channel_t channel;
 } * srtm_tty_service_t;
 
@@ -75,6 +76,7 @@ enum tty_rpmsg_header_cmd
     TTY_RPMSG_COMMAND_PAYLOAD,
     TTY_RPMSG_COMMAND_SET_BAUD,
     TTY_RPMSG_COMMAND_NOTIFY,
+    TTY_RPMSG_COMMAND_SET_WAKE,
 };
 
 /*******************************************************************************
@@ -160,6 +162,19 @@ static srtm_status_t SRTM_TtyService_Request(srtm_service_t service, srtm_reques
                 retCode = kStatus_InvalidArgument;
             }
             break;
+        case TTY_RPMSG_COMMAND_SET_WAKE:
+            if (payload->len == sizeof(bool) && handle->setWake != NULL)
+            {
+                handle->setWake(payload->buf[0]);
+                retCode = kStatus_Success;
+            }
+            else
+            {
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Command set wake not allowed?!? (or bad len %d)\r\n",
+                                   __func__, payload->len);
+                retCode = kStatus_InvalidArgument;
+            }
+            break;
         default:
             SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: command %d unsupported!\r\n", __func__, command);
             retCode = kStatus_InvalidArgument;
@@ -191,7 +206,8 @@ static srtm_status_t SRTM_TtyService_Notify(srtm_service_t service, srtm_notific
     return SRTM_Status_ServiceNotFound;
 }
 
-srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service_set_baud_t setBaud)
+srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service_set_baud_t setBaud,
+                                      srtm_tty_service_set_wake_t setWake)
 {
     srtm_tty_service_t handle;
 
@@ -202,6 +218,7 @@ srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service
 
     handle->tx      = tx;
     handle->setBaud = setBaud;
+    handle->setWake = setWake;
 
     SRTM_List_Init(&handle->service.node);
     handle->service.dispatcher = NULL;
