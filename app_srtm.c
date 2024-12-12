@@ -45,7 +45,7 @@
 #include "fsl_flexio_i2c_master.h"
 #include "fsl_lpuart_freertos.h"
 #include "fsl_reset.h"
-#include "fsl_wdog32.h"
+#include "fsl_ewm.h"
 
 /*******************************************************************************
  * Definitions
@@ -898,39 +898,45 @@ static srtm_status_t APP_IO_InputInit(srtm_service_t service, srtm_peercore_t co
     return APP_IO_ConfInput(inputIdx, event, wakeup, pinctrl);
 }
 
-void WDOG1_IRQHandler(void)
+void EWM_IRQHandler(void)
 {
     PRINTF("WATCHDOG IRQ!\r\n");
     SRTM_WdogService_NotifyPreTimeout(wdogService);
-    WDOG32_ClearStatusFlags(WDOG1, kWDOG32_InterruptFlag);
+    EWM_DisableInterrupts(EWM0, kEWM_InterruptEnable);
 }
 
 static srtm_status_t wdog_enable(bool enabled, uint16_t timeout)
 {
 
-    bool is_running = WDOG32_GetStatusFlags(WDOG1) & kWDOG32_RunningFlag;
+    bool is_running = EWM_GetStatusFlags(EWM0) & kEWM_RunningFlag;
     PRINTF("Watchdog %s (timeout %d)\r\n", enabled ? "start" : "stop", timeout);
 
-    /* timeout cannot be changed while running, always disable first */
+    /* timeout cannot be changed for EWM, just ignore any re-enable... */
     if (is_running)
     {
-        WDOG32_Deinit(WDOG1);
+        PRINTF("(ignored action on running wdog; had %d)\r\n", suspendContext.wdog.timeout);
+        return SRTM_Status_Success;
         /* wait for deinit to actually be effective */
-        while (0U == ((WDOG1->CS) & WDOG_CS_RCS_MASK))
-            ;
+        // while (0U == ((WDOG1->CS) & WDOG_CS_RCS_MASK))
+        //     ;
     }
 
     if (enabled)
     {
-        wdog32_config_t config;
-        WDOG32_GetDefaultConfig(&config);
+        ewm_config_t config;
+        EWM_GetDefaultConfig(&config);
 
-        config.timeoutValue = timeout;
+        config.compareHighValue = MIN(timeout / 250, 0xff);
+        config.prescaler        = 250;
         /* get a warning before reset (log message) */
         config.enableInterrupt = true;
 
-        WDOG32_Init(WDOG1, &config);
-        EnableIRQ(WDOG1_IRQn);
+        EWM_Init(EWM0, &config);
+        NVIC_EnableIRQ(EWM_IRQn);
+        EWM_EnableInterrupts(EWM0, kEWM_InterruptEnable);
+
+        /* enable PMIC WDOG_B reset */
+        UPOWER_SetPmicReg(8 /* RESET_CTRL */, 0xa0 /* WDOG_B_CFG = 10b | PMIC_RST_CFG = 10b*/);
     }
     suspendContext.wdog.timeout = enabled ? timeout : 0;
 
@@ -940,8 +946,18 @@ static srtm_status_t wdog_enable(bool enabled, uint16_t timeout)
 static srtm_status_t wdog_ping(void)
 {
     PRINTF("watchdog ping\r\n");
-    WDOG32_Refresh(WDOG1);
+    EWM_Refresh(EWM0);
     return SRTM_Status_Success;
+}
+
+static void APP_SRTM_WdogSuspend(void)
+{
+    if (suspendContext.wdog.timeout == 0)
+        return;
+
+    /* disable PMIC WDOG_B reset */
+    UPOWER_SetPmicReg(8 /* RESET_CTRL */, 0x20 /* WDOG_B_CFG = 00b | PMIC_RST_CFG = 10b*/);
+    EWM_DisableInterrupts(EWM0, kEWM_InterruptEnable);
 }
 
 static void APP_SRTM_WdogResume(void)
@@ -949,6 +965,7 @@ static void APP_SRTM_WdogResume(void)
     if (suspendContext.wdog.timeout == 0)
         return;
 
+    EWM_Refresh(EWM0);
     wdog_enable(true, suspendContext.wdog.timeout);
 }
 
@@ -1922,12 +1939,14 @@ void APP_SRTM_StartCommunication(void)
 void APP_SRTM_SuspendTask(void)
 {
     s_rs485LpuartSuspend = true;
+    APP_SRTM_WdogSuspend();
 }
 
 void APP_SRTM_ResumeTask(void)
 {
     s_rs485LpuartSuspend = false;
     vTaskResume(s_rs485LpuartRxTask);
+    APP_SRTM_WdogResume();
 }
 
 void APP_SRTM_Suspend(void)
@@ -1947,7 +1966,6 @@ void APP_SRTM_Suspend(void)
 
 void APP_SRTM_Resume(bool resume)
 {
-    APP_SRTM_WdogResume();
     APP_SRTM_InitI2CDevice();
     /*
      * IO has restored in APP_Resume(), so don't need init io again in here.

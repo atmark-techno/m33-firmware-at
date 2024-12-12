@@ -24,6 +24,7 @@ void BOARD_InitBootPins(void)
     BOARD_InitTpmPins();
     BOARD_InitHdmiIntPins();
     BOARD_InitPmicModePins();
+    BOARD_InitWdogPins();
 }
 
 /* FUNCTION ************************************************************************************************************
@@ -157,6 +158,11 @@ void BOARD_InitPmicModePins(void)
     IOMUXC_SetPinConfig(IOMUXC_PTB9_PMIC0_MODE0, 0U); // pull-down on the board
 }
 
+void BOARD_InitWdogPins(void)
+{
+    IOMUXC_SetPinMux(IOMUXC_PTA14_EWM0_OUT_B, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA14_EWM0_OUT_B, IOMUXC_PCR_ODE_MASK);
+}
 /***********************************************************************************************************************
  * EOF
  **********************************************************************************************************************/
