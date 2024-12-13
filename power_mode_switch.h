@@ -18,9 +18,8 @@
         return (char *)#e
 #endif
 
-#define MAIN_TASK_PRIORITY    1
+#define MAIN_TASK_PRIORITY 1
 #define SUSPEND_TASK_PRIORITY 2
-
 
 /* Power mode definition used in application. */
 typedef enum _app_power_mode
@@ -40,7 +39,6 @@ typedef enum _app_wakeup_source
     kAPP_WakeupSourceLptmr, /*!< Wakeup by LPTMR.        */
     kAPP_WakeupSourcePin    /*!< Wakeup by external pin. */
 } app_wakeup_source_t;
-
 
 typedef enum
 {

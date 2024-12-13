@@ -50,7 +50,7 @@ typedef enum
 /* Task priority definition, bigger number stands for higher priority */
 #define APP_SRTM_MONITOR_TASK_PRIO (4U)
 #define APP_SRTM_DISPATCHER_TASK_PRIO (3U)
-#define RS485_RX_TASK_PRIORITY        (3U)
+#define RS485_RX_TASK_PRIORITY (3U)
 
 /* IRQ handler priority definition, bigger number stands for lower priority */
 #define APP_LPI2C_IRQ_PRIO (5U)
