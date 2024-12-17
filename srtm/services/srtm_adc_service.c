@@ -72,6 +72,8 @@ static srtm_status_t SRTM_AdcService_Request(srtm_service_t service, srtm_reques
     }
 
     adcResp = (struct _srtm_adc_payload *)(void *)SRTM_CommMessage_GetPayload(response);
+    /* don't leak uninitialized values to linux */
+    memset(adcResp, 0, sizeof(*adcResp));
 
     status = SRTM_Service_CheckVersion(service, request, SRTM_ADC_VERSION);
     if ((status != SRTM_Status_Success) || (adcReq == NULL) || (payloadLen != sizeof(struct _srtm_adc_payload)))
@@ -96,11 +98,17 @@ static srtm_status_t SRTM_AdcService_Request(srtm_service_t service, srtm_reques
             case SRTM_ADC_CMD_GET:
                 assert(adapter->get);
 
-                status = adapter->get(&adapter->handles[adcReq->idx], adcResp->idx, &value);
+                status = adapter->get(&adapter->handles[adcReq->idx], adcReq->idx, &value);
                 SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_DEBUG, "Got ADC value %d\r\n", value);
-                adcResp->value = value;
-                adcResp->retCode =
-                    status == SRTM_Status_Success ? SRTM_ADC_RETURN_CODE_SUCCESS : SRTM_ADC_RETURN_CODE_FAIL;
+                if (status == SRTM_Status_Success)
+                {
+                    adcResp->value   = value;
+                    adcResp->retCode = SRTM_ADC_RETURN_CODE_SUCCESS;
+                }
+                else
+                {
+                    adcResp->retCode = SRTM_ADC_RETURN_CODE_FAIL;
+                }
                 break;
             default:
                 SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: command %d unsupported\r\n", __func__, command);
