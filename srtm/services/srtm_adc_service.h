@@ -37,6 +37,7 @@ struct adc_handle
     lpadc_sample_scale_mode_t scale;
     lpadc_hardware_average_mode_t average;
     uint32_t cmdid;
+    uint32_t pinmux[5];
 };
 
 typedef struct _srtm_adc_adapter *srtm_adc_adapter_t;

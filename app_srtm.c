@@ -269,6 +269,7 @@ static struct adc_handle adcHandles[] = {
         .scale   = kLPADC_SamplePartScale,
         .average = kLPADC_HardwareAverageCount4,
         .cmdid   = 1,
+        .pinmux  = { IOMUXC_PTA24_ADC1_CH5B },
     },
 };
 static struct _srtm_adc_adapter adcAdapter = {
@@ -2065,6 +2066,19 @@ static srtm_status_t APP_SRTM_I2C_Read(srtm_i2c_adapter_t adapter, uint32_t base
 static srtm_status_t APP_SRTM_ADC_Get(struct adc_handle *handle, size_t idx, uint16_t *value)
 {
     lpadc_conv_result_t resultConfig;
+
+    if (idx > ARRAY_SIZE(adcHandles))
+    {
+        PRINTF("APP_SRTM_ADC_Get called with idx %d > %d\r\n", idx, ARRAY_SIZE(adcHandles));
+        return kStatus_Fail;
+    }
+
+    /* reset pinmux everytime to avoid surprises: if someone used the pin as gpio or
+     * something in between this could get an invalid value */
+    IOMUXC_SetPinMux(handle[idx].pinmux[0], handle[idx].pinmux[1], handle[idx].pinmux[2], handle[idx].pinmux[3],
+                     handle[idx].pinmux[4], 0);
+    IOMUXC_SetPinConfig(handle[idx].pinmux[0], handle[idx].pinmux[1], handle[idx].pinmux[2], handle[idx].pinmux[3],
+                        handle[idx].pinmux[4], 0);
 
     LPADC_DoSoftwareTrigger(ADC1, 1 << idx);
     LPADC_GetConvResultBlocking(ADC1, &resultConfig);
