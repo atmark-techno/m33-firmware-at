@@ -109,6 +109,7 @@ typedef enum
 #define APP_IO_PINS_PER_CHIP 25U
 #define APP_IO_CHIPS 3U /* Only support GPIOA, GPIOB and GPIOC */
 #define APP_IO_NUM (APP_IO_CHIPS * APP_IO_PINS_PER_CHIP)
+#define APP_WUU_PINS_NUM (2 * APP_IO_PINS_PER_CHIP)
 #define APP_GPIO_IDX(ioId) ((uint8_t)(((uint16_t)ioId) >> 8U))
 #define APP_PIN_IDX(ioId) ((uint8_t)ioId)
 #define APP_IO_ID(gpio, pin) ((uint16_t)(((uint8_t)gpio << 8U) | (uint8_t)pin))
@@ -141,6 +142,25 @@ static inline uint8_t APP_IO_GetWUUPin(uint8_t gpio_idx, uint8_t pin_idx)
     if (pin_idx > APP_IO_PINS_PER_CHIP)
         return 255;
     return wuuPins[APP_IO_IDX(gpio_idx, pin_idx)];
+}
+
+static inline uint16_t APP_WUUPin_TO_IoId(uint8_t pin)
+{
+    bool found = false;
+    int i;
+
+    for (i = 0; i < APP_WUU_PINS_NUM; i++)
+    {
+        if (wuuPins[i] == pin)
+        {
+            found = true;
+            break;
+        }
+    }
+    if (!found)
+        return 0xffff;
+
+    return APP_IO_ID((i / APP_IO_PINS_PER_CHIP), (i % APP_IO_PINS_PER_CHIP));
 }
 
 #define APP_GPIO_INT_SEL (kRGPIO_InterruptOutput2)
@@ -197,6 +217,8 @@ void APP_SRTM_Resume(bool resume);
 
 bool APP_SRTM_GetSupportDSLForApd(void);
 void APP_SRTM_SetSupportDSLForApd(bool support);
+
+void APP_SRTM_EmulateGPIOHandler(uint8_t wuuPin);
 #if defined(__cplusplus)
 }
 #endif

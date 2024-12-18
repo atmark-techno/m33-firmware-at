@@ -76,6 +76,8 @@ extern void UPOWER_InitBuck2Buck3Table(void);
 static TaskHandle_t mainTask;
 static uint32_t s_wakeupTimeout;           /* Wakeup timeout. (Unit: Second) */
 static app_wakeup_source_t s_wakeupSource; /* Wakeup source.                 */
+static uint32_t s_wakeupPinFlag;           /* Wakeup pin flag.               */
+static bool wakeWithLinux  = true;
 static bool sleepWithLinux = true;
 static SemaphoreHandle_t s_wakeupSig;
 static SemaphoreHandle_t handleSuspendSig;
@@ -83,6 +85,7 @@ static lpm_rtd_power_mode_e suspendPowerMode;
 static app_wakeup_source_t suspendWakeupSource;
 static const char *s_modeNames[] = { "ACTIVE", "WAIT", "STOP", "Sleep", "Deep Sleep", "Power Down", "Deep Power Down" };
 extern lpm_ad_power_mode_e AD_CurrentMode;
+extern bool support_dsl_for_apd;
 extern bool option_v_boot_flag;
 extern lpm_rtd_power_mode_e s_curMode;
 extern lpm_rtd_power_mode_e s_lastMode;
@@ -182,6 +185,61 @@ typedef struct
     uint32_t pddr;
 } gpioOutputConfig_t;
 static gpioOutputConfig_t gpioOutputBackup[3]; /* Backup PTA, PTB and PTC Output-related GPIO registers */
+
+static uint32_t WuuPinToBackupIndex(uint8_t wuuPin)
+{
+    uint16_t ioId   = APP_WUUPin_TO_IoId(wuuPin);
+    uint8_t gpioIdx = APP_GPIO_IDX(ioId);
+    uint8_t pinIdx  = APP_PIN_IDX(ioId);
+    uint32_t backupIndex;
+
+    assert(gpioIdx < 2); /* Only support GPIOA and GPIOB */
+    assert(pinIdx < APP_IO_PINS_PER_CHIP);
+
+    switch (gpioIdx)
+    {
+        case 0:
+            backupIndex = 0;
+            break;
+        case 1:
+            backupIndex = 25;
+            break;
+        default:
+            return UINT32_MAX;
+    }
+
+    return (backupIndex + pinIdx);
+}
+
+static bool IsWuuPinMuxGPIO(uint8_t wuuPin)
+{
+    uint32_t backupIndex = WuuPinToBackupIndex(wuuPin);
+
+    assert(backupIndex < ARRAY_SIZE(iomuxBackup));
+
+    /* All PTx function values ​​are 0x01. */
+    if ((iomuxBackup[backupIndex] & IOMUXC_PCR_MUX_MODE_MASK) == IOMUXC_PCR_MUX_MODE(0x1))
+        return true;
+
+    return false;
+}
+
+static bool IsWuuPinGPIOIrqcInterruptEdge(uint8_t wuuPin)
+{
+    uint32_t backupIndex = WuuPinToBackupIndex(wuuPin);
+
+    assert(backupIndex < ARRAY_SIZE(gpioICRBackup));
+
+    switch (gpioICRBackup[backupIndex] & RGPIO_ICR_IRQC_MASK)
+    {
+        case RGPIO_ICR_IRQC(kRGPIO_InterruptRisingEdge):
+        case RGPIO_ICR_IRQC(kRGPIO_InterruptFallingEdge):
+        case RGPIO_ICR_IRQC(kRGPIO_InterruptEitherEdge):
+            return true;
+    }
+
+    return false;
+}
 
 static void PinMuxPrepareSuspend(uint8_t gpioIdx, uint8_t pinIdx)
 {
@@ -563,6 +621,7 @@ void WUU0_IRQHandler(void)
     /* "really" wake up for LPTMR1 alarm or GPIO.
      * If only LPTRM0 (SYSTICK) then we'll sleep again */
     bool wakeup = false;
+    uint32_t pinsFlag;
 
     if (WUU_GetInternalWakeupModuleFlag(WUU0, WUU_MODULE_LPTMR1))
     {
@@ -583,11 +642,13 @@ void WUU0_IRQHandler(void)
         LPTMR_ClearStatusFlags(SYSTICK_BASE, kLPTMR_TimerCompareFlag);
     }
 
-    if (WUU0->PF)
+    pinsFlag = WUU_GetExternalWakeUpPinsFlag(WUU0);
+    s_wakeupPinFlag |= pinsFlag;
+    if (pinsFlag)
     {
         /* clear pin interrupt flag */
-        WUU0->PF = WUU0->PF;
-        wakeup   = true;
+        WUU_ClearExternalWakeUpPinsFlag(WUU0, pinsFlag);
+        wakeup = true;
     }
 
     if (!wakeup)
@@ -789,6 +850,35 @@ static void HandleSuspendTask(void *pvParameters)
         /*update Mode state*/
         s_lastMode = s_curMode;
         s_curMode  = LPM_PowerModeActive;
+
+        if (s_wakeupPinFlag)
+        {
+            uint8_t pins = (WUU0->PARAM & WUU_PARAM_PINS_MASK) >> WUU_PARAM_PINS_SHIFT;
+            bool wakeup  = false;
+            int i;
+
+            /* The interrupt received by wuu is reported as an rgpio
+             * interrupt. This is because rgpio cannot receive edge
+             * interrupts while suspended. */
+            for (i = 0; i < pins; i++)
+            {
+                if ((s_wakeupPinFlag & BIT(i)) && IsWuuPinMuxGPIO(i) && IsWuuPinGPIOIrqcInterruptEdge(i))
+                {
+                    APP_SRTM_EmulateGPIOHandler(i);
+                    wakeup = true;
+                }
+            }
+
+            if ((AD_CurrentMode == AD_PD || (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL)) &&
+                wakeWithLinux && wakeup)
+            {
+                /* Wakeup A Core(CA35) when A Core is in Power Down Mode */
+                PRINTF("Wake up from WUU_Pn 0x%x\r\n", s_wakeupPinFlag);
+                APP_SRTM_WakeupCA35();
+            }
+
+            s_wakeupPinFlag = 0;
+        }
     }
 }
 
@@ -885,6 +975,7 @@ void PowerModeSwitchTask(void *pvParameters)
             "Press  N for supporting Deep Sleep Mode(Pls set it when the option IMX8ULP_DSL_SUPPORT of TF-A is "
             "enabled) of Linux. support_dsl_for_apd = %d\r\n",
             APP_SRTM_GetSupportDSLForApd());
+        PRINTF("Press  X to toggle wake with linux.\r\n");
         PRINTF("Press  Z to toggle sleep with linux.\r\n");
         PRINTF("Press  R to force reset\r\n");
         PRINTF("\r\nWaiting for power mode select..\r\n\r\n");
@@ -936,6 +1027,11 @@ void PowerModeSwitchTask(void *pvParameters)
         {
             PRINTF("Warning: Pls ensure that the option IMX8ULP_DSL_SUPPORT is enabled in TF-A\r\n");
             APP_SRTM_SetSupportDSLForApd(true);
+        }
+        else if ('X' == ch)
+        {
+            wakeWithLinux = !wakeWithLinux;
+            PRINTF("Wake with linux: %s\r\n", wakeWithLinux ? "true" : "false");
         }
         else if ('Z' == ch)
         {

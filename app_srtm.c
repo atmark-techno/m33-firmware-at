@@ -134,7 +134,7 @@ static int64_t apd_boot_cnt = 0; /* it's cold boot when apd_boot_cnt(Application
  * NOTE: cannot support them at the same time for Linux.
  */
 
-static bool support_dsl_for_apd = false; /* true: support deep sleep mode; false: not support deep sleep mode */
+bool support_dsl_for_apd = false; /* true: support deep sleep mode; false: not support deep sleep mode */
 
 const uint8_t wuuPins[] = {
     0,   /* WUU_P0 PTA0 */
@@ -478,6 +478,18 @@ void APP_SRTM_ShutdownCA35(void)
     SRTM_Dispatcher_PostProc(disp, proc);
 }
 
+void APP_SRTM_EmulateGPIOHandler(uint8_t wuuPin)
+{
+    uint16_t ioId            = APP_WUUPin_TO_IoId(wuuPin);
+    uint8_t __unused gpioIdx = APP_GPIO_IDX(ioId);
+    uint8_t __unused pinIdx  = APP_PIN_IDX(ioId);
+
+    assert(gpioIdx < 2); /* Only support GPIOA and GPIOB */
+    assert(pinIdx < APP_IO_PINS_PER_CHIP);
+
+    SRTM_IoService_NotifyInputEvent(ioService, ioId);
+}
+
 static void APP_HandleGPIOHander(uint8_t gpioIdx)
 {
     RGPIO_Type *gpio = gpios[gpioIdx];
@@ -715,7 +727,7 @@ static void APP_IO_SetPinConfig(uint16_t ioId, uint32_t pinctrl)
 
     /* check table is sound... */
     BUILD_BUG_ON(ARRAY_SIZE(pinFuncId) != APP_IO_NUM);
-    BUILD_BUG_ON(ARRAY_SIZE(wuuPins) != 2 * APP_IO_PINS_PER_CHIP);
+    BUILD_BUG_ON(ARRAY_SIZE(wuuPins) != APP_WUU_PINS_NUM);
 
     assert(index < APP_IO_NUM);
 
@@ -799,36 +811,15 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
         return SRTM_Status_Error;
     }
     config.event = kWUU_ExternalPinInterrupt;
-    config.mode  = kWUU_ExternalPinActiveAlways;
+    /* To correctly determine the WUU0->PF wakeup source, do not specify kWUU_ExternalPinActiveAlways. */
+    config.mode = kWUU_ExternalPinActiveDSPD;
 
     /* safe value if unset */
     if (pinctrl == IO_PINCTRL_UNSET)
         pinctrl = IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK;
 
-    /* wakeup with WUU will lose edge irqs, convert edges to level if current value
-     * allows it (e.g. up before falling edge)
-     * Otherwise just setup edge irq even if it will probably be lost */
     if (wakeup)
-    {
         PRINTF("Wakeup requested on %d/%d, mode %d\r\n", gpioIdx, pinIdx, event);
-        switch (event)
-        {
-            case SRTM_IoEventRisingEdge:
-                if (RGPIO_PinRead(gpios[gpioIdx], pinIdx) == 0)
-                    event = SRTM_IoEventHighLevel;
-                break;
-            case SRTM_IoEventFallingEdge:
-                if (RGPIO_PinRead(gpios[gpioIdx], pinIdx) == 1)
-                    event = SRTM_IoEventLowLevel;
-                break;
-            case SRTM_IoEventEitherEdge:
-                if (RGPIO_PinRead(gpios[gpioIdx], pinIdx) == 1)
-                    event = SRTM_IoEventLowLevel;
-                else
-                    event = SRTM_IoEventHighLevel;
-                break;
-        }
-    }
 
     APP_IO_SetPinConfig(ioId, pinctrl);
     switch (event)
