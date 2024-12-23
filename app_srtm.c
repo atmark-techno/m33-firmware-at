@@ -1830,58 +1830,10 @@ static void SRTM_MonitorTask(void *pvParameters)
             case APP_SRTM_StateReboot:
                 assert(state == APP_SRTM_StateRun);
 
-                PRINTF("Handle Peer Core Reboot\r\n");
+                PRINTF("Peer Core Reboot: forcing reset\r\n");
 
-                SRTM_Dispatcher_Stop(disp);
-                /* Remove peer core from dispatcher */
-                APP_SRTM_DeinitPeerCore();
-
-                /* Initialize io and tpm for uboot */
-                BOARD_InitMipiDsiPins();
-                BOARD_EnableMipiDsiBacklight();
-
-                /* enable clock of MU0_MUA before accessing registers of MU0_MUA */
-                MU_Init(MU0_MUA);
-
-                /* Force peer core in reset */
-                if (need_reset_peer_core)
-                {
-                    MU_HardwareResetOtherCore(MU0_MUA, true, true, kMU_CoreBootFromAddr0);
-                    need_reset_peer_core = false;
-                }
-
-                /* Help A35 to setup TRDC before release A35 */
-                BOARD_SetTrdcAfterApdReset();
-
-                /* Release peer core from reset */
-                MU_BootOtherCore(MU0_MUA, (mu_core_boot_mode_t)0);
-
-                if (BOARD_HandshakeWithUboot() == true)
-                {
-                    /* CMC1(CMC_AD) is belongs to Application Domain, so if want to access these registers of CMC1, pls
-                     * make sure that mcore can access CMC1(mcore can access CMC1 after BOARD_HandshakeWithUboot) */
-                    CMC_ADClrAD_PSDORF(
-                        CMC_AD,
-                        CMC_AD_AD_PSDORF_AD_PERIPH(
-                            1)); /* need clear it, unless A Core cannot reboot after A Core suspend and resume back */
-                }
-                /* Initialize peer core and add to dispatcher */
-                APP_SRTM_InitPeerCore();
-
-                /* Restore srtmState to Run. */
-                srtmState = APP_SRTM_StateRun;
-
-                SRTM_Dispatcher_Start(disp);
-
-                NVIC_ClearPendingIRQ(CMC1_IRQn);
-                EnableIRQ(CMC1_IRQn);
-
-                /* hold A core for next reboot */
-                MU_HoldOtherCoreReset(MU0_MUA);
-
-                /* Do not need to change state. It's still Run. */
+                PMIC_Reset(); /* does not return */
                 break;
-
             default:
                 assert(false);
                 break;
