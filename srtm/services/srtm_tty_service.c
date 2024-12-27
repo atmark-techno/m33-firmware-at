@@ -37,7 +37,7 @@ typedef struct _srtm_tty_service
 {
     struct _srtm_service service;
     srtm_tty_service_tx_t tx;
-    srtm_tty_service_set_baud_t setBaud;
+    srtm_tty_service_set_cflag_t setCflag;
     srtm_tty_service_set_wake_t setWake;
     srtm_channel_t channel;
 } * srtm_tty_service_t;
@@ -57,7 +57,7 @@ SRTM_PACKED_BEGIN struct _srtm_tty_payload
     union
     {
         uint8_t buf[RPMSG_MAX_SIZE];
-        // uint32_t baudrate; // not actually used to avoid unaligned access.. & fails build_bug_on
+        // uint32_t cflag; // not actually used to avoid unaligned access.. & fails build_bug_on
         uint8_t retcode;
     };
 } SRTM_PACKED_END;
@@ -74,7 +74,7 @@ enum tty_rpmsg_header_type
 enum tty_rpmsg_header_cmd
 {
     TTY_RPMSG_COMMAND_PAYLOAD,
-    TTY_RPMSG_COMMAND_SET_BAUD,
+    TTY_RPMSG_COMMAND_SET_CFLAG,
     TTY_RPMSG_COMMAND_NOTIFY,
     TTY_RPMSG_COMMAND_SET_WAKE,
 };
@@ -147,17 +147,17 @@ static srtm_status_t SRTM_TtyService_Request(srtm_service_t service, srtm_reques
                 retCode = kStatus_InvalidArgument;
             }
             break;
-        case TTY_RPMSG_COMMAND_SET_BAUD:
-            if (payload->len == sizeof(uint32_t) && handle->setBaud != NULL)
+        case TTY_RPMSG_COMMAND_SET_CFLAG:
+            if (payload->len == sizeof(tcflag_t) && handle->setCflag != NULL)
             {
-                uint32_t baud;
-                memcpy(&baud, payload->buf, sizeof(baud));
-                status  = handle->setBaud(baud);
+                uint32_t cflag;
+                memcpy(&cflag, payload->buf, sizeof(cflag));
+                status  = handle->setCflag(cflag);
                 retCode = MIN(status, 255);
             }
             else
             {
-                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Command set baud not allowed?!? (or bad len %d)\r\n",
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Command set cflag not allowed?!? (or bad len %d)\r\n",
                                    __func__, payload->len);
                 retCode = kStatus_InvalidArgument;
             }
@@ -206,7 +206,7 @@ static srtm_status_t SRTM_TtyService_Notify(srtm_service_t service, srtm_notific
     return SRTM_Status_ServiceNotFound;
 }
 
-srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service_set_baud_t setBaud,
+srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service_set_cflag_t setCflag,
                                       srtm_tty_service_set_wake_t setWake)
 {
     srtm_tty_service_t handle;
@@ -216,9 +216,9 @@ srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service
     handle = (srtm_tty_service_t)SRTM_Heap_Malloc(sizeof(struct _srtm_tty_service));
     assert(handle);
 
-    handle->tx      = tx;
-    handle->setBaud = setBaud;
-    handle->setWake = setWake;
+    handle->tx       = tx;
+    handle->setCflag = setCflag;
+    handle->setWake  = setWake;
 
     SRTM_List_Init(&handle->service.node);
     handle->service.dispatcher = NULL;

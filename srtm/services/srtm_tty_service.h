@@ -10,6 +10,7 @@
 #define __SRTM_TTY_SERVICE_H__
 
 #include "srtm_service.h"
+#include "termbits.h"
 
 /*!
  * @addtogroup srtm_service
@@ -30,7 +31,7 @@
 #endif
 
 typedef int (*srtm_tty_service_tx_t)(uint16_t len, uint8_t *buf);
-typedef int (*srtm_tty_service_set_baud_t)(uint32_t baud);
+typedef int (*srtm_tty_service_set_cflag_t)(tcflag_t cflag);
 typedef void (*srtm_tty_service_set_wake_t)(bool enable);
 
 /*******************************************************************************
@@ -45,7 +46,7 @@ extern "C" {
  *
  * @return SRTM service handle on success and NULL on failure.
  */
-srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service_set_baud_t setBaud,
+srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service_set_cflag_t setCflag,
                                       srtm_tty_service_set_wake_t setWake);
 
 /*!

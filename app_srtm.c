@@ -31,6 +31,7 @@
 #include "board.h"
 #include "pin_mux.h"
 #include "build_bug.h"
+#include "tty.h"
 #include "fsl_mu.h"
 #include "fsl_debug_console.h"
 #include "fsl_rgpio.h"
@@ -1002,9 +1003,45 @@ static int tty_tx(uint16_t len, uint8_t *buf)
     return rc;
 }
 
-static int tty_setbaud(uint32_t baud)
+static int tty_setcflag(tcflag_t cflag)
 {
-    return LPUART_SetBaudRate(RS485_LPUART, baud, CLOCK_GetIpFreq(RS485_LPUART_CLK));
+    speed_t baudrate                 = tty_baudrate(cflag);
+    lpuart_parity_mode_t parity      = tty_parity(cflag);
+    bool cmsparity                   = tty_cmsparity(cflag);
+    lpuart_data_bits_t databits      = tty_databits(cflag);
+    lpuart_stop_bit_count_t stopbits = tty_stopbits(cflag);
+
+    /*
+     * only support CS8 and CS7, and for CS7 must enable parity.
+     * supported mode:
+     *  - (7,e/o,1/2)
+     *  - (8,n,1/2)
+     *  - (8,m/s,1/2)
+     *  - (8,e/o,1/2)
+     */
+    if (parity == kLPUART_ParityDisabled && databits == kLPUART_SevenDataBits)
+    {
+        PRINTF("Invalid cflag: 0x%x\r\n", cflag);
+        return kStatus_Fail;
+    }
+
+    /* set baud rate */
+    LPUART_SetBaudRate(RS485_LPUART, baudrate, CLOCK_GetIpFreq(RS485_LPUART_CLK));
+
+    /* set databits */
+    if (databits == kLPUART_EightDataBits && (parity != kLPUART_ParityDisabled || cmsparity))
+        LPUART_Enable9bitMode(RS485_LPUART, true); /* (8,e/o) or (8,m/s) */
+    else
+        LPUART_Enable9bitMode(RS485_LPUART, false); /* (7,e/o) or (8,n) */
+
+    /* set parity */
+    LPUART_SetParity(RS485_LPUART, parity); /* LPUART_Enable9bitMode() may disable parity. Do not call
+                                               LPUART_SetParity() first. */
+
+    /* set stop bits */
+    LPUART_SetStopBit(RS485_LPUART, stopbits);
+
+    return 0;
 }
 
 static void tty_setwake(bool enable)
@@ -1028,7 +1065,7 @@ static void APP_SRTM_InitTtyService(void)
 {
     APP_SRTM_InitTtyDevice();
 
-    ttyService = SRTM_TtyService_Create(tty_tx, tty_setbaud, tty_setwake);
+    ttyService = SRTM_TtyService_Create(tty_tx, tty_setcflag, tty_setwake);
     SRTM_Dispatcher_RegisterService(disp, ttyService);
     /* we need this task to be higher priority than HandleSuspendTask in main,
      * in order to exit out of LPUART_RTOS_Receive safely as suspend deinits it */
