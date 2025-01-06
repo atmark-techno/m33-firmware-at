@@ -72,8 +72,8 @@ void BOARD_InitPmicModePins(void)
 
 void BOARD_InitWdogPins(void)
 {
-    IOMUXC_SetPinMux(IOMUXC_PTA14_EWM0_OUT_B, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA14_EWM0_OUT_B, IOMUXC_PCR_ODE_MASK);
+    IOMUXC_SetPinMux(IOMUXC_PTA1_EWM0_OUT_B, 0U);
+    IOMUXC_SetPinConfig(IOMUXC_PTA1_EWM0_OUT_B, IOMUXC_PCR_ODE_MASK);
 }
 /***********************************************************************************************************************
  * EOF
