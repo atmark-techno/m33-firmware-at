@@ -25,73 +25,15 @@
 extern "C" {
 #endif
 
-/*!
- * @brief Calls initialization functions.
- *
- */
 void BOARD_InitBootPins(void);
-
-/*!
- * @brief Configures pin routing and optionally pin electrical features.
- *
- */
-void BOARD_InitConsolePins(void); /*!< Function assigned for the core: Cortex-M33[cm33] */
+void BOARD_InitConsolePins(void);
 void BOARD_DeinitConsolePins(void);
-void BOARD_InitRs485Pins(void); /*!< Function assigned for the core: Cortex-M33[cm33] */
-
-/*!
- * @brief Configures pin routing and optionally pin electrical features.
- *
- */
-void BOARD_InitI2cPins(void); /*!< Function assigned for the core: Cortex-M33[cm33] */
-
-/*!
- * @brief Configures pin routing and optionally pin electrical features.
- *
- */
-void BOARD_InitPmicI2cPins(void); /*!< Function assigned for the core: Cortex-M33[cm33] */
-
-/*!
- * @brief Configures pin routing and optionally pin electrical features.
- *
- */
-void BOARD_InitI2sPins(void); /*!< Function assigned for the core: Cortex-M33[cm33] */
-
-/*!
- * @brief Configures pin routing and optionally pin electrical features.
- *
- */
-void BOARD_InitTpmPins(void); /*!< Function assigned for the core: Cortex-M33[cm33] */
-
-/*!
- * @brief Configures pin routing and optionally pin electrical features.
- *
- */
-void BOARD_InitHdmiIntPins(void); /*!< Function assigned for the core: Cortex-M33[cm33] */
-
-/*!
- * @brief Configures pin routing and optionally pin electrical features.
- *
- */
-void BOARD_InitTouchIntPins(void); /*!< Function assigned for the core: Cortex-M33[cm33] */
-
-/*!
- * @brief Configures pin routing and optionally pin electrical features.
- *
- */
-void BOARD_InitButtonPins(void); /*!< Function assigned for the core: Cortex-M33[cm33] */
-
-/*!
- * @brief Configures pin routing and optionally pin electrical features.
- *
- */
-void BOARD_InitPmicModePins(void); /*!< Function assigned for the core: Cortex-M33[cm33] */
-
-/*!
- * @brief Configures pin routing and optionally pin electrical features.
- *
- */
-void BOARD_InitLsm6dsoPins(void); /*!< Function assigned for the core: Cortex-M33[cm33] */
+void BOARD_InitRs485Pins(void);
+void BOARD_InitI2cPins(void);
+void BOARD_InitPmicI2cPins(void);
+void BOARD_InitTpmPins(void);
+void BOARD_InitHdmiIntPins(void);
+void BOARD_InitPmicModePins(void);
 
 #if defined(__cplusplus)
 }
