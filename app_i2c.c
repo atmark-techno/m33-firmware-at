@@ -5,6 +5,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <errno.h>
+
 #include "fsl_reset.h"
 #include "fsl_lpi2c_freertos.h"
 #include "fsl_flexio_i2c_master.h"
@@ -12,6 +14,7 @@
 #include "board.h"
 #include "app_srtm_internal.h"
 #include "srtm_i2c_service.h"
+#include "app_uboot.h"
 
 #define I2C_MAX_BUSES 4
 
@@ -61,6 +64,19 @@ static struct _srtm_i2c_adapter i2c_adapter = { .read          = i2c_read,
                                                     .buses   = platform_i2c_buses,
                                                     .bus_num = 0,
                                                 } };
+
+static int i2c_find_bus(int bus_id)
+{
+    int i;
+
+    for (i = 0; i < i2c_adapter.bus_structure.bus_num; i++)
+    {
+        if (platform_i2c_buses[i].bus_id == bus_id)
+            return i;
+    }
+
+    return -1;
+}
 
 /**********************************************************
  * SRTM callbacks
@@ -151,6 +167,32 @@ static srtm_status_t i2c_switchChannel(srtm_i2c_adapter_t adapter, uint32_t base
     return SRTM_Status_Error; // error is ignored...
 }
 
+static void i2c_reset_device(int i)
+{
+    switch (platform_i2c_buses[i].type)
+    {
+        case SRTM_I2C_TYPE_LPI2C:
+        {
+            switch (platform_i2c_buses[i].base_addr)
+            {
+                case LPI2C0_BASE:
+                    // XXX disable clock?
+                    RESET_PeripheralReset(kRESET_Lpi2c0);
+                    break;
+                case LPI2C1_BASE:
+                    RESET_PeripheralReset(kRESET_Lpi2c1);
+                    break;
+            }
+            break;
+        }
+        case SRTM_I2C_TYPE_FLEXIO_I2C:
+        {
+            RESET_PeripheralReset(kRESET_Flexio0);
+            break;
+        }
+    }
+}
+
 static srtm_status_t i2c_init_device(int i)
 {
     switch (platform_i2c_buses[i].type)
@@ -203,13 +245,11 @@ static srtm_status_t i2c_init(srtm_i2c_adapter_t adapter, int bus_id, struct srt
 {
     int i;
 
-    for (i = 0; i < adapter->bus_structure.bus_num; i++)
+    i = i2c_find_bus(bus_id);
+    if (i >= 0)
     {
-        if (platform_i2c_buses[i].bus_id == bus_id)
-        {
-            PRINTF("i2c bus %d already init\r\n", bus_id);
-            return SRTM_Status_Error;
-        }
+        PRINTF("i2c bus %d already init\r\n", bus_id);
+        return SRTM_Status_Error;
     }
     if (adapter->bus_structure.bus_num >= I2C_MAX_BUSES)
     {
@@ -310,5 +350,139 @@ void APP_I2C_Resume(void)
     for (i = 0; i < i2c_adapter.bus_structure.bus_num; i++)
     {
         i2c_init_device(i);
+    }
+}
+
+void APP_I2C_ResetService(void)
+{
+    int i;
+
+    for (i = 0; i < i2c_adapter.bus_structure.bus_num; i++)
+    {
+        if (platform_i2c_buses[i].bus_id == 0xff)
+            continue;
+        i2c_reset_device(i);
+    }
+    i2c_adapter.bus_structure.bus_num = 0;
+}
+
+void APP_I2C_uboot(uint32_t command)
+{
+    uint8_t subcommand = (command >> 8) & 0xff;
+    uint8_t bus_id     = (command >> 16) & 0xff;
+    int rc;
+
+    switch (subcommand)
+    {
+        case UBOOT_I2C_INIT:
+        {
+            struct srtm_i2c_init_payload init = { 0 };
+
+            init.i2c_type  = uboot_recv();
+            init.i2c_index = uboot_recv();
+            init.baudrate  = uboot_recv();
+
+            /* only support lpi2c for now but flexio support would be trivial */
+            if (init.i2c_type != SRTM_I2C_TYPE_LPI2C)
+            {
+                uboot_send(EINVAL);
+                return;
+            }
+
+            rc = i2c_init(&i2c_adapter, bus_id, &init);
+            uboot_send(rc);
+            break;
+        }
+        case UBOOT_I2C_RESET:
+        {
+            int i = i2c_find_bus(bus_id);
+            if (i < 0)
+            {
+                uboot_send(EINVAL);
+                return;
+            }
+
+            i2c_reset_device(i);
+
+            /* mark as reset and also shrink array if it was last */
+            platform_i2c_buses[i].bus_id = 0xff;
+            if (i == i2c_adapter.bus_structure.bus_num - 1)
+                i2c_adapter.bus_structure.bus_num--;
+
+            uboot_send(0);
+            break;
+        }
+        case UBOOT_I2C_READ:
+        {
+            /* buffer on the stack so limit to something sane.
+             * If needed later we could allocate a bigger buffer... */
+            uint8_t buf[32];
+            uint32_t addr;
+            uint32_t len;
+
+            addr = uboot_recv();
+            len  = uboot_recv();
+            if (len > sizeof(buf))
+            {
+                PRINTF("uboot i2c read too big %d\r\n", len);
+                uboot_send(EINVAL);
+                return;
+            }
+
+            // this needs to be after all uboot_recv()s to avoid getting stuck
+            int i = i2c_find_bus(bus_id);
+            if (i < 0)
+            {
+                uboot_send(EINVAL);
+                return;
+            }
+
+            rc = i2c_read(&i2c_adapter, platform_i2c_buses[i].base_addr, platform_i2c_buses[i].type, addr, buf, len, 0);
+
+            uboot_send(rc);
+            if (rc)
+                return;
+
+            uboot_send_many(buf, len);
+            break;
+        }
+        case UBOOT_I2C_WRITE:
+        {
+            /* buffer on the stack so limit to something sane.
+             * If needed later we could allocate a bigger buffer... */
+            uint8_t buf[32];
+            uint32_t addr;
+            uint32_t len;
+
+            addr = uboot_recv();
+            len  = uboot_recv();
+            if (len > sizeof(buf))
+            {
+                PRINTF("uboot i2c write too big %d\r\n", len);
+                // we still need to recv this to not get uboot stuck...
+                len = (len + 3) / 4;
+                while (len > 0)
+                    (void)uboot_recv();
+                uboot_send(EINVAL);
+                return;
+            }
+            uboot_recv_many(buf, len);
+
+            int i = i2c_find_bus(bus_id);
+            if (i < 0)
+            {
+                uboot_send(EINVAL);
+                return;
+            }
+
+            rc =
+                i2c_write(&i2c_adapter, platform_i2c_buses[i].base_addr, platform_i2c_buses[i].type, addr, buf, len, 0);
+
+            uboot_send(rc);
+            break;
+        }
+        default:
+            MU_SendMsg(MU0_MUA, 0, EINVAL);
+            break;
     }
 }

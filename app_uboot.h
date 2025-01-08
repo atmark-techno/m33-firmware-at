@@ -88,3 +88,30 @@ static inline void uboot_send_many(void *buf, int len)
  * (Unlike linux's this is not registered anywhere on m33 side)
  */
 #define UBOOT_PINCTRL 3
+
+/* I2C operations.
+ * uboot -> m33: (i2c | (subcommand <<8) | (bus_id << 16))
+ * rest depends on subcommand as follow. Anything else gets error back.
+ */
+#define UBOOT_I2C 4
+/* i2c init subcommand:
+ * uboot -> m33: i2c type, index, baudrate
+ * (type must be lpi2c, if we support lpuart later that one needs to send scl/sda too)
+ * m33 -> uboot: status
+ */
+#define UBOOT_I2C_INIT 0
+/* i2c reset subcommand:
+ * uboot -> m33: nothing else
+ * m33 -> uboot: status
+ */
+#define UBOOT_I2C_RESET 1
+/* i2c read subcommand:
+ * uboot -> m33: addr, len (in byte)
+ * m33 -> uboot: status, actual read len (in byte), followed by data one word at a time
+ */
+#define UBOOT_I2C_READ 2
+/* i2c write subcommand:
+ * uboot -> m33: addr, len (in byte), data one word at a time
+ * m33 -> uboot: status
+ */
+#define UBOOT_I2C_WRITE 3

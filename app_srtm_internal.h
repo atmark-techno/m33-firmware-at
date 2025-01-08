@@ -21,6 +21,8 @@ void APP_ADC_Resume(void);
 /* app_i2c.c */
 void APP_I2C_InitService(void);
 void APP_I2C_Resume(void);
+void APP_I2C_ResetService(void);
+void APP_I2C_uboot(uint32_t subcommand);
 
 /* app_pwm.c */
 void APP_PWM_InitService(void);

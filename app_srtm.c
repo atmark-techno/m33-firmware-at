@@ -1016,6 +1016,7 @@ static void APP_SRTM_ResetServices(void)
     /* When CA35 resets, we need to avoid async event to send to CA35. IO services have async events. */
     SRTM_RtcService_Reset(rtcService, core);
     SRTM_IoService_Reset(ioService, core);
+    APP_I2C_ResetService();
 }
 
 static void APP_SRTM_DeinitPeerCore(void)
@@ -1376,7 +1377,7 @@ static void process_uboot_messages(void)
     while (true)
     {
         uint32_t command = uboot_recv();
-        switch (command)
+        switch (command & 0xff)
         {
             case UBOOT_HANDSHAKE:
                 PRINTF("uboot: handshake\r\n");
@@ -1395,6 +1396,8 @@ static void process_uboot_messages(void)
                 break;
             case UBOOT_BOOT:
                 PRINTF("uboot: booting into linux\r\n");
+                /* reset any service that might have been used by uboot */
+                APP_SRTM_ResetServices();
                 return;
             case UBOOT_RESET:
                 PRINTF("uboot: reset\r\n");
@@ -1411,6 +1414,10 @@ static void process_uboot_messages(void)
                 uboot_send(0);
                 break;
             }
+            case UBOOT_I2C:
+                /* handles replies */
+                APP_I2C_uboot(command);
+                break;
         }
     }
 }
