@@ -28,6 +28,7 @@
 #include "srtm_tty_service.h"
 
 #include "app_srtm.h"
+#include "app_uboot.h"
 #include "board.h"
 #include "pin_mux.h"
 #include "build_bug.h"
@@ -1744,6 +1745,39 @@ static void APP_PowerOnCA35(void)
     vTaskDelay(pdMS_TO_TICKS(200));
 }
 
+static void process_uboot_messages(void)
+{
+    /* handle things from uboot */
+    PRINTF("waiting message from uboot\r\n");
+    MU_Init(MU0_MUA);
+    MU_SetFlags(MU0_MUA, 0);
+    while (true)
+    {
+        uint32_t command = MU_ReceiveMsg(MU0_MUA, 0);
+        switch (command)
+        {
+            case UBOOT_HANDSHAKE:
+                PRINTF("uboot: handshake\r\n");
+
+                /* Set Trdc config then reply OK; then do other CMC configs expected after handshake. */
+                BOARD_SetTrdcGlobalConfig();
+
+                MU_SendMsg(MU0_MUA, 0, 0);
+
+                /* CMC1(CMC_AD) is belongs to Application Domain, so if want to access these registers of CMC1,
+                 * pls make sure that mcore can access CMC1(mcore can access CMC1 after
+                 * BOARD_HandshakeWithUboot) */
+                CMC_ADClrAD_PSDORF(CMC_AD, CMC_AD_AD_PSDORF_AD_PERIPH(1)); /* need clear it, unless A Core cannot reboot
+                                                                              after A Core suspend and resume back */
+
+                break;
+            case UBOOT_BOOT:
+                PRINTF("uboot: booting into linux\r\n");
+                return;
+        }
+    }
+}
+
 static void SRTM_MonitorTask(void *pvParameters)
 {
     app_srtm_state_t state = APP_SRTM_StateShutdown;
@@ -1789,24 +1823,12 @@ static void SRTM_MonitorTask(void *pvParameters)
                 BOARD_InitMipiDsiPins();
                 BOARD_EnableMipiDsiBacklight();
 
-                /*
-                 * Need handshake with uboot when SoC in all boot type(single boot type, dual boot type, low power boot
-                 * type);
-                 * M Core will boot A Core with APP_PowerOnCA35() API when SoC in low power boot type.
-                 */
-                if (BOARD_HandshakeWithUboot() == true)
-                {
-                    /* CMC1(CMC_AD) is belongs to Application Domain, so if want to access these registers of CMC1, pls
-                     * make sure that mcore can access CMC1(mcore can access CMC1 after BOARD_HandshakeWithUboot) */
-                    CMC_ADClrAD_PSDORF(
-                        CMC_AD,
-                        CMC_AD_AD_PSDORF_AD_PERIPH(
-                            1)); /* need clear it, unless A Core cannot reboot after A Core suspend and resume back */
-                }
+                /* process messages from uboot, including handshake */
+                process_uboot_messages();
 
                 /* enable CMC1 interrupt after handshake with uboot(M Core cannot access CMC1 that belongs to
-                 * Application Domain when Power On Reset; M Core can access CMC1 after uboot(running on A Core) enable
-                 * accessing permission of CMC1 by XRDC) */
+                 * Application Domain when Power On Reset; M Core can access CMC1 after uboot(running on A Core)
+                 * enable accessing permission of CMC1 by XRDC) */
                 EnableIRQ(CMC1_IRQn);
 
                 APP_SRTM_InitPeerCore();
@@ -1887,14 +1909,14 @@ void APP_SRTM_Init(void)
     monSig = xSemaphoreCreateBinary();
     assert(monSig);
 
-    /* Create a rtc alarm event timer to send rtc alarm event to A Core after A Core is waken by rtc alarm(avoid losting
-     * rtc alarm event) */
+    /* Create a rtc alarm event timer to send rtc alarm event to A Core after A Core is waken by rtc alarm(avoid
+     * losting rtc alarm event) */
     rtcAlarmEventTimer = xTimerCreate("rtcAlarmEventTimer", APP_MS2TICK(APP_RTC_ALM_EVT_TIMER_PERIOD_MS), pdFALSE, NULL,
                                       rtcAlarmEventTimer_Callback);
     assert(rtcAlarmEventTimer);
 
-    /* Note: Create a task to refresh S400(sentinel) watchdog timer to keep S400 alive, the task will be removed after
-     * the bug is fixed in soc A1 */
+    /* Note: Create a task to refresh S400(sentinel) watchdog timer to keep S400 alive, the task will be removed
+     * after the bug is fixed in soc A1 */
     SENTINEL_Init();
     refreshS400WdgTimer = xTimerCreate("refreshS400WdgTimer", APP_MS2TICK(APP_REFRESH_S400_WDG_TIMER_PERIOD_MS),
                                        pdFALSE, NULL, APP_RefreshS400WdgTimerCallback);
@@ -1969,9 +1991,9 @@ void APP_SRTM_Resume(bool resume)
     APP_SRTM_InitI2CDevice();
     /*
      * IO has restored in APP_Resume(), so don't need init io again in here.
-     * For RTD Power Down Mode(Wakeup through WUU), it's okay to initialize io again(use WUU to wakeup cortex-M33, the
-     * WUU interrupt will not lost) For RTD Deep Sleep Mode(Wakeup through WIC), the GPIO interrupt will lost after
-     * initialize io with APP_SRTM_InitIoKeyDevice().
+     * For RTD Power Down Mode(Wakeup through WUU), it's okay to initialize io again(use WUU to wakeup cortex-M33,
+     * the WUU interrupt will not lost) For RTD Deep Sleep Mode(Wakeup through WIC), the GPIO interrupt will lost
+     * after initialize io with APP_SRTM_InitIoKeyDevice().
      */
     /* APP_SRTM_InitIoKeyDevice(); */
     APP_SRTM_InitPwmDevice();
