@@ -19,3 +19,9 @@
  * (no reply)
  */
 #define UBOOT_BOOT 1
+
+/* cold reset
+ * uboot -> m33: reset command
+ * (no reply)
+ */
+#define UBOOT_RESET 2

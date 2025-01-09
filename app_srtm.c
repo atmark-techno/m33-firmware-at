@@ -1774,6 +1774,10 @@ static void process_uboot_messages(void)
             case UBOOT_BOOT:
                 PRINTF("uboot: booting into linux\r\n");
                 return;
+            case UBOOT_RESET:
+                PRINTF("uboot: reset\r\n");
+                PMIC_Reset(); /* does not return */
+                break;
         }
     }
 }
