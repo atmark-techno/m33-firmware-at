@@ -9,6 +9,7 @@
 #define _APP_SRTM_H_
 
 #include "rpmsg_lite.h"
+#include "fsl_wuu.h"
 
 /*******************************************************************************
  * Definitions
@@ -50,11 +51,9 @@ typedef enum
 /* Task priority definition, bigger number stands for higher priority */
 #define APP_SRTM_MONITOR_TASK_PRIO (4U)
 #define APP_SRTM_DISPATCHER_TASK_PRIO (3U)
-#define RS485_RX_TASK_PRIORITY (3U)
 
 /* IRQ handler priority definition, bigger number stands for lower priority */
 #define APP_LPI2C_IRQ_PRIO (5U)
-#define APP_LPUART_IRQ_PRIO (5U)
 #define APP_GPIO_IRQ_PRIO (5U)
 #define APP_WUU_IRQ_PRIO (5U)
 #define APP_CMC1_IRQ_PRIO (5U)
@@ -195,6 +194,9 @@ void APP_SRTM_SetRpmsgMonitor(app_rpmsg_monitor_t monitor, void *param);
 
 uint8_t APP_Read_I2C_Register(uint8_t busID, uint16_t slaveAddr, uint8_t regIndex);
 uint8_t APP_Write_I2C_Register(uint8_t busID, uint16_t slaveAddr, uint8_t regIndex, uint8_t value);
+
+/* used for tty wakeup by gpio */
+void APP_IO_SetupWUU(uint8_t wuuIdx, wuu_external_pin_edge_detection_t wuuEdge);
 
 /* Set IRQ handler for application */
 void APP_SRTM_SetIRQHandler(app_irq_handler_t handler, void *param);

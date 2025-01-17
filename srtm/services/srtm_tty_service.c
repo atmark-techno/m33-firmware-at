@@ -31,7 +31,7 @@
 /* Protocol definition */
 #define SRTM_TTY_CATEGORY (0xF1U)
 
-#define SRTM_TTY_VERSION (0x0200U)
+#define SRTM_TTY_VERSION (0x0300U)
 
 /* Service handle */
 typedef struct _srtm_tty_service
@@ -40,6 +40,7 @@ typedef struct _srtm_tty_service
     srtm_tty_service_tx_t tx;
     srtm_tty_service_set_cflag_t setCflag;
     srtm_tty_service_set_wake_t setWake;
+    srtm_tty_service_init_t init;
     srtm_channel_t channel;
 } * srtm_tty_service_t;
 
@@ -49,18 +50,21 @@ typedef struct _srtm_tty_service
 #define RS485_LPUART_BUFFER_LENGTH (RL_BUFFER_PAYLOAD_SIZE(0))
 #endif
 /* sizeof(app_rpmsg_msg) must be less than or equal to LPUART_BUFFER_LENGTH */
-#define RPMSG_MAX_SIZE (RS485_LPUART_BUFFER_LENGTH - 13)
+#define RPMSG_MAX_SIZE (RS485_LPUART_BUFFER_LENGTH - 14)
 
 SRTM_PACKED_BEGIN struct _srtm_tty_payload
 {
+    uint8_t port_idx;
     uint8_t request_id;
     uint16_t len;
-    union
+    SRTM_PACKED_BEGIN union
     {
         uint8_t buf[RPMSG_MAX_SIZE];
-        // uint32_t cflag; // not actually used to avoid unaligned access.. & fails build_bug_on
+        uint32_t cflag;
+        /* note: packed only by design, sanity is ensured by checking size */
+        struct srtm_tty_init_payload init;
         uint8_t retcode;
-    };
+    } SRTM_PACKED_END;
 } SRTM_PACKED_END;
 
 #define msg_size(s) (sizeof(struct _srtm_tty_payload) - RPMSG_MAX_SIZE + s)
@@ -78,6 +82,7 @@ enum tty_rpmsg_header_cmd
     TTY_RPMSG_COMMAND_SET_CFLAG,
     TTY_RPMSG_COMMAND_NOTIFY,
     TTY_RPMSG_COMMAND_SET_WAKE,
+    TTY_RPMSG_COMMAND_INIT,
 };
 
 /*******************************************************************************
@@ -100,7 +105,7 @@ static srtm_status_t SRTM_TtyService_Request(srtm_service_t service, srtm_reques
     uint8_t command, retCode;
     struct _srtm_tty_payload *payload;
     srtm_response_t response;
-    uint8_t request_id = 0;
+    uint8_t request_id = 0, port_idx = 0;
     uint32_t len;
 
     /* fails if RPMSG_MAX_SIZE is too big */
@@ -132,16 +137,17 @@ static srtm_status_t SRTM_TtyService_Request(srtm_service_t service, srtm_reques
         retCode = kStatus_InvalidArgument;
         goto out;
     }
+    port_idx   = payload->port_idx;
     request_id = payload->request_id;
     /* Record channel for further input event */
     handle->channel = channel;
-    SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_DEBUG, "tty got %d (len %d)\r\n", command, payload->len);
     switch (command)
     {
         case TTY_RPMSG_COMMAND_PAYLOAD:
             if (handle->tx != NULL)
             {
-                status  = handle->tx(payload->len, payload->buf);
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_DEBUG, "tty %d tx, len %d\r\n", port_idx, payload->len);
+                status  = handle->tx(port_idx, payload->buf, payload->len);
                 retCode = MIN(status, 255);
             }
             else
@@ -154,27 +160,48 @@ static srtm_status_t SRTM_TtyService_Request(srtm_service_t service, srtm_reques
             if (payload->len == sizeof(tcflag_t) && handle->setCflag != NULL)
             {
                 uint32_t cflag;
-                memcpy(&cflag, payload->buf, sizeof(cflag));
-                status  = handle->setCflag(cflag);
+                memcpy(&cflag, &payload->cflag, sizeof(cflag));
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_DEBUG, "tty %d set cflag %d\r\n", port_idx, cflag);
+                status  = handle->setCflag(port_idx, cflag);
                 retCode = MIN(status, 255);
             }
             else
             {
-                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Command set cflag not allowed?!? (or bad len %d)\r\n",
-                                   __func__, payload->len);
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
+                                   "%s: Command set cflag not allowed?!? (or bad len %d, expected %zu)\r\n", __func__,
+                                   payload->len, sizeof(tcflag_t));
                 retCode = kStatus_InvalidArgument;
             }
             break;
         case TTY_RPMSG_COMMAND_SET_WAKE:
             if (payload->len == sizeof(bool) && handle->setWake != NULL)
             {
-                handle->setWake(payload->buf[0]);
-                retCode = kStatus_Success;
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_DEBUG, "tty %d set wake %d\r\n", port_idx, payload->buf[0]);
+                status  = handle->setWake(port_idx, payload->buf[0]);
+                retCode = MIN(status, 255);
             }
             else
             {
-                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Command set wake not allowed?!? (or bad len %d)\r\n",
-                                   __func__, payload->len);
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
+                                   "%s: Command set wake not allowed?!? (or bad len %d, expected %zu)\r\n", __func__,
+                                   payload->len, sizeof(bool));
+                retCode = kStatus_InvalidArgument;
+            }
+            break;
+        case TTY_RPMSG_COMMAND_INIT:
+            if (payload->len == sizeof(struct srtm_tty_init_payload) && handle->init != NULL)
+            {
+                struct srtm_tty_init_payload init;
+                memcpy(&init, &payload->init, sizeof(init));
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_DEBUG, "tty %d: init\r\n", port_idx);
+                status  = handle->init(port_idx, &init);
+                retCode = MIN(status, 255);
+            }
+            else
+            {
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
+                                   "%s: Command init not allowed?!? (or bad len %d, expected %zd)\r\n", __func__,
+                                   payload->len, sizeof(struct srtm_tty_init_payload));
                 retCode = kStatus_InvalidArgument;
             }
             break;
@@ -192,6 +219,7 @@ out:
     }
 
     payload             = (struct _srtm_tty_payload *)SRTM_CommMessage_GetPayload(response);
+    payload->port_idx   = port_idx;
     payload->request_id = request_id;
     payload->len        = 1;
     payload->buf[0]     = retCode;
@@ -210,7 +238,7 @@ static srtm_status_t SRTM_TtyService_Notify(srtm_service_t service, srtm_notific
 }
 
 srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service_set_cflag_t setCflag,
-                                      srtm_tty_service_set_wake_t setWake)
+                                      srtm_tty_service_set_wake_t setWake, srtm_tty_service_init_t init)
 {
     srtm_tty_service_t handle;
 
@@ -222,6 +250,7 @@ srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service
     handle->tx       = tx;
     handle->setCflag = setCflag;
     handle->setWake  = setWake;
+    handle->init     = init;
 
     SRTM_List_Init(&handle->service.node);
     handle->service.dispatcher = NULL;
@@ -258,7 +287,7 @@ void SRTM_TtyService_Reset(srtm_service_t service, srtm_peercore_t core)
     handle->channel = NULL;
 }
 
-srtm_notification_t SRTM_TtyService_NotifyAlloc(uint8_t **buf, uint16_t *len)
+srtm_notification_t SRTM_TtyService_NotifyAlloc(uint8_t port_idx, uint8_t **buf, uint16_t *len)
 {
     struct _srtm_tty_payload *payload;
     srtm_notification_t notif =
@@ -268,7 +297,11 @@ srtm_notification_t SRTM_TtyService_NotifyAlloc(uint8_t **buf, uint16_t *len)
         PRINTF("Could not alloc tty rx buffer\r\n");
         return NULL;
     }
-    payload = (struct _srtm_tty_payload *)SRTM_CommMessage_GetPayload(notif);
+
+    SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "%s port %d\r\n", __func__, port_idx);
+
+    payload           = (struct _srtm_tty_payload *)SRTM_CommMessage_GetPayload(notif);
+    payload->port_idx = port_idx;
 
     /* allocate smaller buffers than max: since rx times out in 1ms then
      * with the default 115200 baud rate we never send more than 14-15
@@ -300,6 +333,8 @@ srtm_status_t SRTM_TtyService_NotifySend(srtm_service_t service, srtm_notificati
     payload        = (struct _srtm_tty_payload *)SRTM_CommMessage_GetPayload(notif);
     payload->len   = len;
     notif->channel = handle->channel;
+
+    SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "%s port %d len %d\r\n", __func__, payload->port_idx, len);
 
     uint32_t dataLen = msg_size(len) + sizeof(srtm_packet_head_t);
     assert(dataLen <= notif->dataLen);

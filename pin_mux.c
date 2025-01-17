@@ -18,7 +18,6 @@
 void BOARD_InitBootPins(void)
 {
     BOARD_InitConsolePins();
-    BOARD_InitRs485Pins();
     BOARD_InitI2cPins();
     BOARD_InitPmicI2cPins();
     BOARD_InitTpmPins();
@@ -50,29 +49,6 @@ void BOARD_DeinitConsolePins(void)
     IOMUXC_SetPinConfig(IOMUXC_PTA22_LPUART1_TX, 0U);
     IOMUXC_SetPinMux(IOMUXC_PTA23_LPUART1_RX, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA23_LPUART1_RX, 0U);
-}
-
-void BOARD_InitRs485Pins(void)
-{
-    /*
-     * LPUART0 is connected to RS-485/RS-422 Transceivers(ISL83485IBZ).
-     *
-     *  PTA18: LPUART0_TX   : DI(Driver input)
-     *  PTA15: LPUART0_RX   : RO(Receiver output)
-     *  PTA16: LPUART0_CTS_B: RE_N(Receiver output enable)
-     *                        This pin is not controlled and must
-     *                        always be pulled down. The receiver is
-     *                        controlled by the i.MX8ULP's LPUART.
-     *  PTA17: LPUART0_RTS_B: DE(Driver output enable)
-     */
-    IOMUXC_SetPinMux(IOMUXC_PTA18_LPUART0_TX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA18_LPUART0_TX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
-    IOMUXC_SetPinMux(IOMUXC_PTA15_LPUART0_RX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA15_LPUART0_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
-    IOMUXC_SetPinMux(IOMUXC_PTA16_PTA16, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA16_PTA16, IOMUXC_PCR_PE_MASK);
-    IOMUXC_SetPinMux(IOMUXC_PTA17_PTA17, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA17_PTA17, IOMUXC_PCR_PE_MASK);
 }
 
 /* FUNCTION ************************************************************************************************************

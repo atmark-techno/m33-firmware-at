@@ -241,7 +241,7 @@ static bool IsWuuPinGPIOIrqcInterruptEdge(uint8_t wuuPin)
     return false;
 }
 
-static void PinMuxPrepareSuspend(uint8_t gpioIdx, uint8_t pinIdx)
+void PinMuxPrepareSuspend(uint8_t gpioIdx, uint8_t pinIdx)
 {
     uint8_t wuuIndex      = APP_IO_GetWUUPin(gpioIdx, pinIdx);
     __IO uint32_t *IOMUXC = &(gpioIdx == 0 ? IOMUXC0->PCR0_IOMUXCARRAY0 : IOMUXC0->PCR0_IOMUXCARRAY1)[pinIdx];

@@ -30,9 +30,38 @@
 #define SRTM_DEBUG_VERBOSE_LEVEL SRTM_DEBUG_VERBOSE_NONE
 #endif
 
-typedef int (*srtm_tty_service_tx_t)(uint16_t len, uint8_t *buf);
-typedef int (*srtm_tty_service_set_cflag_t)(tcflag_t cflag);
-typedef void (*srtm_tty_service_set_wake_t)(bool enable);
+enum tty_rpmsg_init_type
+{
+    TTY_TYPE_LPUART,
+    TTY_TYPE_CUSTOM,
+    _TTY_TYPE_COUNT,
+};
+
+struct srtm_tty_init_payload
+{
+    /* enum tty_rpmsg_init_type coerced to u32 for alignment; should be no-op... */
+    uint32_t port_type;
+    union
+    {
+        struct srtm_tty_init_lpuart_payload
+        {
+            uint32_t uart_index;
+            uint32_t rs485_flags;
+            uint32_t rs485_de_gpio;
+            uint32_t suspend_wakeup_gpio;
+            uint32_t cflag;
+        } lpuart;
+        struct srtm_tty_init_custom_payload
+        {
+            char name[32];
+        } custom;
+    };
+};
+
+typedef int (*srtm_tty_service_tx_t)(uint8_t port_idx, uint8_t *buf, uint16_t len);
+typedef int (*srtm_tty_service_set_cflag_t)(uint8_t port_idx, tcflag_t cflag);
+typedef int (*srtm_tty_service_set_wake_t)(uint8_t port_idx, bool enable);
+typedef int (*srtm_tty_service_init_t)(uint8_t port_idx, struct srtm_tty_init_payload *init);
 
 /*******************************************************************************
  * API
@@ -47,7 +76,7 @@ extern "C" {
  * @return SRTM service handle on success and NULL on failure.
  */
 srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service_set_cflag_t setCflag,
-                                      srtm_tty_service_set_wake_t setWake);
+                                      srtm_tty_service_set_wake_t setWake, srtm_tty_service_init_t init);
 
 /*!
  * @brief Destroy TTY service.
@@ -68,7 +97,7 @@ void SRTM_TtyService_Reset(srtm_service_t service, srtm_peercore_t core);
 
 // alloc notify buffer
 // store pointer to payload in arg
-srtm_notification_t SRTM_TtyService_NotifyAlloc(uint8_t **buf, uint16_t *len);
+srtm_notification_t SRTM_TtyService_NotifyAlloc(uint8_t port_idx, uint8_t **buf, uint16_t *len);
 // send notify buffer
 srtm_status_t SRTM_TtyService_NotifySend(srtm_service_t service, srtm_notification_t notif, uint16_t len);
 

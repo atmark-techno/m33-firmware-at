@@ -25,14 +25,14 @@
 #include "srtm_rtc_adapter.h"
 #include "srtm_adc_service.h"
 #include "srtm_wdog_service.h"
-#include "srtm_tty_service.h"
 
 #include "app_srtm.h"
+#include "app_srtm_internal.h"
 #include "app_uboot.h"
+#include "app_tty.h"
 #include "board.h"
 #include "pin_mux.h"
 #include "build_bug.h"
-#include "tty.h"
 #include "fsl_mu.h"
 #include "fsl_debug_console.h"
 #include "fsl_rgpio.h"
@@ -44,7 +44,6 @@
 #include "fsl_sentinel.h"
 #include "fsl_lpadc.h"
 #include "fsl_flexio_i2c_master.h"
-#include "fsl_lpuart_freertos.h"
 #include "fsl_reset.h"
 #include "fsl_ewm.h"
 
@@ -183,40 +182,7 @@ const uint8_t wuuPins[] = {
     255, /* 24 */
 };
 
-/* RS485 on CON3 */
-#define RS485_LPUART LPUART0
-#define RS485_LPUART_IRQn LPUART0_IRQn
-#define RS485_LPUART_BAUDRATE (115200U)
-#define RS485_LPUART_CLK kCLOCK_Lpuart0
-#define APP_PIN_PTA17 (0x0011U)
-#define APP_PIN_PTA15 (0x000fU) /* LPUART0_RX: Used for data receive wakeup */
-
-bool s_rs485LpuartSuspend;
-bool s_rs485LpuartWakeupSource;
-static TaskHandle_t s_rs485LpuartRxTask;
-static lpuart_rtos_handle_t s_rs485LpuartRtosHandle;
-static lpuart_handle_t s_rs485LpuartHandle;
-static tcflag_t s_rs485Tcflag;
-
-/* This buffer is only used for the short period of time during which rx task
- * allocates a new buffer and does not need to be big */
-static uint8_t s_rs485BackgroundBuffer[128];
-static lpuart_rtos_config_t s_rs485LpuartConfig = {
-    .baudrate    = RS485_LPUART_BAUDRATE,
-    .parity      = kLPUART_ParityDisabled,
-    .stopbits    = kLPUART_OneStopBit,
-    .buffer      = s_rs485BackgroundBuffer,
-    .buffer_size = sizeof(s_rs485BackgroundBuffer),
-    /* .enableRxRTS = true, */
-    /* .enableTxCTS = true, */
-    .base        = RS485_LPUART,
-    .rs485       = {
-        .flags   = LPUART_RS485_ENABLED | LPUART_RS485_DE_ON_SEND,
-        .deGpio  = APP_PIN_PTA17,
-    },
-};
-
-static srtm_dispatcher_t disp;
+srtm_dispatcher_t disp;
 static srtm_peercore_t core;
 static srtm_service_t pwmService;
 static srtm_service_t adcService;
@@ -225,7 +191,6 @@ static srtm_rtc_adapter_t rtcAdapter;
 static srtm_service_t i2cService;
 static srtm_service_t ioService;
 static srtm_service_t wdogService;
-static srtm_service_t ttyService;
 static SemaphoreHandle_t monSig;
 static struct rpmsg_lite_instance *rpmsgHandle;
 static app_rpmsg_monitor_t rpmsgMonitor;
@@ -998,128 +963,6 @@ static void APP_SRTM_InitWdogService(void)
     SRTM_Dispatcher_RegisterService(disp, wdogService);
 }
 
-static void tty_rx_task(void *pvParameters)
-{
-    uint8_t *buf;
-    uint16_t maxlen;
-    while (true)
-    {
-        size_t recvlen = 0;
-
-        srtm_notification_t notif = SRTM_TtyService_NotifyAlloc(&buf, &maxlen);
-        if (!notif)
-        {
-            // message already printed in alloc failure
-            SDK_DelayAtLeastUs(1000000, SDK_DEVICE_MAXIMUM_CPU_CLOCK_FREQUENCY);
-            continue;
-        }
-
-        do
-        {
-            LPUART_RTOS_Receive(&s_rs485LpuartRtosHandle, buf, maxlen, &recvlen);
-            if (s_rs485LpuartSuspend)
-                vTaskSuspend(NULL);
-        } while (recvlen == 0);
-
-        SRTM_TtyService_NotifySend(ttyService, notif, recvlen);
-    }
-}
-
-static int tty_tx(uint16_t len, uint8_t *buf)
-{
-    int rc;
-    // not yet ready (e.g. in suspend)
-    if (!s_rs485LpuartRtosHandle.base)
-    {
-        PRINTF("rs485 write before device init\r\n");
-        return kStatus_Fail;
-    }
-
-    rc = LPUART_RTOS_Send(&s_rs485LpuartRtosHandle, buf, len);
-    if (rc)
-    {
-        PRINTF("Send fail for buf len %d, first byte %x: %d\r\n", len, len > 0 ? buf[0] : 0, rc);
-    }
-    return rc;
-}
-
-static int tty_setcflag(tcflag_t cflag)
-{
-    speed_t baudrate                 = tty_baudrate(cflag);
-    lpuart_parity_mode_t parity      = tty_parity(cflag);
-    bool cmsparity                   = tty_cmsparity(cflag);
-    lpuart_data_bits_t databits      = tty_databits(cflag);
-    lpuart_stop_bit_count_t stopbits = tty_stopbits(cflag);
-
-    /*
-     * only support CS8 and CS7, and for CS7 must enable parity.
-     * supported mode:
-     *  - (7,e/o,1/2)
-     *  - (8,n,1/2)
-     *  - (8,m/s,1/2)
-     *  - (8,e/o,1/2)
-     */
-    if (parity == kLPUART_ParityDisabled && databits == kLPUART_SevenDataBits)
-    {
-        PRINTF("Invalid cflag: 0x%x\r\n", cflag);
-        return kStatus_Fail;
-    }
-
-    /* set baud rate */
-    LPUART_SetBaudRate(RS485_LPUART, baudrate, CLOCK_GetIpFreq(RS485_LPUART_CLK));
-
-    /* set databits */
-    if (databits == kLPUART_EightDataBits && (parity != kLPUART_ParityDisabled || cmsparity))
-        LPUART_Enable9bitMode(RS485_LPUART, true); /* (8,e/o) or (8,m/s) */
-    else
-        LPUART_Enable9bitMode(RS485_LPUART, false); /* (7,e/o) or (8,n) */
-
-    /* set parity */
-    LPUART_SetParity(RS485_LPUART, parity); /* LPUART_Enable9bitMode() may disable parity. Do not call
-                                               LPUART_SetParity() first. */
-
-    /* set stop bits */
-    LPUART_SetStopBit(RS485_LPUART, stopbits);
-
-    /* remember for resume */
-    s_rs485Tcflag = cflag;
-
-    return 0;
-}
-
-static void tty_setwake(bool enable)
-{
-    s_rs485LpuartWakeupSource = enable;
-}
-
-static void APP_SRTM_InitTtyDevice(void)
-{
-    /* IRQ enable by lpuart but priority isn't set, set it now */
-    NVIC_SetPriority(RS485_LPUART_IRQn, APP_LPUART_IRQ_PRIO);
-
-    CLOCK_SetIpSrc(RS485_LPUART_CLK, kCLOCK_Pcc1BusIpSrcSysOscDiv2);
-    s_rs485LpuartConfig.srcclk = CLOCK_GetIpFreq(RS485_LPUART_CLK);
-    LPUART_RTOS_Init(&s_rs485LpuartRtosHandle, &s_rs485LpuartHandle, &s_rs485LpuartConfig);
-    LPUART_RTOS_SetRxTimeout(&s_rs485LpuartRtosHandle, 1, 0); /* short timeout to give data back asap */
-    LPUART_RTOS_SetTxTimeout(&s_rs485LpuartRtosHandle, 0, 0); /* XXX no timeout, depends on baud rate */
-
-    /* restore any flag we might have remembered before suspend */
-    if (s_rs485Tcflag)
-        tty_setcflag(s_rs485Tcflag);
-}
-
-static void APP_SRTM_InitTtyService(void)
-{
-    APP_SRTM_InitTtyDevice();
-
-    ttyService = SRTM_TtyService_Create(tty_tx, tty_setcflag, tty_setwake);
-    SRTM_Dispatcher_RegisterService(disp, ttyService);
-    /* we need this task to be higher priority than HandleSuspendTask in main,
-     * in order to exit out of LPUART_RTOS_Receive safely as suspend deinits it */
-    BUILD_BUG_ON(RS485_RX_TASK_PRIORITY <= SUSPEND_TASK_PRIORITY);
-    xTaskCreate(tty_rx_task, "rs485 rx task", 256U, NULL, RS485_RX_TASK_PRIORITY, &s_rs485LpuartRxTask);
-}
-
 static void APP_SRTM_DoWakeup(void *param)
 {
     APP_WakeupACore();
@@ -1698,7 +1541,7 @@ static void APP_SRTM_InitServices(void)
     APP_SRTM_InitRtcService();
     APP_SRTM_InitLfclService();
     APP_SRTM_InitWdogService();
-    APP_SRTM_InitTtyService();
+    APP_TTY_InitService();
 }
 
 void APP_PowerOffCA35(void)
@@ -1936,29 +1779,19 @@ void APP_SRTM_StartCommunication(void)
 
 void APP_SRTM_SuspendTask(void)
 {
-    s_rs485LpuartSuspend = true;
+    APP_TTY_SuspendTask();
     APP_SRTM_WdogSuspend();
 }
 
 void APP_SRTM_ResumeTask(void)
 {
-    s_rs485LpuartSuspend = false;
-    vTaskResume(s_rs485LpuartRxTask);
     APP_SRTM_WdogResume();
+    APP_TTY_ResumeTask();
 }
 
 void APP_SRTM_Suspend(void)
 {
-    LPUART_RTOS_Deinit(&s_rs485LpuartRtosHandle);
-
-    if (s_rs485LpuartWakeupSource)
-    {
-        APP_IO_ConfInput(APP_PIN_PTA15, SRTM_IoEventFallingEdge, s_rs485LpuartWakeupSource);
-        /* This runs after APP_Suspend() that does this for other IOs,
-         * so set pinmux to wuu manually and restore is handled by
-         * APP_Resume() */
-        IOMUXC_SetPinMux(IOMUXC_PTA15_WUU0_P12, 0U);
-    }
+    APP_TTY_Suspend();
 }
 
 void APP_SRTM_Resume(bool resume)
@@ -1969,11 +1802,8 @@ void APP_SRTM_Resume(bool resume)
      */
     APP_SRTM_InitPwmDevice();
     APP_SRTM_InitAdcDevice();
-    APP_SRTM_InitTtyDevice();
+    APP_TTY_Resume();
     HAL_RtcInit(rtcHandle, 0);
-    if (resume)
-    {
-    }
 }
 
 void APP_SRTM_SetRpmsgMonitor(app_rpmsg_monitor_t monitor, void *param)

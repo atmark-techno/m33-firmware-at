@@ -60,6 +60,7 @@ typedef struct
 extern "C" {
 #endif
 
+void PinMuxPrepareSuspend(uint8_t gpioIdx, uint8_t pinIdx);
 void PMIC_Reset(void);
 void APP_PowerModeSwitch(lpm_rtd_power_mode_e targetPowerMode, app_wakeup_source_t source);
 
