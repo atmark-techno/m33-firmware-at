@@ -295,6 +295,11 @@ srtm_status_t SRTM_TtyService_NotifySend(srtm_service_t service, srtm_notificati
     payload->len   = len;
     notif->channel = handle->channel;
 
+    uint32_t dataLen = msg_size(len) + sizeof(srtm_packet_head_t);
+    assert(dataLen <= notif->dataLen);
+    /* This controls how much is actually sent to linux, and is not
+     * used for any free/recycling so we can just override this. */
+    notif->dataLen = dataLen;
     SRTM_Dispatcher_DeliverNotification(handle->service.dispatcher, notif);
 
     return SRTM_Status_Success;
