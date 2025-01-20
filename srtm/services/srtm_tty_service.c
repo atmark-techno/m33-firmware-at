@@ -20,6 +20,7 @@
 #include "srtm_message_pool.h"
 #include "srtm_message_struct.h"
 
+#include "build_bug.h"
 #include "app_srtm.h"
 
 #include "fsl_common.h"
@@ -102,6 +103,8 @@ static srtm_status_t SRTM_TtyService_Request(srtm_service_t service, srtm_reques
     uint8_t request_id = 0;
     uint32_t len;
 
+    /* fails if RPMSG_MAX_SIZE is too big */
+    BUILD_BUG_ON(sizeof(*payload) + sizeof(srtm_packet_head_t) > RS485_LPUART_BUFFER_LENGTH);
     assert(service->dispatcher);
 
     SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "%s\r\n", __func__);
