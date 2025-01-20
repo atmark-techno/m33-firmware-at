@@ -758,8 +758,12 @@ static srtm_status_t APP_IO_SetOutput(uint16_t ioId, srtm_io_value_t ioValue)
 static srtm_status_t APP_IO_OutputInit(srtm_service_t service, srtm_peercore_t core, uint16_t ioId,
                                        srtm_io_value_t ioValue, uint32_t pinctrl)
 {
-    uint8_t index = APP_IO_GetIndex(ioId);
+    uint8_t index   = APP_IO_GetIndex(ioId);
+    uint8_t gpioIdx = APP_GPIO_IDX(ioId);
+    uint8_t pinIdx  = APP_PIN_IDX(ioId);
 
+    assert(gpioIdx < 3U);
+    assert(pinIdx < 32U);
     assert(index < APP_IO_NUM);
 
     suspendContext.io.data[index].value = (uint8_t)ioValue;
@@ -769,7 +773,14 @@ static srtm_status_t APP_IO_OutputInit(srtm_service_t service, srtm_peercore_t c
         pinctrl = IOMUXC_PCR_OBE_MASK;
     APP_IO_SetPinConfig(ioId, pinctrl);
 
-    return APP_IO_SetOutput(ioId, ioValue);
+    rgpio_pin_config_t config = {
+        .outputLogic  = ioValue,
+        .pinDirection = kRGPIO_DigitalOutput,
+    };
+
+    RGPIO_PinInit(gpios[gpioIdx], pinIdx, &config);
+
+    return SRTM_Status_Success;
 }
 
 static srtm_status_t APP_IO_InputGet(srtm_service_t service, srtm_peercore_t core, uint16_t ioId,
@@ -827,6 +838,12 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
         PRINTF("Wakeup requested on %d/%d, mode %d\r\n", gpioIdx, pinIdx, event);
 
     APP_IO_SetPinConfig(ioId, pinctrl);
+    /* set direction as input */
+    rgpio_pin_config_t gpio_config = {
+        .pinDirection = kRGPIO_DigitalInput,
+    };
+    RGPIO_PinInit(gpios[gpioIdx], pinIdx, &gpio_config);
+
     switch (event)
     {
         case SRTM_IoEventRisingEdge:
