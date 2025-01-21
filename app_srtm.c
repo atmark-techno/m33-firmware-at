@@ -55,12 +55,7 @@ void APP_SRTM_WakeupCA35(void);
 
 typedef struct
 {
-    TimerHandle_t timer; /* GPIO glitch detect timer */
-    srtm_io_event_t event;
     bool wakeup;
-    bool overridden; /* Means the CA35 pin configuration is overridden by CM33 wakeup pin. */
-    uint8_t index;
-    uint8_t value;
 } app_io_t;
 
 /* NOTE: CM33 DRIVERS DON'T SUPPORT SAVE CONTEXT FOR RESUME, BUT CA35 LINUX DRIVERS DO.
@@ -74,10 +69,6 @@ typedef struct
     {
         app_io_t data[APP_IO_NUM];
     } io;
-    struct
-    {
-        uint32_t CR;
-    } mu;
     struct
     {
         uint16_t timeout;
@@ -190,13 +181,6 @@ const uint8_t wuuPins[] = {
     255, /* 22 */
     255, /* 23 */
     255, /* 24 */
-};
-
-static const srtm_io_event_t wuuPinModeEvents[] = {
-    SRTM_IoEventNone,        /* kWUU_ExternalPinDisable */
-    SRTM_IoEventRisingEdge,  /* kWUU_ExternalPinRisingEdge */
-    SRTM_IoEventFallingEdge, /* kWUU_ExternalPinFallingEdge */
-    SRTM_IoEventEitherEdge   /* kWUU_ExternalPinAnyEdge */
 };
 
 /* RS485 on CON3 */
@@ -759,15 +743,11 @@ static srtm_status_t APP_IO_SetOutput(uint16_t ioId, srtm_io_value_t ioValue)
 static srtm_status_t APP_IO_OutputInit(srtm_service_t service, srtm_peercore_t core, uint16_t ioId,
                                        srtm_io_value_t ioValue, uint32_t pinctrl)
 {
-    uint8_t index   = APP_IO_GetIndex(ioId);
     uint8_t gpioIdx = APP_GPIO_IDX(ioId);
     uint8_t pinIdx  = APP_PIN_IDX(ioId);
 
     assert(gpioIdx < 3U);
     assert(pinIdx < 32U);
-    assert(index < APP_IO_NUM);
-
-    suspendContext.io.data[index].value = (uint8_t)ioValue;
 
     /* safe value if unset */
     if (pinctrl == IO_PINCTRL_UNSET)
@@ -802,12 +782,6 @@ static srtm_status_t APP_IO_InputGet(srtm_service_t service, srtm_peercore_t cor
 static srtm_status_t APP_IO_OutputSet(srtm_service_t service, srtm_peercore_t core, uint16_t ioId,
                                       srtm_io_value_t ioValue)
 {
-    uint8_t index = APP_IO_GetIndex(ioId);
-
-    assert(index < APP_IO_NUM);
-
-    suspendContext.io.data[index].value = (uint8_t)ioValue;
-
     return APP_IO_SetOutput(ioId, ioValue);
 }
 
@@ -911,7 +885,6 @@ static srtm_status_t APP_IO_InputInit(srtm_service_t service, srtm_peercore_t co
 
     assert(inputIdx < APP_IO_NUM);
 
-    suspendContext.io.data[inputIdx].event  = event;
     suspendContext.io.data[inputIdx].wakeup = wakeup;
 
     return APP_IO_ConfInput(inputIdx, event, wakeup, pinctrl);
@@ -1272,43 +1245,11 @@ static void APP_SRTM_InitPeerCore(void)
     }
 }
 
-static void APP_SRTM_GpioReset(void)
-{
-    int32_t i;
-
-    /* First disable all GPIO interrupts configured by CA35 */
-    /* XXX actually reset A35 pins */
-    for (i = 0; i < 0; i++)
-    {
-        if (suspendContext.io.data[i].timer)
-        {
-            xTimerStop(suspendContext.io.data[i].timer, portMAX_DELAY);
-        }
-        if (suspendContext.io.data[i].overridden)
-        {
-            /* The IO is configured by CM33 instead of CA35, don't reset HW configuration. */
-            suspendContext.io.data[i].event  = SRTM_IoEventNone;
-            suspendContext.io.data[i].wakeup = false;
-        }
-        else
-        {
-            APP_IO_InputInit(NULL, NULL, APP_IO_GetId(i), SRTM_IoEventNone, false, IO_PINCTRL_UNSET);
-        }
-    }
-
-    /* TODO reset interrupts registration */
-
-    /* Output pin value doesn't change. */
-
-    /* Then reset IO service */
-    SRTM_IoService_Reset(ioService, core);
-}
-
 static void APP_SRTM_ResetServices(void)
 {
     /* When CA35 resets, we need to avoid async event to send to CA35. IO services have async events. */
     SRTM_RtcService_Reset(rtcService, core);
-    APP_SRTM_GpioReset();
+    SRTM_IoService_Reset(ioService, core);
 }
 
 static void APP_SRTM_DeinitPeerCore(void)
@@ -1424,33 +1365,8 @@ static void APP_SRTM_InitI2CService(void)
     SRTM_Dispatcher_RegisterService(disp, i2cService);
 }
 
-static void APP_SRTM_InitIoKeyDevice(void)
-{
-    uint32_t i;
-
-    rgpio_pin_config_t gpioConfig = {
-        kRGPIO_DigitalInput,
-        0U,
-    };
-
-    /* Init input configuration */
-    /* XXX actually init as appropriate */
-    for (i = 0; i < 0; i++)
-    {
-        uint16_t ioId = APP_IO_GetId(i);
-        RGPIO_PinInit(gpios[APP_GPIO_IDX(ioId)], APP_PIN_IDX(ioId), &gpioConfig);
-        if (!suspendContext.io.data[i].overridden)
-        {
-            APP_IO_ConfInput(i, suspendContext.io.data[i].event, suspendContext.io.data[i].wakeup, IO_PINCTRL_UNSET);
-        }
-    }
-}
-
 static void APP_SRTM_InitIoKeyService(void)
 {
-    /* Init IO structure used in the application. */
-    APP_SRTM_InitIoKeyDevice();
-
     /* Enable interrupt for GPIO. */
     NVIC_SetPriority(GPIOA_INT0_IRQn, APP_GPIO_IRQ_PRIO);
     NVIC_SetPriority(GPIOA_INT1_IRQn, APP_GPIO_IRQ_PRIO);
@@ -2020,11 +1936,7 @@ void APP_SRTM_Resume(bool resume)
     APP_SRTM_InitI2CDevice();
     /*
      * IO has restored in APP_Resume(), so don't need init io again in here.
-     * For RTD Power Down Mode(Wakeup through WUU), it's okay to initialize io again(use WUU to wakeup cortex-M33,
-     * the WUU interrupt will not lost) For RTD Deep Sleep Mode(Wakeup through WIC), the GPIO interrupt will lost
-     * after initialize io with APP_SRTM_InitIoKeyDevice().
      */
-    /* APP_SRTM_InitIoKeyDevice(); */
     APP_SRTM_InitPwmDevice();
     APP_SRTM_InitAdcDevice();
     APP_SRTM_InitTtyDevice();
@@ -2209,41 +2121,6 @@ void APP_SRTM_ClrWakeupModule(uint32_t module, uint16_t event)
     srtm_procedure_t proc;
 
     proc = SRTM_Procedure_Create(APP_SRTM_DoClrWakeupModule, (void *)module, (void *)(uint32_t)event);
-    assert(proc);
-
-    SRTM_Dispatcher_CallProc(disp, proc, SRTM_WAIT_FOR_EVER);
-    SRTM_Procedure_Destroy(proc);
-}
-
-static void APP_SRTM_DoSetWakeupPin(srtm_dispatcher_t dispatcher, void *param1, void *param2)
-{
-    uint16_t ioId    = (uint32_t)param1;
-    uint16_t event   = (uint32_t)param2;
-    uint8_t inputIdx = APP_IO_GetIndex(ioId);
-    bool wakeup      = (bool)(event >> 8);
-    uint8_t pinMode  = (uint8_t)event;
-
-    assert(pinMode < ARRAY_SIZE(wuuPinModeEvents));
-    if (inputIdx < APP_IO_NUM)
-    {
-        if (wuuPinModeEvents[pinMode] != SRTM_IoEventNone)
-        {
-            APP_IO_ConfInput(inputIdx, wuuPinModeEvents[pinMode], wakeup, IO_PINCTRL_UNSET);
-        }
-        else
-        {
-            /* Restore CA35 settings */
-            APP_IO_ConfInput(inputIdx, suspendContext.io.data[inputIdx].event, suspendContext.io.data[inputIdx].wakeup,
-                             IO_PINCTRL_UNSET);
-        }
-    }
-}
-
-void APP_SRTM_SetWakeupPin(uint16_t ioId, uint16_t event)
-{
-    srtm_procedure_t proc;
-
-    proc = SRTM_Procedure_Create(APP_SRTM_DoSetWakeupPin, (void *)(uint32_t)ioId, (void *)(uint32_t)event);
     assert(proc);
 
     SRTM_Dispatcher_CallProc(disp, proc, SRTM_WAIT_FOR_EVER);
