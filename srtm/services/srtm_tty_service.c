@@ -270,7 +270,13 @@ srtm_notification_t SRTM_TtyService_NotifyAlloc(uint8_t **buf, uint16_t *len)
     }
     payload = (struct _srtm_tty_payload *)SRTM_CommMessage_GetPayload(notif);
 
-    *len = RPMSG_MAX_SIZE;
+    /* allocate smaller buffers than max: since rx times out in 1ms then
+     * with the default 115200 baud rate we never send more than 14-15
+     * chars at a timer.
+     * At 1M baud rate we'd need 125chars/ms so increasing the size depending
+     * on baud rate would make sense, to be tried later.
+     */
+    *len = MIN(RPMSG_MAX_SIZE, 64);
     *buf = payload->buf;
     return notif;
 }

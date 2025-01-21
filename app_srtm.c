@@ -198,7 +198,9 @@ static lpuart_rtos_handle_t s_rs485LpuartRtosHandle;
 static lpuart_handle_t s_rs485LpuartHandle;
 static tcflag_t s_rs485Tcflag;
 
-static uint8_t s_rs485BackgroundBuffer[4096];
+/* This buffer is only used for the short period of time during which rx task
+ * allocates a new buffer and does not need to be big */
+static uint8_t s_rs485BackgroundBuffer[128];
 static lpuart_rtos_config_t s_rs485LpuartConfig = {
     .baudrate    = RS485_LPUART_BAUDRATE,
     .parity      = kLPUART_ParityDisabled,
