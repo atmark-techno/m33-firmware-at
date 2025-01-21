@@ -30,7 +30,7 @@
 /* Protocol definition */
 #define SRTM_IO_CATEGORY (0x5U)
 
-#define SRTM_IO_VERSION (0x0300U)
+#define SRTM_IO_VERSION (0x0400U)
 
 #define SRTM_IO_RETURN_CODE_SUCCESS (0x0U)
 #define SRTM_IO_RETURN_CODE_FAIL (0x1U)
@@ -46,6 +46,7 @@ typedef struct _srtm_io_service
     srtm_io_service_output_init_t outputInit;
     srtm_io_service_input_get_t inputGet;
     srtm_io_service_output_set_t outputSet;
+    srtm_io_service_pinctrl_set_t pinctrlSet;
     int pin_count;
     srtm_channel_t channel;
 } * srtm_io_service_t;
@@ -61,18 +62,20 @@ SRTM_PACKED_BEGIN struct _srtm_io_payload
         {
             uint8_t event;
             uint8_t wakeup;
-            uint32_t pinctrl;
         } SRTM_PACKED_END input_init;
         SRTM_PACKED_BEGIN struct
         {
             uint8_t value;
-            uint32_t pinctrl;
         } SRTM_PACKED_END output_init;
         /* no arg for input_get */
         SRTM_PACKED_BEGIN struct
         {
             uint8_t value;
         } SRTM_PACKED_END output_set;
+        SRTM_PACKED_BEGIN struct
+        {
+            uint32_t pinctrl[6];
+        } SRTM_PACKED_END pinctrl;
         SRTM_PACKED_BEGIN struct
         {
             uint8_t retcode;
@@ -87,6 +90,7 @@ enum gpio_rpmsg_header_cmd
     GPIO_RPMSG_OUTPUT_INIT,
     GPIO_RPMSG_INPUT_GET,
     GPIO_RPMSG_OUTPUT_SET,
+    GPIO_RPMSG_PINCTRL,
 };
 
 /*******************************************************************************
@@ -143,7 +147,7 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
             if (handle->inputInit != NULL)
             {
                 status  = handle->inputInit(service, channel->core, ioId, payload->input_init.event,
-                                            payload->input_init.wakeup, payload->input_init.pinctrl);
+                                            payload->input_init.wakeup);
                 retCode = status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCCESS : SRTM_IO_RETURN_CODE_FAIL;
             }
             else
@@ -155,8 +159,7 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
         case GPIO_RPMSG_OUTPUT_INIT:
             if (handle->outputInit != NULL)
             {
-                status  = handle->outputInit(service, channel->core, ioId, payload->output_init.value,
-                                             payload->output_init.pinctrl);
+                status  = handle->outputInit(service, channel->core, ioId, payload->output_init.value);
                 retCode = status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCCESS : SRTM_IO_RETURN_CODE_FAIL;
             }
             else
@@ -187,6 +190,20 @@ static srtm_status_t SRTM_IoService_Request(srtm_service_t service, srtm_request
             else
             {
                 SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Command ouput set not allowed!\r\n", __func__);
+                retCode = SRTM_IO_RETURN_CODE_FAIL;
+            }
+            break;
+        case GPIO_RPMSG_PINCTRL:
+            if (handle->pinctrlSet != NULL)
+            {
+                uint32_t pinctrl[6];
+                memcpy(pinctrl, payload->pinctrl.pinctrl, sizeof(pinctrl));
+                status  = handle->pinctrlSet(service, channel->core, ioId, pinctrl);
+                retCode = status == SRTM_Status_Success ? SRTM_IO_RETURN_CODE_SUCCESS : SRTM_IO_RETURN_CODE_FAIL;
+            }
+            else
+            {
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: Command pinctrl not allowed!\r\n", __func__);
                 retCode = SRTM_IO_RETURN_CODE_FAIL;
             }
             break;
@@ -224,7 +241,7 @@ static srtm_status_t SRTM_IoService_Notify(srtm_service_t service, srtm_notifica
 
 srtm_service_t SRTM_IoService_Create(int pin_count, srtm_io_service_input_init_t inputInit,
                                      srtm_io_service_output_init_t outputInit, srtm_io_service_input_get_t inputGet,
-                                     srtm_io_service_output_set_t outputSet)
+                                     srtm_io_service_output_set_t outputSet, srtm_io_service_pinctrl_set_t pinctrlSet)
 {
     srtm_io_service_t handle;
 
@@ -238,6 +255,7 @@ srtm_service_t SRTM_IoService_Create(int pin_count, srtm_io_service_input_init_t
     handle->outputInit = outputInit;
     handle->inputGet   = inputGet;
     handle->outputSet  = outputSet;
+    handle->pinctrlSet = pinctrlSet;
 
     SRTM_List_Init(&handle->service.node);
     handle->service.dispatcher = NULL;

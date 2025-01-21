@@ -101,7 +101,7 @@ static srtm_status_t APP_SRTM_I2C_SwitchChannel(srtm_i2c_adapter_t adapter, uint
                                                 uint16_t slaveAddr, srtm_i2c_switch_channel channel);
 
 static srtm_status_t APP_IO_InputInit(srtm_service_t service, srtm_peercore_t core, uint16_t ioId,
-                                      srtm_io_event_t event, bool wakeup, uint32_t pinctrl);
+                                      srtm_io_event_t event, bool wakeup);
 
 static srtm_status_t APP_SRTM_ADC_Get(struct adc_handle *handle, size_t idx, uint16_t *value);
 
@@ -628,49 +628,49 @@ void BBNSM_IRQHandler(void)
     }
 }
 
-#define PIN_FUNC_ID_SIZE (5)
+#define PIN_FUNC_ID_SIZE (6)
 static uint32_t pinFuncId[][PIN_FUNC_ID_SIZE] = {
-    { IOMUXC_PTA0_PTA0 },
-    { IOMUXC_PTA1_PTA1 },
-    { IOMUXC_PTA2_PTA2 },
-    { IOMUXC_PTA3_PTA3 },
-    { IOMUXC_PTA4_PTA4 },
-    { IOMUXC_PTA5_PTA5 },
-    { IOMUXC_PTA6_PTA6 },
-    { IOMUXC_PTA7_PTA7 },
-    { IOMUXC_PTA8_PTA8 },
-    { IOMUXC_PTA9_PTA9 },
-    { IOMUXC_PTA10_PTA10 },
-    { IOMUXC_PTA11_PTA11 },
-    { IOMUXC_PTA12_PTA12 },
-    { IOMUXC_PTA13_PTA13 },
-    { IOMUXC_PTA14_PTA14 },
-    { IOMUXC_PTA15_PTA15 },
-    { IOMUXC_PTA16_PTA16 },
-    { IOMUXC_PTA17_PTA17 },
-    { IOMUXC_PTA18_PTA18 },
-    { IOMUXC_PTA19_PTA19 },
-    { IOMUXC_PTA20_PTA20 },
-    { IOMUXC_PTA21_PTA21 },
-    { IOMUXC_PTA22_PTA22 },
-    { IOMUXC_PTA23_PTA23 },
-    { IOMUXC_PTA24_PTA24 },
-    { IOMUXC_PTB0_PTB0 },
-    { IOMUXC_PTB1_PTB1 },
-    { IOMUXC_PTB2_PTB2 },
-    { IOMUXC_PTB3_PTB3 },
-    { IOMUXC_PTB4_PTB4 },
-    { IOMUXC_PTB5_PTB5 },
-    { IOMUXC_PTB6_PTB6 },
-    { IOMUXC_PTB7_PTB7 },
-    { IOMUXC_PTB8_PTB8 },
-    { IOMUXC_PTB9_PTB9 },
-    { IOMUXC_PTB10_PTB10 },
-    { IOMUXC_PTB11_PTB11 },
-    { IOMUXC_PTB12_PTB12 },
-    { IOMUXC_PTB13_PTB13 },
-    { IOMUXC_PTB14_PTB14 },
-    { IOMUXC_PTB15_PTB15 },
+    { IOMUXC_PTA0_PTA0, -1 },
+    { IOMUXC_PTA1_PTA1, -1 },
+    { IOMUXC_PTA2_PTA2, -1 },
+    { IOMUXC_PTA3_PTA3, -1 },
+    { IOMUXC_PTA4_PTA4, -1 },
+    { IOMUXC_PTA5_PTA5, -1 },
+    { IOMUXC_PTA6_PTA6, -1 },
+    { IOMUXC_PTA7_PTA7, -1 },
+    { IOMUXC_PTA8_PTA8, -1 },
+    { IOMUXC_PTA9_PTA9, -1 },
+    { IOMUXC_PTA10_PTA10, -1 },
+    { IOMUXC_PTA11_PTA11, -1 },
+    { IOMUXC_PTA12_PTA12, -1 },
+    { IOMUXC_PTA13_PTA13, -1 },
+    { IOMUXC_PTA14_PTA14, -1 },
+    { IOMUXC_PTA15_PTA15, -1 },
+    { IOMUXC_PTA16_PTA16, -1 },
+    { IOMUXC_PTA17_PTA17, -1 },
+    { IOMUXC_PTA18_PTA18, -1 },
+    { IOMUXC_PTA19_PTA19, -1 },
+    { IOMUXC_PTA20_PTA20, -1 },
+    { IOMUXC_PTA21_PTA21, -1 },
+    { IOMUXC_PTA22_PTA22, -1 },
+    { IOMUXC_PTA23_PTA23, -1 },
+    { IOMUXC_PTA24_PTA24, -1 },
+    { IOMUXC_PTB0_PTB0, -1 },
+    { IOMUXC_PTB1_PTB1, -1 },
+    { IOMUXC_PTB2_PTB2, -1 },
+    { IOMUXC_PTB3_PTB3, -1 },
+    { IOMUXC_PTB4_PTB4, -1 },
+    { IOMUXC_PTB5_PTB5, -1 },
+    { IOMUXC_PTB6_PTB6, -1 },
+    { IOMUXC_PTB7_PTB7, -1 },
+    { IOMUXC_PTB8_PTB8, -1 },
+    { IOMUXC_PTB9_PTB9, -1 },
+    { IOMUXC_PTB10_PTB10, -1 },
+    { IOMUXC_PTB11_PTB11, -1 },
+    { IOMUXC_PTB12_PTB12, -1 },
+    { IOMUXC_PTB13_PTB13, -1 },
+    { IOMUXC_PTB14_PTB14, -1 },
+    { IOMUXC_PTB15_PTB15, -1 },
     { 0 }, /* no PTB after 15 */
     { 0 },
     { 0 },
@@ -680,30 +680,30 @@ static uint32_t pinFuncId[][PIN_FUNC_ID_SIZE] = {
     { 0 },
     { 0 },
     { 0 },
-    { IOMUXC_PTC0_PTC0 },
-    { IOMUXC_PTC1_PTC1 },
-    { IOMUXC_PTC2_PTC2 },
-    { IOMUXC_PTC3_PTC3 },
-    { IOMUXC_PTC4_PTC4 },
-    { IOMUXC_PTC5_PTC5 },
-    { IOMUXC_PTC6_PTC6 },
-    { IOMUXC_PTC7_PTC7 },
-    { IOMUXC_PTC8_PTC8 },
-    { IOMUXC_PTC9_PTC9 },
-    { IOMUXC_PTC10_PTC10 },
-    { IOMUXC_PTC11_PTC11 },
-    { IOMUXC_PTC12_PTC12 },
-    { IOMUXC_PTC13_PTC13 },
-    { IOMUXC_PTC14_PTC14 },
-    { IOMUXC_PTC15_PTC15 },
-    { IOMUXC_PTC16_PTC16 },
-    { IOMUXC_PTC17_PTC17 },
-    { IOMUXC_PTC18_PTC18 },
-    { IOMUXC_PTC19_PTC19 },
-    { IOMUXC_PTC20_PTC20 },
-    { IOMUXC_PTC21_PTC21 },
-    { IOMUXC_PTC22_PTC22 },
-    { IOMUXC_PTC23_PTC23 },
+    { IOMUXC_PTC0_PTC0, -1 },
+    { IOMUXC_PTC1_PTC1, -1 },
+    { IOMUXC_PTC2_PTC2, -1 },
+    { IOMUXC_PTC3_PTC3, -1 },
+    { IOMUXC_PTC4_PTC4, -1 },
+    { IOMUXC_PTC5_PTC5, -1 },
+    { IOMUXC_PTC6_PTC6, -1 },
+    { IOMUXC_PTC7_PTC7, -1 },
+    { IOMUXC_PTC8_PTC8, -1 },
+    { IOMUXC_PTC9_PTC9, -1 },
+    { IOMUXC_PTC10_PTC10, -1 },
+    { IOMUXC_PTC11_PTC11, -1 },
+    { IOMUXC_PTC12_PTC12, -1 },
+    { IOMUXC_PTC13_PTC13, -1 },
+    { IOMUXC_PTC14_PTC14, -1 },
+    { IOMUXC_PTC15_PTC15, -1 },
+    { IOMUXC_PTC16_PTC16, -1 },
+    { IOMUXC_PTC17_PTC17, -1 },
+    { IOMUXC_PTC18_PTC18, -1 },
+    { IOMUXC_PTC19_PTC19, -1 },
+    { IOMUXC_PTC20_PTC20, -1 },
+    { IOMUXC_PTC21_PTC21, -1 },
+    { IOMUXC_PTC22_PTC22, -1 },
+    { IOMUXC_PTC23_PTC23, -1 },
     { 0 }, /* no PTC24 */
 };
 
@@ -711,7 +711,7 @@ static uint32_t pinFuncId[][PIN_FUNC_ID_SIZE] = {
  * @brief Set pad control register
  * @param asInput    use gpio as input, unless use as output
  */
-static void APP_IO_SetPinConfig(uint16_t ioId, uint32_t pinctrl)
+static void APP_IO_SetPinConfig(uint16_t ioId, uint32_t defaultPinctrl)
 {
     int index = APP_IO_GetIndex(ioId);
 
@@ -724,35 +724,58 @@ static void APP_IO_SetPinConfig(uint16_t ioId, uint32_t pinctrl)
     IOMUXC_SetPinMux(pinFuncId[index][0], pinFuncId[index][1], pinFuncId[index][2], pinFuncId[index][3],
                      pinFuncId[index][4], 0U);
     IOMUXC_SetPinConfig(pinFuncId[index][0], pinFuncId[index][1], pinFuncId[index][2], pinFuncId[index][3],
-                        pinFuncId[index][4], pinctrl);
+                        pinFuncId[index][4], pinFuncId[index][5] == -1 ? defaultPinctrl : pinFuncId[index][5]);
 }
 
-static srtm_status_t APP_IO_SetOutput(uint16_t ioId, srtm_io_value_t ioValue)
+static bool APP_IO_PinIsGPIO(uint16_t ioId)
 {
-    uint8_t gpioIdx = APP_GPIO_IDX(ioId);
-    uint8_t pinIdx  = APP_PIN_IDX(ioId);
+    int index = APP_IO_GetIndex(ioId);
+    assert(index < APP_IO_NUM);
 
-    assert(gpioIdx < 3U); /* We only support GPIOA, GPIOB and GPIOC */
-    assert(pinIdx < 32U);
+    /* in imx8ulp, pinmux for GPIO is always function 1 */
+    return pinFuncId[index][1] == 1;
+}
 
-    RGPIO_PinWrite(gpios[gpioIdx], pinIdx, (uint8_t)ioValue);
+static srtm_status_t APP_IO_PinctrlSet(srtm_service_t service, srtm_peercore_t core, uint16_t ioId, uint32_t pinctrl[6])
+{
+    int index = APP_IO_GetIndex(ioId);
+    assert(index < APP_IO_NUM);
+
+    if (pinFuncId[index][5] != -1)
+    {
+        PRINTF("pinctrl %x was already set\r\n", ioId);
+        return SRTM_Status_Error;
+    }
+    if (pinFuncId[index][0] != pinctrl[0])
+    {
+        PRINTF("pinctrl %x first value %x did not match expected %x\r\n", ioId, pinctrl[0], pinFuncId[index][0]);
+        return SRTM_Status_Error;
+    }
+
+    /* remember pinctrl and apply it */
+    memcpy(pinFuncId[index], pinctrl, sizeof(pinFuncId[0]));
+    APP_IO_SetPinConfig(ioId, 0);
 
     return SRTM_Status_Success;
 }
 
 static srtm_status_t APP_IO_OutputInit(srtm_service_t service, srtm_peercore_t core, uint16_t ioId,
-                                       srtm_io_value_t ioValue, uint32_t pinctrl)
+                                       srtm_io_value_t ioValue)
 {
     uint8_t gpioIdx = APP_GPIO_IDX(ioId);
     uint8_t pinIdx  = APP_PIN_IDX(ioId);
 
     assert(gpioIdx < 3U);
     assert(pinIdx < 32U);
+    assert(index < APP_IO_NUM);
 
-    /* safe value if unset */
-    if (pinctrl == IO_PINCTRL_UNSET)
-        pinctrl = IOMUXC_PCR_OBE_MASK;
-    APP_IO_SetPinConfig(ioId, pinctrl);
+    if (!APP_IO_PinIsGPIO(ioId))
+    {
+        PRINTF("Refusing to configure non-GPIO pin %x as output (val %d)\r\n", ioId, ioValue);
+        return SRTM_Status_Error;
+    }
+
+    APP_IO_SetPinConfig(ioId, IOMUXC_PCR_OBE_MASK);
 
     rgpio_pin_config_t config = {
         .outputLogic  = ioValue,
@@ -774,6 +797,12 @@ static srtm_status_t APP_IO_InputGet(srtm_service_t service, srtm_peercore_t cor
     assert(pinIdx < 32U);
     assert(pIoValue);
 
+    if (!APP_IO_PinIsGPIO(ioId))
+    {
+        PRINTF("Refusing to get non-GPIO pin %x value\r\n", ioId);
+        return SRTM_Status_Error;
+    }
+
     *pIoValue = RGPIO_PinRead(gpios[gpioIdx], pinIdx) ? SRTM_IoValueHigh : SRTM_IoValueLow;
 
     return SRTM_Status_Success;
@@ -782,37 +811,55 @@ static srtm_status_t APP_IO_InputGet(srtm_service_t service, srtm_peercore_t cor
 static srtm_status_t APP_IO_OutputSet(srtm_service_t service, srtm_peercore_t core, uint16_t ioId,
                                       srtm_io_value_t ioValue)
 {
-    return APP_IO_SetOutput(ioId, ioValue);
-}
-
-static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, bool wakeup, uint32_t pinctrl)
-{
-    uint16_t ioId   = APP_IO_GetId(inputIdx);
     uint8_t gpioIdx = APP_GPIO_IDX(ioId);
     uint8_t pinIdx  = APP_PIN_IDX(ioId);
-    uint8_t wuuIdx  = APP_IO_GetWUUPin(gpioIdx, pinIdx);
+
+    assert(index < APP_IO_NUM);
+    assert(gpioIdx < 3U); /* We only support GPIOA, GPIOB and GPIOC */
+    assert(pinIdx < 32U);
+
+    if (!APP_IO_PinIsGPIO(ioId))
+    {
+        PRINTF("Refusing to set non-GPIO pin %x (val %d)\r\n", ioId, ioValue);
+        return SRTM_Status_Error;
+    }
+
+    RGPIO_PinWrite(gpios[gpioIdx], pinIdx, (uint8_t)ioValue);
+
+    return SRTM_Status_Success;
+}
+
+static srtm_status_t APP_IO_ConfInput(uint16_t ioId, srtm_io_event_t event, bool wakeup)
+{
+    uint8_t gpioIdx  = APP_GPIO_IDX(ioId);
+    uint8_t pinIdx   = APP_PIN_IDX(ioId);
+    uint8_t wuuIdx   = APP_IO_GetWUUPin(gpioIdx, pinIdx);
+    uint8_t inputIdx = APP_IO_GetIndex(ioId);
 
     wuu_external_wakeup_pin_config_t config;
 
     assert(gpioIdx < APP_IO_CHIPS); /* Only support GPIOA, GPIOB and GPIOC */
     assert(pinIdx < APP_IO_PINS_PER_CHIP);
+    assert(inputIdx < APP_IO_NUM);
     if (wakeup && wuuIdx == 255)
     {
         PRINTF("Wakeup requested on %x which has no wakeup\r\n", ioId);
+        return SRTM_Status_Error;
+    }
+    if (!APP_IO_PinIsGPIO(ioId))
+    {
+        PRINTF("Refusing to configure non-GPIO pin %x as input\r\n", ioId);
         return SRTM_Status_Error;
     }
     config.event = kWUU_ExternalPinInterrupt;
     /* To correctly determine the WUU0->PF wakeup source, do not specify kWUU_ExternalPinActiveAlways. */
     config.mode = kWUU_ExternalPinActiveDSPD;
 
-    /* safe value if unset */
-    if (pinctrl == IO_PINCTRL_UNSET)
-        pinctrl = IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK;
-
     if (wakeup)
         PRINTF("Wakeup requested on %d/%d, mode %d\r\n", gpioIdx, pinIdx, event);
+    suspendContext.io.data[inputIdx].wakeup = wakeup;
 
-    APP_IO_SetPinConfig(ioId, pinctrl);
+    APP_IO_SetPinConfig(ioId, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
     /* set direction as input */
     rgpio_pin_config_t gpio_config = {
         .pinDirection = kRGPIO_DigitalInput,
@@ -879,15 +926,9 @@ static srtm_status_t APP_IO_ConfInput(uint8_t inputIdx, srtm_io_event_t event, b
 }
 
 static srtm_status_t APP_IO_InputInit(srtm_service_t service, srtm_peercore_t core, uint16_t ioId,
-                                      srtm_io_event_t event, bool wakeup, uint32_t pinctrl)
+                                      srtm_io_event_t event, bool wakeup)
 {
-    uint8_t inputIdx = APP_IO_GetIndex(ioId);
-
-    assert(inputIdx < APP_IO_NUM);
-
-    suspendContext.io.data[inputIdx].wakeup = wakeup;
-
-    return APP_IO_ConfInput(inputIdx, event, wakeup, pinctrl);
+    return APP_IO_ConfInput(ioId, event, wakeup);
 }
 
 void EWM_IRQHandler(void)
@@ -1384,8 +1425,8 @@ static void APP_SRTM_InitIoKeyService(void)
     EnableIRQ(GPIOC_INT0_IRQn);
     EnableIRQ(GPIOC_INT1_IRQn);
 
-    ioService =
-        SRTM_IoService_Create(APP_IO_NUM, APP_IO_InputInit, APP_IO_OutputInit, APP_IO_InputGet, APP_IO_OutputSet);
+    ioService = SRTM_IoService_Create(APP_IO_NUM, APP_IO_InputInit, APP_IO_OutputInit, APP_IO_InputGet,
+                                      APP_IO_OutputSet, APP_IO_PinctrlSet);
     SRTM_Dispatcher_RegisterService(disp, ioService);
 }
 
@@ -1922,8 +1963,7 @@ void APP_SRTM_Suspend(void)
 
     if (s_rs485LpuartWakeupSource)
     {
-        APP_IO_ConfInput(APP_IO_GetIndex(APP_PIN_PTA15), SRTM_IoEventFallingEdge, s_rs485LpuartWakeupSource,
-                         IO_PINCTRL_UNSET);
+        APP_IO_ConfInput(APP_PIN_PTA15, SRTM_IoEventFallingEdge, s_rs485LpuartWakeupSource);
         /* This runs after APP_Suspend() that does this for other IOs,
          * so set pinmux to wuu manually and restore is handled by
          * APP_Resume() */
