@@ -212,6 +212,7 @@ bool s_rs485LpuartWakeupSource;
 static TaskHandle_t s_rs485LpuartRxTask;
 static lpuart_rtos_handle_t s_rs485LpuartRtosHandle;
 static lpuart_handle_t s_rs485LpuartHandle;
+static tcflag_t s_rs485Tcflag;
 
 static uint8_t s_rs485BackgroundBuffer[4096];
 static lpuart_rtos_config_t s_rs485LpuartConfig = {
@@ -1076,6 +1077,9 @@ static int tty_setcflag(tcflag_t cflag)
     /* set stop bits */
     LPUART_SetStopBit(RS485_LPUART, stopbits);
 
+    /* remember for resume */
+    s_rs485Tcflag = cflag;
+
     return 0;
 }
 
@@ -1094,6 +1098,10 @@ static void APP_SRTM_InitTtyDevice(void)
     LPUART_RTOS_Init(&s_rs485LpuartRtosHandle, &s_rs485LpuartHandle, &s_rs485LpuartConfig);
     LPUART_RTOS_SetRxTimeout(&s_rs485LpuartRtosHandle, 1, 0); /* short timeout to give data back asap */
     LPUART_RTOS_SetTxTimeout(&s_rs485LpuartRtosHandle, 0, 0); /* XXX no timeout, depends on baud rate */
+
+    /* restore any flag we might have remembered before suspend */
+    if (s_rs485Tcflag)
+        tty_setcflag(s_rs485Tcflag);
 }
 
 static void APP_SRTM_InitTtyService(void)
