@@ -85,7 +85,6 @@ static lpm_rtd_power_mode_e suspendPowerMode;
 static app_wakeup_source_t suspendWakeupSource;
 static const char *s_modeNames[] = { "ACTIVE", "WAIT", "STOP", "Sleep", "Deep Sleep", "Power Down", "Deep Power Down" };
 extern lpm_ad_power_mode_e AD_CurrentMode;
-extern bool s_rs485LpuartWakeupSource;
 extern bool support_dsl_for_apd;
 extern bool option_v_boot_flag;
 extern lpm_rtd_power_mode_e s_curMode;
@@ -220,15 +219,6 @@ static bool IsWuuPinMuxGPIO(uint8_t wuuPin)
 
     /* All PTx function values ​​are 0x01. */
     if ((iomuxBackup[backupIndex] & IOMUXC_PCR_MUX_MODE_MASK) == IOMUXC_PCR_MUX_MODE(0x1))
-        return true;
-
-    return false;
-}
-
-static inline bool IsWuuPinMuxRS485UartRX(uint8_t wuuPin)
-{
-    /* WUU0_P12(PTA15) is LPUART0_RX */
-    if (wuuPin == 12)
         return true;
 
     return false;
@@ -877,11 +867,9 @@ static void HandleSuspendTask(void *pvParameters)
                     if (IsWuuPinMuxGPIO(i) && IsWuuPinGPIOIrqcInterruptEdge(i))
                     {
                         APP_SRTM_EmulateGPIOHandler(i);
-                        wakeup = true;
                     }
 
-                    if (IsWuuPinMuxRS485UartRX(i) & s_rs485LpuartWakeupSource)
-                        wakeup = true;
+                    wakeup = true;
                 }
             }
 
