@@ -70,6 +70,7 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../app_srtm.c"
 "${ProjDirPath}/../app_srtm.h"
 "${ProjDirPath}/../app_srtm_internal.h"
+"${ProjDirPath}/../app_adc.c"
 "${ProjDirPath}/../app_uboot.h"
 "${ProjDirPath}/../app_tty.c"
 "${ProjDirPath}/../app_tty.h"
