@@ -172,7 +172,6 @@ void HardFault_Handler(void)
 /*******************************************************************************
  * Function Code
  ******************************************************************************/
-#define SKIP_JTAG_PINS (0)
 extern lpm_ad_power_mode_e AD_CurrentMode;
 extern pca9460_buck3ctrl_t buck3_ctrl;
 extern pca9460_ldo1_cfg_t ldo1_cfg;
@@ -291,10 +290,10 @@ static void APP_Suspend(void)
         GPIOA->ICR[i] = 0; /* Disable interrupts */
 
         /*
-         * Skip PTA20 ~ 23(JTAG pins)[define SKIP_JTAG_PINS as 1] if want to debug code with JTAG before entering power
-         * down/deep sleep mode
+         * Skip PTA20 ~ 23(JTAG pins)[define DEBUG_SUSPEND_SKIP_JTAG_PINS as 1] if want to debug code with JTAG before
+         * entering power down/deep sleep mode
          */
-#if SKIP_JTAG_PINS
+#if DEBUG_SUSPEND_SKIP_JTAG_PINS
         if (i < 20 || i > 23)
 #endif
         {
@@ -362,7 +361,7 @@ static void APP_Resume(bool resume)
     GPIOA->PDDR = gpioOutputBackup[0].pddr;
     for (i = 0; i <= 24; i++)
     {
-#if SKIP_JTAG_PINS
+#if DEBUG_SUSPEND_SKIP_JTAG_PINS
         if (i < 20 || i > 23)
 #endif
         {
@@ -408,10 +407,10 @@ void APP_DisableGPIO(void)
         GPIOA->ICR[i] = 0; /* Disable interrupts */
 
         /*
-         * Skip PTA20 ~ 23(JTAG pins)[define SKIP_JTAG_PINS as 1] if want to debug code with JTAG before entering deep
-         * power down mode
+         * Skip PTA20 ~ 23(JTAG pins)[define DEBUG_SUSPEND_SKIP_JTAG_PINS as 1] if want to debug code with JTAG before
+         * entering deep power down mode
          */
-#if SKIP_JTAG_PINS
+#if DEBUG_SUSPEND_SKIP_JTAG_PINS
         if (i < 20 || i > 23)
 #endif
         {
@@ -444,6 +443,9 @@ void APP_DisableGPIO(void)
 
 void APP_PowerPreSwitchHook(lpm_rtd_power_mode_e targetMode)
 {
+#ifdef DEBUG_SUSPEND
+    PRINTF("%s\r\n", __func__);
+#endif
     if ((LPM_PowerModeActive != targetMode))
     {
         PRINTF("Preparing for %s\r\n", s_modeNames[targetMode]);
@@ -476,6 +478,9 @@ void APP_PowerPreSwitchHook(lpm_rtd_power_mode_e targetMode)
 
 void APP_PowerPostSwitchHook(lpm_rtd_power_mode_e targetMode, bool result)
 {
+#ifdef DEBUG_SUSPEND
+    PRINTF("%s\r\n", __func__);
+#endif
     if (LPM_PowerModeActive != targetMode)
     {
         /* init clock first as apps use it indirectly */

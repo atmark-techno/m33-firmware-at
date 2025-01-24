@@ -1779,23 +1779,35 @@ void APP_SRTM_StartCommunication(void)
 
 void APP_SRTM_SuspendTask(void)
 {
+#ifdef DEBUG_SUSPEND
+    PRINTF("%s\r\n", __func__);
+#endif
     APP_TTY_SuspendTask();
     APP_SRTM_WdogSuspend();
 }
 
 void APP_SRTM_ResumeTask(void)
 {
+#ifdef DEBUG_SUSPEND
+    PRINTF("%s\r\n", __func__);
+#endif
     APP_SRTM_WdogResume();
     APP_TTY_ResumeTask();
 }
 
 void APP_SRTM_Suspend(void)
 {
+#ifdef DEBUG_SUSPEND
+    PRINTF("%s\r\n", __func__);
+#endif
     APP_TTY_Suspend();
 }
 
 void APP_SRTM_Resume(bool resume)
 {
+#ifdef DEBUG_SUSPEND
+    PRINTF("%s\r\n", __func__);
+#endif
     APP_SRTM_InitI2CDevice();
     /*
      * IO has restored in APP_Resume(), so don't need init io again in here.

@@ -17,6 +17,10 @@
 #include "srtm_message.h"
 #include "srtm_message_struct.h"
 
+/* uncomment to debug this service */
+//#undef SRTM_DEBUG_VERBOSE_LEVEL
+//#define SRTM_DEBUG_VERBOSE_LEVEL SRTM_DEBUG_VERBOSE_DEBUG
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/

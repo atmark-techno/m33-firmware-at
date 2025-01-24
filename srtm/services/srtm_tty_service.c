@@ -25,6 +25,10 @@
 
 #include "fsl_common.h"
 
+/* uncomment to debug this service */
+//#undef SRTM_DEBUG_VERBOSE_LEVEL
+//#define SRTM_DEBUG_VERBOSE_LEVEL SRTM_DEBUG_VERBOSE_DEBUG
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/

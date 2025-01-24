@@ -7,8 +7,22 @@
 
 #ifndef _POWER_MODE_SWITCH_H_
 #define _POWER_MODE_SWITCH_H_
+
 #include "app_srtm.h"
 #include "lpm.h"
+
+/****************
+ * debug toggles
+ ****************/
+
+/* some basic function tracing when entering sleep */
+// #define DEBUG_SUSPEND 1
+
+/* do not reset jtag pinmux on suspend */
+// #define DEBUG_SUSPEND_SKIP_JTAG_PINS 1
+
+/* Also see SRTM_DEBUG_VERBOSE_LEVEL in srtm_config.h and each srtm/services .c file */
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
