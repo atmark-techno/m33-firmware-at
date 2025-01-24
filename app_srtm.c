@@ -831,14 +831,27 @@ static srtm_status_t APP_IO_OutputSet(srtm_service_t service, srtm_peercore_t co
     return SRTM_Status_Success;
 }
 
+void APP_IO_SetupWUU(uint8_t wuuIdx, wuu_external_pin_edge_detection_t wuuEdge)
+{
+    if (wuuIdx == 255)
+        return;
+
+    wuu_external_wakeup_pin_config_t config = {
+        .event = kWUU_ExternalPinInterrupt,
+        /* To correctly determine the WUU0->PF wakeup source, do not specify kWUU_ExternalPinActiveAlways. */
+        .mode = kWUU_ExternalPinActiveDSPD,
+        .edge = wuuEdge,
+    };
+    WUU_SetExternalWakeUpPinsConfig(WUU0, wuuIdx, &config);
+}
+
 static srtm_status_t APP_IO_ConfInput(uint16_t ioId, srtm_io_event_t event, bool wakeup)
 {
-    uint8_t gpioIdx  = APP_GPIO_IDX(ioId);
-    uint8_t pinIdx   = APP_PIN_IDX(ioId);
-    uint8_t wuuIdx   = APP_IO_GetWUUPin(gpioIdx, pinIdx);
-    uint8_t inputIdx = APP_IO_GetIndex(ioId);
-
-    wuu_external_wakeup_pin_config_t config;
+    uint8_t gpioIdx                           = APP_GPIO_IDX(ioId);
+    uint8_t pinIdx                            = APP_PIN_IDX(ioId);
+    uint8_t wuuIdx                            = APP_IO_GetWUUPin(gpioIdx, pinIdx);
+    uint8_t inputIdx                          = APP_IO_GetIndex(ioId);
+    wuu_external_pin_edge_detection_t wuuEdge = kWUU_ExternalPinDisable;
 
     assert(gpioIdx < APP_IO_CHIPS); /* Only support GPIOA, GPIOB and GPIOC */
     assert(pinIdx < APP_IO_PINS_PER_CHIP);
@@ -853,10 +866,6 @@ static srtm_status_t APP_IO_ConfInput(uint16_t ioId, srtm_io_event_t event, bool
         PRINTF("Refusing to configure non-GPIO pin %x as input\r\n", ioId);
         return SRTM_Status_Error;
     }
-    config.event = kWUU_ExternalPinInterrupt;
-    /* To correctly determine the WUU0->PF wakeup source, do not specify kWUU_ExternalPinActiveAlways. */
-    config.mode = kWUU_ExternalPinActiveDSPD;
-
     if (wakeup)
         PRINTF("Wakeup requested on %d/%d, mode %d\r\n", gpioIdx, pinIdx, event);
     suspendContext.io.data[inputIdx].wakeup = wakeup;
@@ -872,45 +881,25 @@ static srtm_status_t APP_IO_ConfInput(uint16_t ioId, srtm_io_event_t event, bool
     {
         case SRTM_IoEventRisingEdge:
             RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptRisingEdge);
-            if (wakeup)
-            {
-                config.edge = kWUU_ExternalPinRisingEdge;
-                WUU_SetExternalWakeUpPinsConfig(WUU0, wuuIdx, &config);
-            }
+            wuuEdge = kWUU_ExternalPinRisingEdge;
             break;
         case SRTM_IoEventFallingEdge:
             RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptFallingEdge);
-            if (wakeup)
-            {
-                config.edge = kWUU_ExternalPinFallingEdge;
-                WUU_SetExternalWakeUpPinsConfig(WUU0, wuuIdx, &config);
-            }
+            wuuEdge = kWUU_ExternalPinFallingEdge;
             break;
         case SRTM_IoEventEitherEdge:
             RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptEitherEdge);
-            if (wakeup)
-            {
-                config.edge = kWUU_ExternalPinAnyEdge;
-                WUU_SetExternalWakeUpPinsConfig(WUU0, wuuIdx, &config);
-            }
+            wuuEdge = kWUU_ExternalPinAnyEdge;
             break;
         case SRTM_IoEventLowLevel:
             RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptLogicZero);
-            if (wakeup)
-            {
-                /* WUU cannot do level, wake on falling edge */
-                config.edge = kWUU_ExternalPinFallingEdge;
-                WUU_SetExternalWakeUpPinsConfig(WUU0, wuuIdx, &config);
-            }
+            /* WUU cannot do level, wake on falling edge */
+            wuuEdge = kWUU_ExternalPinFallingEdge;
             break;
         case SRTM_IoEventHighLevel:
             RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptLogicOne);
-            if (wakeup)
-            {
-                /* WUU cannot do level, wake on rising edge */
-                config.edge = kWUU_ExternalPinRisingEdge;
-                WUU_SetExternalWakeUpPinsConfig(WUU0, wuuIdx, &config);
-            }
+            /* WUU cannot do level, wake on rising edge */
+            wuuEdge = kWUU_ExternalPinRisingEdge;
             break;
         case SRTM_IoEventDisable:
             RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptOrDMADisabled);
@@ -918,11 +907,10 @@ static srtm_status_t APP_IO_ConfInput(uint16_t ioId, srtm_io_event_t event, bool
         default:
             break;
     }
-    if (!wakeup && wuuIdx != 255)
-    {
-        config.edge = kWUU_ExternalPinDisable;
-        WUU_SetExternalWakeUpPinsConfig(WUU0, wuuIdx, &config);
-    }
+
+    if (!wakeup)
+        wuuEdge = kWUU_ExternalPinDisable;
+    APP_IO_SetupWUU(wuuIdx, wuuEdge);
 
     return SRTM_Status_Success;
 }
