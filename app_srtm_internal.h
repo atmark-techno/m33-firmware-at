@@ -12,5 +12,5 @@
 extern srtm_dispatcher_t disp;
 
 /* app_adc.c */
-void APP_ADC_Resume(void);
 void APP_ADC_InitService(void);
+void APP_ADC_Resume(void);

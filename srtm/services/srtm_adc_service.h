@@ -32,21 +32,28 @@
 
 struct adc_handle
 {
-    uint32_t chan;
+    ADC_Type *base;
+    uint8_t chan;
     lpadc_sample_channel_mode_t side;
     lpadc_sample_scale_mode_t scale;
     lpadc_hardware_average_mode_t average;
-    uint32_t cmdid;
-    uint32_t pinmux[5];
 };
 
 typedef struct _srtm_adc_adapter *srtm_adc_adapter_t;
 
+SRTM_PACKED_BEGIN struct srtm_adc_init_payload
+{
+    uint8_t adc_index;
+    uint8_t adc_chan;
+    uint8_t adc_side;
+    uint8_t adc_scale;
+    uint8_t adc_average;
+} SRTM_PACKED_END;
+
 struct _srtm_adc_adapter
 {
-    srtm_status_t (*get)(struct adc_handle *handle, size_t idx, uint16_t *value);
-    struct adc_handle *handles;
-    size_t handles_count;
+    srtm_status_t (*get)(uint8_t idx, uint16_t *value);
+    srtm_status_t (*init)(uint8_t idx, struct srtm_adc_init_payload *init);
 };
 
 /**
@@ -56,8 +63,16 @@ SRTM_PACKED_BEGIN struct _srtm_adc_payload
 {
     uint8_t requestID;
     uint8_t idx;
-    uint8_t retCode; /* used in response packet */
-    uint16_t value;
+    SRTM_PACKED_BEGIN union
+    {
+        /* get has no argument other than idx */
+        struct srtm_adc_init_payload init;
+        SRTM_PACKED_BEGIN struct
+        {
+            uint8_t retCode;
+            uint16_t value;
+        } SRTM_PACKED_END response;
+    } SRTM_PACKED_END;
 } SRTM_PACKED_END;
 
 /*******************************************************************************

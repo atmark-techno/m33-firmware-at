@@ -5,59 +5,168 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include "app_srtm_internal.h"
-#include "srtm_adc_service.h"
-
 #include "fsl_iomuxc.h"
 #include "fsl_reset.h"
 #include "fsl_lpadc.h"
 
+#include "app_srtm_internal.h"
+#include "srtm_adc_service.h"
+
+#include "build_bug.h"
+
 #define ADC_MAX_PORTS 4
+#define ADC_MAX 2
 
-static srtm_status_t APP_ADC_Get(struct adc_handle *handle, size_t idx, uint16_t *value);
+/* forward declarations to use in adcAdapter */
+static srtm_status_t adc_get(uint8_t idx, uint16_t *value);
+static srtm_status_t adc_init(uint8_t idx, struct srtm_adc_init_payload *init);
 
+/* global state */
+static struct adc_handle *adcHandles[ADC_MAX_PORTS];
+static bool adcInit[ADC_MAX];
 static srtm_service_t adcService;
-static struct adc_handle adcHandles[] = {
-    {
-        .chan    = 5,
-        .side    = kLPADC_SampleChannelSingleEndSideB,
-        .scale   = kLPADC_SamplePartScale,
-        .average = kLPADC_HardwareAverageCount4,
-        .cmdid   = 1,
-        .pinmux  = { IOMUXC_PTA24_ADC1_CH5B },
-    },
-};
 static struct _srtm_adc_adapter adcAdapter = {
-    .get           = APP_ADC_Get,
-    .handles       = adcHandles,
-    .handles_count = sizeof(adcHandles) / sizeof(*adcHandles),
+    .get  = adc_get,
+    .init = adc_init,
 };
 
 /**********************************************************
  * SRTM callbacks
  *********************************************************/
 
-static srtm_status_t APP_ADC_Get(struct adc_handle *handle, size_t idx, uint16_t *value)
+static srtm_status_t adc_get(uint8_t idx, uint16_t *value)
 {
     lpadc_conv_result_t resultConfig;
 
     if (idx > ARRAY_SIZE(adcHandles))
     {
-        PRINTF("APP_ADC_Get called with idx %d > %d\r\n", idx, ARRAY_SIZE(adcHandles));
+        PRINTF("adc_get called with idx %d > %d\r\n", idx, ARRAY_SIZE(adcHandles));
+        return kStatus_Fail;
+    }
+    struct adc_handle *handle = adcHandles[idx];
+    if (!handle)
+    {
+        PRINTF("adc_get called with non-init'd adc %d\r\n", idx);
         return kStatus_Fail;
     }
 
-    /* reset pinmux everytime to avoid surprises: if someone used the pin as gpio or
-     * something in between this could get an invalid value */
-    IOMUXC_SetPinMux(handle[idx].pinmux[0], handle[idx].pinmux[1], handle[idx].pinmux[2], handle[idx].pinmux[3],
-                     handle[idx].pinmux[4], 0);
-    IOMUXC_SetPinConfig(handle[idx].pinmux[0], handle[idx].pinmux[1], handle[idx].pinmux[2], handle[idx].pinmux[3],
-                        handle[idx].pinmux[4], 0);
-
-    LPADC_DoSoftwareTrigger(ADC1, 1 << idx);
-    LPADC_GetConvResultBlocking(ADC1, &resultConfig);
+    LPADC_DoSoftwareTrigger(handle->base, 1 << idx);
+    LPADC_GetConvResultBlocking(handle->base, &resultConfig);
     *value = resultConfig.convValue >> 3U;
 
+    return kStatus_Success;
+}
+
+int adc_init_device(struct adc_handle *handle, uint8_t idx)
+{
+    int adcIdx;
+
+    switch ((uint32_t)handle->base)
+    {
+        case ADC0_BASE:
+            adcIdx = 0;
+            if (!adcInit[adcIdx])
+            {
+                CLOCK_SetIpSrc(kCLOCK_Adc0, kCLOCK_Pcc0BusIpSrcCm33Bus);
+                RESET_PeripheralReset(kRESET_Adc0);
+            }
+            break;
+        case ADC1_BASE:
+            adcIdx = 1;
+            if (!adcInit[adcIdx])
+            {
+                CLOCK_SetIpSrc(kCLOCK_Adc1, kCLOCK_Pcc1BusIpSrcCm33Bus);
+                RESET_PeripheralReset(kRESET_Adc1);
+            }
+            break;
+        default:
+            return kStatus_InvalidArgument;
+    }
+
+    /* only init ADC once per ADC */
+    if (!adcInit[adcIdx])
+    {
+        lpadc_config_t config;
+        LPADC_GetDefaultConfig(&config);
+        config.enableAnalogPreliminary = true;
+        LPADC_Init(handle->base, &config);
+        adcInit[adcIdx] = true;
+    }
+
+    lpadc_conv_command_config_t commandConfig;
+    LPADC_GetDefaultConvCommandConfig(&commandConfig);
+    commandConfig.channelNumber       = handle->chan;
+    commandConfig.sampleChannelMode   = handle->side;
+    commandConfig.sampleScaleMode     = handle->scale;
+    commandConfig.hardwareAverageMode = handle->average;
+    LPADC_SetConvCommandConfig(handle->base, idx + 1, &commandConfig);
+
+    lpadc_conv_trigger_config_t triggerConfig;
+    LPADC_GetDefaultConvTriggerConfig(&triggerConfig);
+    triggerConfig.targetCommandId       = idx + 1;
+    triggerConfig.enableHardwareTrigger = false;
+    LPADC_SetConvTriggerConfig(handle->base, idx, &triggerConfig);
+
+    return 0;
+}
+
+srtm_status_t adc_init(uint8_t idx, struct srtm_adc_init_payload *init)
+{
+    /* We use index as command id / trigger id; this will need rework if we use more than 4:
+     * - for command id, 1-15 are usable
+     * - for trigger id, 0-3 are usable
+     * - (note this is per ADC so a first improvement would be to count per ADC, then
+     *   we'd need to disable/re-enable triggers as appropriate...)
+     */
+    BUILD_BUG_ON(ADC_MAX_PORTS > 4);
+
+    if (idx >= ADC_MAX_PORTS)
+    {
+        PRINTF("adc %d: index %d too big\r\n", idx, idx);
+        return kStatus_Fail;
+    }
+    if (adcHandles[idx])
+    {
+        PRINTF("adc %d: index %d already setup\r\n", idx, idx);
+        return kStatus_Fail;
+    }
+
+    ADC_Type *adc_base;
+    switch (init->adc_index)
+    {
+        case 0:
+            adc_base = ADC0;
+            break;
+        case 1:
+            adc_base = ADC1;
+            break;
+        default:
+            BUILD_BUG_ON(ADC_MAX != 2);
+            PRINTF("adc %d: adc_index %d unsupported\r\n", idx, init->adc_index);
+            return kStatus_Fail;
+    }
+
+    PRINTF("ADC %d init: ADC %x, chan %d, side %d, scale %d, average %d\r\n", idx, init->adc_index, init->adc_chan,
+           init->adc_side, init->adc_scale, init->adc_average);
+
+    struct adc_handle *handle = pvPortMalloc(sizeof(handle));
+    if (!handle)
+        return kStatus_Fail;
+
+    handle->base    = adc_base;
+    handle->chan    = init->adc_chan;
+    handle->side    = init->adc_side;
+    handle->scale   = init->adc_scale;
+    handle->average = init->adc_average;
+
+    int rc = adc_init_device(handle, idx);
+    if (rc)
+    {
+        vPortFree(handle);
+        return rc;
+    }
+
+    adcHandles[idx] = handle;
     return kStatus_Success;
 }
 
@@ -77,28 +186,14 @@ void APP_ADC_Resume(void)
 {
     size_t i;
 
-    CLOCK_SetIpSrc(kCLOCK_Adc1, kCLOCK_Pcc1BusIpSrcCm33Bus);
-    RESET_PeripheralReset(kRESET_Adc1);
+    /* reset and re-init */
+    memset(&adcInit, 0, sizeof(adcInit));
 
-    lpadc_config_t config;
-    LPADC_GetDefaultConfig(&config);
-    config.enableAnalogPreliminary = true;
-    LPADC_Init(ADC1, &config);
-
-    for (i = 0; i < adcAdapter.handles_count; i++)
+    for (i = 0; i < ADC_MAX_PORTS; i++)
     {
-        lpadc_conv_command_config_t commandConfig;
-        LPADC_GetDefaultConvCommandConfig(&commandConfig);
-        commandConfig.channelNumber       = adcAdapter.handles[i].chan;
-        commandConfig.sampleChannelMode   = adcAdapter.handles[i].side;
-        commandConfig.sampleScaleMode     = adcAdapter.handles[i].scale;
-        commandConfig.hardwareAverageMode = adcAdapter.handles[i].average;
-        LPADC_SetConvCommandConfig(ADC1, adcAdapter.handles[i].cmdid, &commandConfig);
+        if (!adcHandles[i])
+            continue;
 
-        lpadc_conv_trigger_config_t triggerConfig;
-        LPADC_GetDefaultConvTriggerConfig(&triggerConfig);
-        triggerConfig.targetCommandId       = adcAdapter.handles[i].cmdid;
-        triggerConfig.enableHardwareTrigger = false;
-        LPADC_SetConvTriggerConfig(ADC1, i, &triggerConfig);
+        adc_init_device(adcHandles[i], i);
     }
 }

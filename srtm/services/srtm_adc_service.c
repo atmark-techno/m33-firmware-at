@@ -26,13 +26,14 @@
 /* Protocol definition */
 #define SRTM_ADC_CATEGORY (0x0bU)
 
-#define SRTM_ADC_VERSION (0x0100U)
+#define SRTM_ADC_VERSION (0x0200U)
 
 #define SRTM_ADC_RETURN_CODE_SUCCESS (0x0U)
 #define SRTM_ADC_RETURN_CODE_FAIL (0x1U)
 #define SRTM_ADC_RETURN_CODE_UNSUPPORTED (0x2U)
 
 #define SRTM_ADC_CMD_GET (0x0U)
+#define SRTM_ADC_CMD_INIT (0x1U)
 
 /* Service handle */
 typedef struct _srtm_adc_service
@@ -80,45 +81,66 @@ static srtm_status_t SRTM_AdcService_Request(srtm_service_t service, srtm_reques
     memset(adcResp, 0, sizeof(*adcResp));
 
     status = SRTM_Service_CheckVersion(service, request, SRTM_ADC_VERSION);
-    if ((status != SRTM_Status_Success) || (adcReq == NULL) || (payloadLen != sizeof(struct _srtm_adc_payload)))
+    if ((status != SRTM_Status_Success) || (adcReq == NULL) ||
+        (payloadLen < offsetof(struct _srtm_adc_payload, response.retCode)))
     {
         SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s format error %d / %d / %d / %d!\r\n", __func__, status,
                            adcReq == NULL, payloadLen, sizeof(struct _srtm_adc_payload));
-        adcResp->retCode = SRTM_ADC_RETURN_CODE_UNSUPPORTED;
+        adcResp->response.retCode = SRTM_ADC_RETURN_CODE_UNSUPPORTED;
         goto out;
     }
-    if (adcReq->idx >= adapter->handles_count)
-    {
-        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "ADC cmd 0x%x idx out of range (0x%x / 0x%x)\r\n", command,
-                           adcReq->idx, adapter->handles_count);
-        adcResp->retCode = SRTM_ADC_RETURN_CODE_FAIL;
-        goto out;
-    }
-    SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "SRTM receive ADC request: cmd = 0x%x, idx = 0x%x\r\n", command,
-                       adcReq->idx);
     adcResp->requestID = adcReq->requestID;
+    adcResp->idx       = adcReq->idx;
     switch (command)
     {
         case SRTM_ADC_CMD_GET:
             if (!adapter->get)
                 goto unsupported;
 
-            status = adapter->get(&adapter->handles[adcReq->idx], adcReq->idx, &value);
+            SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_DEBUG, "ADC %d get\r\n", adcReq->idx);
+            status = adapter->get(adcReq->idx, &value);
             SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_DEBUG, "Got ADC value %d\r\n", value);
             if (status == SRTM_Status_Success)
             {
-                adcResp->value   = value;
-                adcResp->retCode = SRTM_ADC_RETURN_CODE_SUCCESS;
+                memcpy(&adcResp->response.value, &value, sizeof(value));
+                adcResp->response.retCode = SRTM_ADC_RETURN_CODE_SUCCESS;
             }
             else
             {
-                adcResp->retCode = SRTM_ADC_RETURN_CODE_FAIL;
+                adcResp->response.retCode = SRTM_ADC_RETURN_CODE_FAIL;
+            }
+            break;
+        case SRTM_ADC_CMD_INIT:
+            if (!adapter->init)
+                goto unsupported;
+
+            if (payloadLen < offsetof(struct _srtm_adc_payload, init) + sizeof(adcResp->init))
+            {
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "ADC %d size too small %d\r\n", adcReq->idx, payloadLen);
+                adcResp->response.retCode = SRTM_ADC_RETURN_CODE_FAIL;
+                goto out;
+            }
+            {
+                struct srtm_adc_init_payload init;
+                memcpy(&init, &adcReq->init, sizeof(init));
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_DEBUG, "ADC %d init\r\n", adcReq->idx);
+                status = adapter->init(adcReq->idx, &init);
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_DEBUG, "ADC %d init status: %d\r\n", adcReq->idx, status);
+            }
+            if (status == SRTM_Status_Success)
+            {
+                adcResp->response.value   = value;
+                adcResp->response.retCode = SRTM_ADC_RETURN_CODE_SUCCESS;
+            }
+            else
+            {
+                adcResp->response.retCode = SRTM_ADC_RETURN_CODE_FAIL;
             }
             break;
         default:
         unsupported:
             SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: command %d unsupported\r\n", __func__, command);
-            adcResp->retCode = SRTM_ADC_RETURN_CODE_UNSUPPORTED;
+            adcResp->response.retCode = SRTM_ADC_RETURN_CODE_UNSUPPORTED;
             break;
     }
 
