@@ -14,3 +14,7 @@ extern srtm_dispatcher_t disp;
 /* app_adc.c */
 void APP_ADC_InitService(void);
 void APP_ADC_Resume(void);
+
+/* app_i2c.c */
+void APP_I2C_InitService(void);
+void APP_I2C_Resume(void);

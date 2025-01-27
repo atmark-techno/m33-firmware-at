@@ -8,7 +8,6 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "timers.h"
-#include "fsl_lpi2c_freertos.h"
 #include "power_mode_switch.h"
 
 #include "srtm_dispatcher.h"
@@ -17,7 +16,6 @@
 #include "srtm_pwm_service.h"
 #include "srtm_message.h"
 #include "srtm_rpmsg_endpoint.h"
-#include "srtm_i2c_service.h"
 
 #include "srtm_io_service.h"
 #include "srtm_lfcl_service.h"
@@ -41,7 +39,6 @@
 #include "rsc_table.h"
 #include "fsl_bbnsm.h"
 #include "fsl_sentinel.h"
-#include "fsl_flexio_i2c_master.h"
 #include "fsl_reset.h"
 #include "fsl_ewm.h"
 
@@ -87,15 +84,6 @@ typedef struct
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
-
-static srtm_status_t APP_SRTM_I2C_Read(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
-                                       uint16_t slaveAddr, uint8_t *buf, uint16_t len, uint16_t flags);
-
-static srtm_status_t APP_SRTM_I2C_Write(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
-                                        uint16_t slaveAddr, uint8_t *buf, uint16_t len, uint16_t flags);
-
-static srtm_status_t APP_SRTM_I2C_SwitchChannel(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
-                                                uint16_t slaveAddr, srtm_i2c_switch_channel channel);
 
 static srtm_status_t APP_IO_InputInit(srtm_service_t service, srtm_peercore_t core, uint16_t ioId,
                                       srtm_io_event_t event, bool wakeup);
@@ -183,7 +171,6 @@ static srtm_peercore_t core;
 static srtm_service_t pwmService;
 static srtm_service_t rtcService;
 static srtm_rtc_adapter_t rtcAdapter;
-static srtm_service_t i2cService;
 static srtm_service_t ioService;
 static srtm_service_t wdogService;
 static SemaphoreHandle_t monSig;
@@ -213,62 +200,6 @@ lpm_ad_power_mode_e AD_WillEnterMode = AD_UNKOWN;
 /* pwmHandles must strictly follow TPM instances. If you don't provide service for some TPM instance,
  * set the corresponding handle to NULL. */
 static hal_pwm_handle_t pwmHandles[2] = { (hal_pwm_handle_t)pwmHandle0, NULL };
-
-// uses maximum I2C speed from fastmode, 400k
-#define FLEXIO_I2C_FREQ 400000
-#define FLEXIO_CLOCK_FREQUENCY CLOCK_GetIpFreq(kCLOCK_Flexio0)
-FLEXIO_I2C_Type flexioI2cDev = {
-    .flexioBase = FLEXIO0,
-    .SCLPinIndex = 20, // PTB4
-    .SDAPinIndex = 21, // PTB5
-    .shifterIndex = { 0, 1, },
-    .timerIndex = { 0, 1, 2, },
-};
-flexio_i2c_master_handle_t flexio_i2c_handle;
-volatile bool i2c_completionFlag = false;
-volatile bool i2c_nakFlag        = false;
-
-static void flexio_i2c_master_Callback(FLEXIO_I2C_Type *base, flexio_i2c_master_handle_t *handle, status_t status,
-                                       void *userData)
-{
-    if (status == kStatus_Success)
-    {
-        i2c_completionFlag = true;
-    }
-
-    if (status == kStatus_FLEXIO_I2C_Nak)
-    {
-        i2c_nakFlag = true;
-    }
-}
-
-static struct _i2c_bus platform_i2c_buses[] = {
-    { .bus_id         = 0,
-      .base_addr      = LPI2C0_BASE,
-      .type           = SRTM_I2C_TYPE_LPI2C,
-      .switch_idx     = I2C_SWITCH_NONE,
-      .switch_channel = SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED },
-    { .bus_id         = 1,
-      .base_addr      = LPI2C1_BASE,
-      .type           = SRTM_I2C_TYPE_LPI2C,
-      .switch_idx     = I2C_SWITCH_NONE,
-      .switch_channel = SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED },
-    // LPI2C2 as flexio
-    { .bus_id         = 2,
-      .base_addr      = (uint32_t)&flexioI2cDev,
-      .type           = SRTM_I2C_TYPE_FLEXIO_I2C,
-      .switch_idx     = I2C_SWITCH_NONE,
-      .switch_channel = SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED },
-};
-
-static struct _srtm_i2c_adapter i2c_adapter = { .read          = APP_SRTM_I2C_Read,
-                                                .write         = APP_SRTM_I2C_Write,
-                                                .switchchannel = APP_SRTM_I2C_SwitchChannel,
-                                                .bus_structure = {
-                                                    .buses      = platform_i2c_buses,
-                                                    .bus_num    = sizeof(platform_i2c_buses) / sizeof(struct _i2c_bus),
-                                                    .switch_num = 0,
-                                                } };
 
 static RGPIO_Type *const gpios[] = RGPIO_BASE_PTRS;
 #define IO_PINCTRL_UNSET 0xffffffffU
@@ -1151,35 +1082,6 @@ static void APP_SRTM_InitPwmService(void)
     SRTM_Dispatcher_RegisterService(disp, pwmService);
 }
 
-static void APP_SRTM_InitI2CDevice(void)
-{
-    lpi2c_master_config_t masterConfig;
-
-    LPI2C_MasterGetDefaultConfig(&masterConfig);
-    masterConfig.baudRate_Hz = LPI2C0_BAUDRATE;
-    LPI2C_MasterInit(LPI2C0, &masterConfig, I2C_SOURCE_CLOCK_FREQ_LPI2C0);
-    masterConfig.baudRate_Hz = LPI2C1_BAUDRATE;
-    LPI2C_MasterInit(LPI2C1, &masterConfig, I2C_SOURCE_CLOCK_FREQ_LPI2C1);
-
-    // flexio i2c
-    flexio_i2c_master_config_t flexConfig;
-
-    CLOCK_SetIpSrcDiv(kCLOCK_Flexio0, kCLOCK_Pcc0BusIpSrcCm33Bus, 0U, 0U);
-    RESET_PeripheralReset(kRESET_Flexio0);
-
-    FLEXIO_I2C_MasterGetDefaultConfig(&flexConfig);
-    flexConfig.baudRate_Bps = FLEXIO_I2C_FREQ;
-    FLEXIO_I2C_MasterInit(&flexioI2cDev, &flexConfig, FLEXIO_CLOCK_FREQUENCY);
-    FLEXIO_I2C_MasterTransferCreateHandle(&flexioI2cDev, &flexio_i2c_handle, flexio_i2c_master_Callback, NULL);
-}
-
-static void APP_SRTM_InitI2CService(void)
-{
-    APP_SRTM_InitI2CDevice();
-    i2cService = SRTM_I2CService_Create(&i2c_adapter);
-    SRTM_Dispatcher_RegisterService(disp, i2cService);
-}
-
 static void APP_SRTM_InitIoKeyService(void)
 {
     /* Enable interrupt for GPIO. */
@@ -1475,7 +1377,7 @@ static void APP_SRTM_InitLfclService(void)
 
 static void APP_SRTM_InitServices(void)
 {
-    APP_SRTM_InitI2CService();
+    APP_I2C_InitService();
     APP_SRTM_InitIoKeyService();
     APP_SRTM_InitPwmService();
     APP_ADC_InitService();
@@ -1749,7 +1651,7 @@ void APP_SRTM_Resume(bool resume)
 #ifdef DEBUG_SUSPEND
     PRINTF("%s\r\n", __func__);
 #endif
-    APP_SRTM_InitI2CDevice();
+    APP_I2C_Resume();
     /*
      * IO has restored in APP_Resume(), so don't need init io again in here.
      */
@@ -1763,96 +1665,6 @@ void APP_SRTM_SetRpmsgMonitor(app_rpmsg_monitor_t monitor, void *param)
 {
     rpmsgMonitor      = monitor;
     rpmsgMonitorParam = param;
-}
-
-static srtm_status_t APP_SRTM_I2C_SwitchChannel(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
-                                                uint16_t slaveAddr, srtm_i2c_switch_channel channel)
-{
-    uint8_t txBuff[1];
-    assert(channel < SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED);
-    txBuff[0] = 1 << (uint8_t)channel;
-    return adapter->write(adapter, base_addr, type, slaveAddr, txBuff, sizeof(txBuff),
-                          SRTM_I2C_FLAG_NEED_STOP); // APP_SRTM_I2C_Write
-}
-
-static srtm_status_t APP_SRTM_I2C_Write(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
-                                        uint16_t slaveAddr, uint8_t *buf, uint16_t len, uint16_t flags)
-{
-    status_t retVal = kStatus_Fail;
-    uint32_t needStop;
-
-    switch (type)
-    {
-        case SRTM_I2C_TYPE_LPI2C:
-            needStop = (flags & SRTM_I2C_FLAG_NEED_STOP) ? kLPI2C_TransferDefaultFlag : kLPI2C_TransferNoStopFlag;
-            retVal   = BOARD_LPI2C_Send((LPI2C_Type *)base_addr, slaveAddr, 0, 0, buf, len, needStop);
-            break;
-        case SRTM_I2C_TYPE_FLEXIO_I2C:
-        {
-            // flexio_i2c has no NoStop flag... print error if used?
-            flexio_i2c_master_transfer_t xfer = {
-                .direction    = kFLEXIO_I2C_Write,
-                .slaveAddress = slaveAddr,
-                // subaddress, subAddressSize, flags = 0,
-                .data     = buf,
-                .dataSize = len,
-            };
-
-            retVal = FLEXIO_I2C_MasterTransferNonBlocking((FLEXIO_I2C_Type *)base_addr, &flexio_i2c_handle, &xfer);
-            while ((!i2c_nakFlag) && (!i2c_completionFlag))
-            {
-            }
-            if (i2c_nakFlag)
-                retVal = kStatus_FLEXIO_I2C_Nak;
-
-            i2c_nakFlag        = false;
-            i2c_completionFlag = false;
-        }
-        break;
-        default:
-            break;
-    }
-    return (retVal == kStatus_Success) ? SRTM_Status_Success : SRTM_Status_TransferFailed;
-}
-
-static srtm_status_t APP_SRTM_I2C_Read(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
-                                       uint16_t slaveAddr, uint8_t *buf, uint16_t len, uint16_t flags)
-{
-    status_t retVal = kStatus_Fail;
-    uint32_t needStop;
-
-    switch (type)
-    {
-        case SRTM_I2C_TYPE_LPI2C:
-            needStop = (flags & SRTM_I2C_FLAG_NEED_STOP) ? kLPI2C_TransferDefaultFlag : kLPI2C_TransferNoStopFlag;
-            retVal   = BOARD_LPI2C_Receive((LPI2C_Type *)base_addr, slaveAddr, 0, 0, buf, len, needStop);
-            break;
-        case SRTM_I2C_TYPE_FLEXIO_I2C:
-        {
-            // flexio_i2c has no NoStop flag... print error if used?
-            flexio_i2c_master_transfer_t xfer = {
-                .direction    = kFLEXIO_I2C_Read,
-                .slaveAddress = slaveAddr,
-                // subaddress, subAddressSize, flags = 0,
-                .data     = buf,
-                .dataSize = len,
-            };
-
-            retVal = FLEXIO_I2C_MasterTransferNonBlocking((FLEXIO_I2C_Type *)base_addr, &flexio_i2c_handle, &xfer);
-            while ((!i2c_nakFlag) && (!i2c_completionFlag))
-            {
-            }
-            if (i2c_nakFlag)
-                retVal = kStatus_FLEXIO_I2C_Nak;
-
-            i2c_nakFlag        = false;
-            i2c_completionFlag = false;
-        }
-        break;
-        default:
-            break;
-    }
-    return (retVal == kStatus_Success) ? SRTM_Status_Success : SRTM_Status_TransferFailed;
 }
 
 void APP_SRTM_HandlePeerReboot(void)
