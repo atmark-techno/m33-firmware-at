@@ -83,18 +83,6 @@ typedef enum
 
 #define PEER_CORE_ID (1U)
 
-/* WUU module index */
-#define WUU_MODULE_LPTMR0 (0U)
-#define WUU_MODULE_LPTMR1 (1U)
-#define WUU_MODULE_CMP0 (2U)
-#define WUU_MODULE_CMP1 (3U)
-#define WUU_MODULE_UPOWER (4U)
-#define WUU_MODULE_TAMPER (5U)
-#define WUU_MODULE_NSRTC (6U)
-#define WUU_MODULE_SRTC (7U)
-/* WUU wakeup event for internal module lptimer1  */
-#define LPTMR1_WUU_WAKEUP_EVENT (kWUU_InternalModuleInterrupt)
-
 /* GPIO */
 #define APP_IO_PINS_PER_CHIP 25U
 #define APP_IO_CHIPS 3U /* Only support GPIOA, GPIOB and GPIOC */
@@ -197,11 +185,6 @@ void APP_SRTM_SetIRQHandler(app_irq_handler_t handler, void *param);
  * event[8]: LLWU wakeup enable
  */
 void APP_SRTM_SetWakeupPin(uint16_t ioId, uint16_t event);
-
-/* Setup Internal modules' event as the wake up soures */
-void APP_SRTM_SetWakeupModule(uint32_t module, uint16_t event);
-/* Clear Internal modules' event */
-void APP_SRTM_ClrWakeupModule(uint32_t module, uint16_t event);
 
 void APP_SRTM_SuspendTask(void);
 void APP_SRTM_ResumeTask(void);

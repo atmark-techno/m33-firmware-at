@@ -755,7 +755,7 @@ static void APP_SetWakeupConfig(lpm_rtd_power_mode_e targetMode)
         if (kAPP_WakeupSourceLptmr == s_wakeupSource)
         {
             /* Set WUU LPTMR1 module wakeup source. */
-            APP_SRTM_SetWakeupModule(WUU_MODULE_LPTMR1, LPTMR1_WUU_WAKEUP_EVENT);
+            WUU_SetInternalWakeUpModulesConfig(WUU0, WUU_MODULE_LPTMR1, LPTMR1_WUU_WAKEUP_EVENT);
             PCC1->PCC_LPTMR1 &= ~PCC1_PCC_LPTMR1_SSADO_MASK;
             PCC1->PCC_LPTMR1 |= PCC1_PCC_LPTMR1_SSADO(1);
         }
@@ -766,7 +766,7 @@ static void APP_ClearWakeupConfig(lpm_rtd_power_mode_e targetMode)
 {
     if ((LPM_PowerModePowerDown == targetMode) || (LPM_PowerModeDeepPowerDown == targetMode))
     {
-        APP_SRTM_ClrWakeupModule(WUU_MODULE_LPTMR1, LPTMR1_WUU_WAKEUP_EVENT);
+        WUU_ClearInternalWakeUpModulesConfig(WUU0, WUU_MODULE_LPTMR1, LPTMR1_WUU_WAKEUP_EVENT);
     }
 }
 
@@ -908,7 +908,7 @@ void PowerModeSwitchTask(void *pvParameters)
     status_t st;
 
     /* Add Systick as Power Down wakeup source, depending on SYSTICK_WUU_WAKEUP_EVENT value. */
-    APP_SRTM_SetWakeupModule(WUU_MODULE_SYSTICK, SYSTICK_WUU_WAKEUP_EVENT);
+    WUU_SetInternalWakeUpModulesConfig(WUU0, WUU_MODULE_SYSTICK, SYSTICK_WUU_WAKEUP_EVENT);
     NVIC_SetPriority(WUU0_IRQn, APP_WUU_IRQ_PRIO);
 
     /* Setup LPTMR. */

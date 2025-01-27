@@ -67,6 +67,19 @@ typedef struct
     allow_combi_e allow_combi; /* Allow Combination */
 } mode_combi_t;
 
+/* WUU module index. Should be a soc define... */
+#define WUU_MODULE_LPTMR0 (0U)
+#define WUU_MODULE_LPTMR1 (1U)
+#define WUU_MODULE_CMP0 (2U)
+#define WUU_MODULE_CMP1 (3U)
+#define WUU_MODULE_UPOWER (4U)
+#define WUU_MODULE_TAMPER (5U)
+#define WUU_MODULE_NSRTC (6U)
+#define WUU_MODULE_SRTC (7U)
+
+/* WUU wakeup event for internal module lptimer1  */
+#define LPTMR1_WUU_WAKEUP_EVENT (kWUU_InternalModuleInterrupt)
+
 /*******************************************************************************
  * API
  ******************************************************************************/
