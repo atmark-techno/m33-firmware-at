@@ -19,8 +19,6 @@
 #define LPI2C1_BAUDRATE (100000)
 #define I2C_SOURCE_CLOCK_FREQ_LPI2C1 CLOCK_GetIpFreq(kCLOCK_Lpi2c1)
 
-#define I2C_SWITCH_NONE 1
-
 static srtm_status_t i2c_read(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type, uint16_t slaveAddr,
                               uint8_t *buf, uint16_t len, uint16_t flags);
 
@@ -63,31 +61,30 @@ static void flexio_i2c_master_Callback(FLEXIO_I2C_Type *base, flexio_i2c_master_
 /* end of flexio i2c */
 
 static struct _i2c_bus platform_i2c_buses[] = {
-    { .bus_id         = 0,
-      .base_addr      = LPI2C0_BASE,
-      .type           = SRTM_I2C_TYPE_LPI2C,
-      .switch_idx     = I2C_SWITCH_NONE,
-      .switch_channel = SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED },
-    { .bus_id         = 1,
-      .base_addr      = LPI2C1_BASE,
-      .type           = SRTM_I2C_TYPE_LPI2C,
-      .switch_idx     = I2C_SWITCH_NONE,
-      .switch_channel = SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED },
+    {
+        .bus_id    = 0,
+        .base_addr = LPI2C0_BASE,
+        .type      = SRTM_I2C_TYPE_LPI2C,
+    },
+    {
+        .bus_id    = 1,
+        .base_addr = LPI2C1_BASE,
+        .type      = SRTM_I2C_TYPE_LPI2C,
+    },
     // LPI2C2 as flexio
-    { .bus_id         = 2,
-      .base_addr      = (uint32_t)&flexioI2cDev,
-      .type           = SRTM_I2C_TYPE_FLEXIO_I2C,
-      .switch_idx     = I2C_SWITCH_NONE,
-      .switch_channel = SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED },
+    {
+        .bus_id    = 2,
+        .base_addr = (uint32_t)&flexioI2cDev,
+        .type      = SRTM_I2C_TYPE_FLEXIO_I2C,
+    },
 };
 
 static struct _srtm_i2c_adapter i2c_adapter = { .read          = i2c_read,
                                                 .write         = i2c_write,
                                                 .switchchannel = i2c_switchChannel,
                                                 .bus_structure = {
-                                                    .buses      = platform_i2c_buses,
-                                                    .bus_num    = sizeof(platform_i2c_buses) / sizeof(struct _i2c_bus),
-                                                    .switch_num = 0,
+                                                    .buses   = platform_i2c_buses,
+                                                    .bus_num = sizeof(platform_i2c_buses) / sizeof(struct _i2c_bus),
                                                 } };
 
 /**********************************************************
@@ -174,11 +171,8 @@ static srtm_status_t i2c_write(srtm_i2c_adapter_t adapter, uint32_t base_addr, s
 static srtm_status_t i2c_switchChannel(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
                                        uint16_t slaveAddr, srtm_i2c_switch_channel channel)
 {
-    uint8_t txBuff[1];
-    assert(channel < SRTM_I2C_SWITCH_CHANNEL_UNSPECIFIED);
-    txBuff[0] = 1 << (uint8_t)channel;
-    return adapter->write(adapter, base_addr, type, slaveAddr, txBuff, sizeof(txBuff),
-                          SRTM_I2C_FLAG_NEED_STOP); // i2c_Write
+    PRINTF("I2C switchchannel should never be called\r\n");
+    return SRTM_Status_Error; // error is ignored...
 }
 
 static void i2c_init_device(void)
