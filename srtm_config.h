@@ -12,7 +12,7 @@
 #ifdef SDK_OS_FREE_RTOS
 #include "FreeRTOS.h"
 #include "rpmsg_config.h"
-#include "printf.h"
+#include "fsl_debug_console.h"
 
 #ifdef __cplusplus
 extern "C" {

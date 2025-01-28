@@ -84,7 +84,7 @@ static srtm_status_t SRTM_AdcService_Request(srtm_service_t service, srtm_reques
     if ((status != SRTM_Status_Success) || (adcReq == NULL) ||
         (payloadLen < offsetof(struct _srtm_adc_payload, response.retCode)))
     {
-        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s format error %d / %d / %d / %d!\r\n", __func__, status,
+        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s format error %d / %d / %" PRIu32 " / %d!\r\n", __func__, status,
                            adcReq == NULL, payloadLen, sizeof(struct _srtm_adc_payload));
         adcResp->response.retCode = SRTM_ADC_RETURN_CODE_UNSUPPORTED;
         goto out;
@@ -116,7 +116,8 @@ static srtm_status_t SRTM_AdcService_Request(srtm_service_t service, srtm_reques
 
             if (payloadLen < offsetof(struct _srtm_adc_payload, init) + sizeof(adcResp->init))
             {
-                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "ADC %d size too small %d\r\n", adcReq->idx, payloadLen);
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "ADC %d size too small %" PRIu32 "\r\n", adcReq->idx,
+                                   payloadLen);
                 adcResp->response.retCode = SRTM_ADC_RETURN_CODE_FAIL;
                 goto out;
             }

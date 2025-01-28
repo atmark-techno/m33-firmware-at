@@ -6,9 +6,6 @@ IF(NOT DEFINED SPECS)
     SET(SPECS "--specs=nano.specs --specs=nosys.specs")
 ENDIF()
 
-# too many printf format errors including in nxp libs..
-SET(DEBUG_CONSOLE_CONFIG "-Wno-format")
-
 SET(CMAKE_ASM_FLAGS_DEBUG " \
     ${CMAKE_ASM_FLAGS_DEBUG} \
     -DNDEBUG \
@@ -56,7 +53,6 @@ SET(CMAKE_C_FLAGS_DEBUG " \
     -mapcs \
     -std=gnu99 \
     ${FPU} \
-    ${DEBUG_CONSOLE_CONFIG} \
 ")
 SET(CMAKE_C_FLAGS_RELEASE " \
     ${CMAKE_C_FLAGS_RELEASE} \
@@ -84,7 +80,6 @@ SET(CMAKE_C_FLAGS_RELEASE " \
     -mapcs \
     -std=gnu99 \
     ${FPU} \
-    ${DEBUG_CONSOLE_CONFIG} \
 ")
 SET(CMAKE_CXX_FLAGS_DEBUG " \
     ${CMAKE_CXX_FLAGS_DEBUG} \
@@ -107,7 +102,6 @@ SET(CMAKE_CXX_FLAGS_DEBUG " \
     -fno-rtti \
     -fno-exceptions \
     ${FPU} \
-    ${DEBUG_CONSOLE_CONFIG} \
 ")
 SET(CMAKE_CXX_FLAGS_RELEASE " \
     ${CMAKE_CXX_FLAGS_RELEASE} \
@@ -129,7 +123,6 @@ SET(CMAKE_CXX_FLAGS_RELEASE " \
     -fno-rtti \
     -fno-exceptions \
     ${FPU} \
-    ${DEBUG_CONSOLE_CONFIG} \
 ")
 SET(CMAKE_EXE_LINKER_FLAGS_DEBUG " \
     ${CMAKE_EXE_LINKER_FLAGS_DEBUG} \

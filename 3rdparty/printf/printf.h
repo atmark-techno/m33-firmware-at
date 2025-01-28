@@ -49,6 +49,16 @@ extern "C" {
 #else
 # include <stdarg.h>
 # include <stddef.h>
+# include <inttypes.h>
+/* newlib's inttypes.h somehow doesn't define these despite having int64.. */
+#ifndef PRIu64
+#define PRId64 __PRI64(d)
+#define PRIi64 __PRI64(i)
+#define PRIo64 __PRI64(o)
+#define PRIu64 __PRI64(u)
+#define PRIx64 __PRI64(x)
+#define PRIX64 __PRI64(X)
+#endif
 #endif
 
 #ifdef __GNUC__

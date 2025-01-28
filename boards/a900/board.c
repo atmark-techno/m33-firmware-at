@@ -11,7 +11,7 @@
 #include "task.h"
 #endif
 #include "fsl_common.h"
-#include "printf.h"
+#include "fsl_debug_console.h"
 #include "board.h"
 #if defined(SDK_I2C_BASED_COMPONENT_USED) && SDK_I2C_BASED_COMPONENT_USED
 #include "fsl_lpi2c.h"

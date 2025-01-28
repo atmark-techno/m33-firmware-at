@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "printf.h"
 #include "app_srtm_internal.h"
 #include "app_tty.h"
 
@@ -107,7 +108,7 @@ static int APP_TTY_init(uint8_t port_idx, struct srtm_tty_init_payload *init)
 
     if (init->port_type > _TTY_TYPE_COUNT || !tty_hooks[init->port_type])
     {
-        PRINTF("tty port %d type %d either type too high or not defined\r\n", port_idx, init->port_type);
+        PRINTF("tty port %d type %" PRIu32 " either type too high or not defined\r\n", port_idx, init->port_type);
         return kStatus_Fail;
     }
 

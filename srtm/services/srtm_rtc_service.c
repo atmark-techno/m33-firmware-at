@@ -110,7 +110,7 @@ static srtm_status_t SRTM_RtcService_Request(srtm_service_t service, srtm_reques
     status = SRTM_Service_CheckVersion(service, request, SRTM_RTC_VERSION);
     if ((status != SRTM_Status_Success) || (rtcReq == NULL) || (payloadLen != sizeof(struct _srtm_rtc_payload)))
     {
-        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s format error %d!\r\n", __func__, payloadLen);
+        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s format error %" PRIu32 "!\r\n", __func__, payloadLen);
         rtcResp->retCode = SRTM_RTC_RETURN_CODE_UNSUPPORTED;
     }
     else
