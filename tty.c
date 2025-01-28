@@ -7,7 +7,7 @@
  */
 
 #include "fsl_common.h"
-#include "fsl_debug_console.h"
+#include "printf.h"
 #include "termbits.h"
 #include "tty.h"
 

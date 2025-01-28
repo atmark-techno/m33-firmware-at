@@ -6,9 +6,8 @@ IF(NOT DEFINED SPECS)
     SET(SPECS "--specs=nano.specs --specs=nosys.specs")
 ENDIF()
 
-IF(NOT DEFINED DEBUG_CONSOLE_CONFIG)
-    SET(DEBUG_CONSOLE_CONFIG "-DSDK_DEBUGCONSOLE=1")
-ENDIF()
+# too many printf format errors including in nxp libs..
+SET(DEBUG_CONSOLE_CONFIG "-Wno-format")
 
 SET(CMAKE_ASM_FLAGS_DEBUG " \
     ${CMAKE_ASM_FLAGS_DEBUG} \

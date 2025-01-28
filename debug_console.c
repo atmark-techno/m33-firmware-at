@@ -1,0 +1,102 @@
+/*
+ * Copyright 2025 Atmark Techno
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+#include "FreeRTOS.h"
+#include "task.h"
+
+#include "fsl_lpuart.h"
+#include "fsl_reset.h"
+#include "lpuart.h"
+
+#include "debug_console.h"
+#include "printf.h"
+#include "build_bug.h"
+
+/* we will stop using this soon so copy from board.h */
+#define DBG_UART LPUART1
+#define DBG_UART_BAUDRATE 115200
+#define DBG_UART_CLK kCLOCK_Lpuart1
+#define DBG_UART_IDX 1
+#define DBG_UART_CLKSRC kCLOCK_Pcc1BusIpSrcSysOscDiv2
+#define DBG_UART_RESET kRESET_Lpuart1
+
+/* can't use immediately on boot */
+static bool consoleSuspended = true;
+
+/**********************************************************
+ * init/PM hooks
+ *********************************************************/
+
+void DebugConsole_Init(void)
+{
+    CLOCK_SetIpSrc(DBG_UART_CLK, DBG_UART_CLKSRC);
+    RESET_PeripheralReset(DBG_UART_RESET);
+    lpuart_config_t config;
+    LPUART_GetDefaultConfig(&config);
+    config.baudRate_Bps = DBG_UART_BAUDRATE;
+    config.enableTx     = true;
+    config.enableRx     = true;
+    LPUART_Init(DBG_UART, &config, CLOCK_GetLpuartClkFreq(DBG_UART_IDX));
+    consoleSuspended = false;
+}
+void DebugConsole_Suspend(void)
+{
+    consoleSuspended = true;
+}
+void DebugConsole_Resume(void)
+{
+    DebugConsole_Init();
+}
+
+/**********************************************************
+ * input
+ *********************************************************/
+
+char getchar(void)
+{
+    uint8_t ch;
+    status_t st;
+
+    do
+    {
+        while (consoleSuspended)
+            vTaskDelay(pdMS_TO_TICKS(1));
+
+        /* use 'times' variant to re-init transfer regularly,
+         * needed for when we deinit/reinit console in another task */
+        st = LPUART_ReadBlockingTimes(DBG_UART, &ch, 1, 100);
+    } while (st != kStatus_Success);
+
+    return (char)ch;
+}
+
+/**********************************************************
+ * output
+ *********************************************************/
+
+void putchar_(char c)
+{
+    uint8_t ch = c;
+    if (consoleSuspended)
+        return;
+
+    /* we will buffer in an intermediate buffer next */
+    LPUART_WriteBlocking(DBG_UART, &ch, 1);
+}
+
+/**********************************************************
+ * abort
+ *********************************************************/
+
+__attribute__((__noreturn__)) void _abort(const char *condstr, const char *func, const char *file, int line)
+{
+    /* we're already screwed so might as well ignore suspended state... */
+    consoleSuspended = false;
+    PRINTF("%s:%d: %s: Assert failure %s\r\n", file, line, func, condstr);
+    while (1)
+        ;
+}

@@ -18,7 +18,7 @@
 #include "fsl_sentinel.h"
 
 #include "lpm.h"
-#include "fsl_debug_console.h"
+#include "printf.h"
 #include "fsl_cache.h"
 #include "app_srtm.h"
 #include "fsl_flexspi.h"

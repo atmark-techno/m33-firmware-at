@@ -82,6 +82,11 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../termbits.h"
 "${ProjDirPath}/../tty.c"
 "${ProjDirPath}/../tty.h"
+"${ProjDirPath}/../debug_console.c"
+"${ProjDirPath}/../debug_console.h"
+"${ProjDirPath}/../3rdparty/printf/printf.c"
+"${ProjDirPath}/../3rdparty/printf/printf.h"
+"${ProjDirPath}/../3rdparty/printf/printf_config.h"
 "${ProjDirPath}/../srtm/channels/srtm_rpmsg_endpoint.h"
 "${ProjDirPath}/../srtm/channels/srtm_rpmsg_endpoint.c"
 "${ProjDirPath}/../srtm/services/srtm_i2c_service.h"
@@ -108,6 +113,7 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 
 target_include_directories(${MCUX_SDK_PROJECT_NAME} PRIVATE
     ${ProjDirPath}/..
+    ${ProjDirPath}/../3rdparty/printf
     ${SdkRootDirPath}/examples/evkmimx8ulp
     ${ProjDirPath}/../boards/a900
     ${ProjDirPath}/../srtm/channels

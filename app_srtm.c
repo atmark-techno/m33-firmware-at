@@ -31,7 +31,7 @@
 #include "pin_mux.h"
 #include "build_bug.h"
 #include "fsl_mu.h"
-#include "fsl_debug_console.h"
+#include "printf.h"
 #include "fsl_rgpio.h"
 #include "fsl_wuu.h"
 #include "fsl_upower.h"

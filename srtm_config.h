@@ -12,7 +12,7 @@
 #ifdef SDK_OS_FREE_RTOS
 #include "FreeRTOS.h"
 #include "rpmsg_config.h"
-#include "fsl_debug_console.h"
+#include "printf.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,7 +42,7 @@ typedef StaticSemaphore_t srtm_mutex_buf_t;
  * SRTM_DEBUG_VERBOSE_INFO
  * SRTM_DEBUG_VERBOSE_DEBUG
  */
-#define SRTM_DEBUG_MESSAGE_FUNC DbgConsole_Printf
+#define SRTM_DEBUG_MESSAGE_FUNC PRINTF
 #define SRTM_DEBUG_VERBOSE_LEVEL SRTM_DEBUG_VERBOSE_WARN
 
 #define SRTM_DEBUG_COMMUNICATION (0)

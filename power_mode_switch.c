@@ -17,7 +17,8 @@
 #include "fsl_lptmr.h"
 #include "fsl_upower.h"
 #include "fsl_mu.h"
-#include "fsl_debug_console.h"
+#include "printf.h"
+#include "debug_console.h"
 #include "build_bug.h"
 
 #include "pin_mux.h"
@@ -450,17 +451,7 @@ void APP_PowerPreSwitchHook(lpm_rtd_power_mode_e targetMode)
     {
         PRINTF("Preparing for %s\r\n", s_modeNames[targetMode]);
 
-        /* Wait for debug console output finished. */
-        while (!(kLPUART_TransmissionCompleteFlag & LPUART_GetStatusFlags((LPUART_Type *)BOARD_DEBUG_UART_BASEADDR)))
-        {
-        }
-        DbgConsole_Deinit();
-        /*
-         * Set pin for current leakage.
-         * Debug console RX pin: Set to pinmux to analog.
-         * Debug console TX pin: Set to pinmux to analog.
-         */
-        BOARD_DeinitConsolePins();
+        DebugConsole_Suspend();
 
         if (LPM_PowerModePowerDown == targetMode || LPM_PowerModeDeepSleep == targetMode)
         {
@@ -491,11 +482,7 @@ void APP_PowerPostSwitchHook(lpm_rtd_power_mode_e targetMode, bool result)
             APP_Resume(result);
         }
 
-        /* Reconfigure console pins after app resume as app remembered disabled pins
-         * TODO Ideally we should be able to make app suspend/resume skip these so we can
-         * get console back earlier */
-        BOARD_InitConsolePins();
-        BOARD_InitDebugConsole();
+        DebugConsole_Resume();
     }
     PRINTF("== Power switch %s ==\r\n", result ? "OK" : "FAIL");
     /* Reinitialize TRDC */
@@ -698,7 +685,7 @@ static uint32_t APP_GetWakeupTimeout(void)
 
         do
         {
-            c = GETCHAR();
+            c = getchar();
             if ((c >= '0') && (c <= '9'))
             {
                 PRINTF("%c", c);
@@ -905,7 +892,6 @@ void PowerModeSwitchTask(void *pvParameters)
     lpm_rtd_power_mode_e targetPowerMode;
     uint32_t freq = 0U;
     uint8_t ch;
-    status_t st;
 
     /* Add Systick as Power Down wakeup source, depending on SYSTICK_WUU_WAKEUP_EVENT value. */
     WUU_SetInternalWakeUpModulesConfig(WUU0, WUU_MODULE_SYSTICK, SYSTICK_WUU_WAKEUP_EVENT);
@@ -992,10 +978,8 @@ void PowerModeSwitchTask(void *pvParameters)
         /* Wait for user response */
         do
         {
-            /* use 'times' variant to re-init transfer regularly,
-             * needed for when we deinit/reinit console in another task */
-            st = LPUART_ReadBlockingTimes((LPUART_Type *)BOARD_DEBUG_UART_BASEADDR, &ch, 1, 100);
-        } while (st != kStatus_Success || ch == '\r' || ch == '\n');
+            ch = getchar();
+        } while (ch == '\r' || ch == '\n');
 
         if ((ch >= 'a') && (ch <= 'z'))
         {
@@ -1050,7 +1034,7 @@ void PowerModeSwitchTask(void *pvParameters)
         else if ('R' == ch)
         {
             PRINTF("confirm? y/N\r\n");
-            ch = GETCHAR();
+            ch = getchar();
             if ('y' == ch || 'Y' == ch)
             {
                 PRINTF("Cold reset\r\n");
@@ -1133,7 +1117,7 @@ int main(void)
     BOARD_ConfigMPU();
     BOARD_InitBootPins();
     BOARD_BootClockRUN();
-    BOARD_InitDebugConsole();
+    DebugConsole_Init();
 
     /* The default 1.0V settings in normal mode might go below 1.0,
      * so set them to 1.05V early on */

@@ -11,7 +11,7 @@
 #include "task.h"
 #endif
 #include "fsl_common.h"
-#include "fsl_debug_console.h"
+#include "printf.h"
 #include "board.h"
 #if defined(SDK_I2C_BASED_COMPONENT_USED) && SDK_I2C_BASED_COMPONENT_USED
 #include "fsl_lpi2c.h"
@@ -121,6 +121,7 @@ static uint32_t freq_specific_reg_array[PHY_DIFF_NUM] = { 90,  92,  93,  96,  97
  * Code
  ******************************************************************************/
 /* Initialize debug console. */
+#ifdef SDK_DEBUGCONSOLE
 void BOARD_InitDebugConsole(void)
 {
     uint32_t uartClkSrcFreq;
@@ -131,6 +132,9 @@ void BOARD_InitDebugConsole(void)
 
     DbgConsole_Init(BOARD_DEBUG_UART_INSTANCE, BOARD_DEBUG_UART_BAUDRATE, BOARD_DEBUG_UART_TYPE, uartClkSrcFreq);
 }
+#else
+void BOARD_InitDebugConsole(void) {}
+#endif
 
 /*
  * check fusion whether available
