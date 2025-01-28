@@ -1,0 +1,3 @@
+printf helpers copied from https://github.com/eyalroz/printf/
+
+Copied as of commit 2d75fef6c605e699d2643267cbaeaaa49b0a2635 (v6.2.0)
