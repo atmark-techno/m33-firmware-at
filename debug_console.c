@@ -13,8 +13,12 @@
 #include "lpuart.h"
 
 #include "debug_console.h"
+#include "app_tty_console.h"
 #include "printf.h"
 #include "build_bug.h"
+
+/* build time configuration -- priority over runtime settings if not empty */
+//#define DISABLE_RPMSG 1
 
 /* we will stop using this soon so copy from board.h */
 #define DBG_UART LPUART1
@@ -65,17 +69,21 @@ void DebugConsole_Resume(void)
 char getchar(void)
 {
     uint8_t ch;
-    status_t st;
 
-    do
+    while (true)
     {
         while (consoleSuspended)
             vTaskDelay(pdMS_TO_TICKS(1));
 
-        /* use 'times' variant to re-init transfer regularly,
-         * needed for when we deinit/reinit console in another task */
-        st = LPUART_ReadBlockingTimes(DBG_UART, &ch, 1, 100);
-    } while (st != kStatus_Success);
+#ifndef DISABLE_RPMSG
+        /* try all possible inputs */
+        if (APP_TTY_Console_Getchar(&ch) == 0)
+            break;
+#endif
+
+        if (LPUART_ReadBlockingTimes(DBG_UART, &ch, 1, 100) == kStatus_Success)
+            break;
+    }
 
     return (char)ch;
 }
@@ -83,6 +91,14 @@ char getchar(void)
 /**********************************************************
  * output
  *********************************************************/
+
+static void send_all(uint8_t *buf, int len)
+{
+    LPUART_WriteBlocking(DBG_UART, buf, len);
+#ifndef DISABLE_RPMSG
+    APP_TTY_Console_Write(buf, len);
+#endif
+}
 
 static void flush(void)
 {
@@ -93,10 +109,10 @@ static void flush(void)
     if (consoleBufferEnd < consoleBufferStart)
     {
         /* looped */
-        LPUART_WriteBlocking(DBG_UART, consoleBuffer + consoleBufferStart, CONSOLE_BUFLEN - consoleBufferStart);
+        send_all(consoleBuffer + consoleBufferStart, CONSOLE_BUFLEN - consoleBufferStart);
         consoleBufferStart = 0;
     }
-    LPUART_WriteBlocking(DBG_UART, consoleBuffer + consoleBufferStart, consoleBufferEnd - consoleBufferStart);
+    send_all(consoleBuffer + consoleBufferStart, consoleBufferEnd - consoleBufferStart);
     consoleBufferStart = consoleBufferEnd;
 }
 
@@ -128,9 +144,9 @@ void DebugConsole_Replay(void)
 {
     if (consoleBufferFull)
     {
-        LPUART_WriteBlocking(DBG_UART, consoleBuffer + consoleBufferEnd, CONSOLE_BUFLEN - consoleBufferEnd);
+        send_all(consoleBuffer + consoleBufferEnd, CONSOLE_BUFLEN - consoleBufferEnd);
     }
-    LPUART_WriteBlocking(DBG_UART, consoleBuffer, consoleBufferEnd);
+    send_all(consoleBuffer, consoleBufferEnd);
 }
 
 /**********************************************************

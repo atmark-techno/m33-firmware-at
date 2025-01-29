@@ -19,9 +19,11 @@ srtm_service_t ttyService;
  * but this is overkill so just list all valid types manually. */
 extern const struct tty_hooks tty_lpuart_hooks;
 extern const struct tty_hooks tty_custom_hooks;
+extern const struct tty_hooks tty_console_hooks;
 static struct tty_hooks const *tty_hooks[_TTY_TYPE_COUNT] = {
-    [TTY_TYPE_LPUART] = &tty_lpuart_hooks,
-    [TTY_TYPE_CUSTOM] = &tty_custom_hooks,
+    [TTY_TYPE_LPUART]      = &tty_lpuart_hooks,
+    [TTY_TYPE_CUSTOM]      = &tty_custom_hooks,
+    [TTY_TYPE_M33_CONSOLE] = &tty_console_hooks,
 };
 
 /* get settings or NULL, log error if caller name given */
