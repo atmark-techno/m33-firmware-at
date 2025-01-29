@@ -6,8 +6,12 @@
  */
 #pragma once
 
-/* for printf, output one char to console */
+#include <stdbool.h>
+
+/* for printf, output one char to console, line-buffered */
 void putchar_(char c);
+/* more generic */
+void putchar(char c, bool is_last);
 
 /* input from console */
 char getchar(void);

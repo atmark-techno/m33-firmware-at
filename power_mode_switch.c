@@ -24,6 +24,7 @@
 #include "pin_mux.h"
 #include "board.h"
 #include "app_srtm.h"
+#include "cli.h"
 #include "lpm.h"
 #include "power_mode_switch.h"
 #include "fsl_rtd_cmc.h"
@@ -74,7 +75,7 @@ extern void UPOWER_InitBuck2Buck3Table(void);
 /*******************************************************************************
  * Variables
  ******************************************************************************/
-static TaskHandle_t mainTask;
+static TaskHandle_t cliTask;
 static uint32_t s_wakeupTimeout;           /* Wakeup timeout. (Unit: Second) */
 static app_wakeup_source_t s_wakeupSource; /* Wakeup source.                 */
 static uint32_t s_wakeupPinFlag;           /* Wakeup pin flag.               */
@@ -580,33 +581,6 @@ static allow_combi_e APP_GetModeAllowCombi(lpm_ad_power_mode_e ad_mode, lpm_rtd_
     return allow;
 }
 
-static void APP_ShowModeCombi(void)
-{
-    int i = 0;
-
-    PRINTF("###############################################\r\n");
-    PRINTF("For Single Boot Type\r\n");
-    for (i = 0; i < ARRAY_SIZE(mode_combi_array_for_single_boot); i++)
-    {
-        PRINTF("%s + %s: %s\r\n", APP_GetAdPwrModeName(mode_combi_array_for_single_boot[i].ad_mode),
-               APP_GetRtdPwrModeName(mode_combi_array_for_single_boot[i].rtd_mode),
-               APP_GetAllowCombiName(mode_combi_array_for_single_boot[i].allow_combi));
-    }
-    PRINTF("###############################################\r\n");
-    PRINTF("\r\n");
-    PRINTF("\r\n");
-
-    PRINTF("###############################################\r\n");
-    PRINTF("For Dual Boot Type/Low Power Boot Type\r\n");
-    for (i = 0; i < ARRAY_SIZE(mode_combi_array_for_dual_or_lp_boot); i++)
-    {
-        PRINTF("%s + %s: %s\r\n", APP_GetAdPwrModeName(mode_combi_array_for_dual_or_lp_boot[i].ad_mode),
-               APP_GetRtdPwrModeName(mode_combi_array_for_dual_or_lp_boot[i].rtd_mode),
-               APP_GetAllowCombiName(mode_combi_array_for_dual_or_lp_boot[i].allow_combi));
-    }
-    PRINTF("###############################################\r\n");
-}
-
 /* WUU0 interrupt handler. */
 void WUU0_IRQHandler(void)
 {
@@ -762,13 +736,13 @@ static void APP_CreateTask(void) {}
 static void APP_SuspendTask(void)
 {
     APP_SRTM_SuspendTask();
-    vTaskSuspend(mainTask);
+    vTaskSuspend(cliTask);
 }
 
 static void APP_ResumeTask(void)
 {
     APP_SRTM_ResumeTask();
-    vTaskResume(mainTask);
+    vTaskResume(cliTask);
 }
 
 static void APP_DestroyTask(void) {}
@@ -886,12 +860,9 @@ void APP_PowerModeSwitch(lpm_rtd_power_mode_e targetPowerMode, app_wakeup_source
 }
 
 /* Power Mode Switch task */
-void PowerModeSwitchTask(void *pvParameters)
+static void PowerModeSwitchInit()
 {
     lptmr_config_t lptmrConfig;
-    lpm_rtd_power_mode_e targetPowerMode;
-    uint32_t freq = 0U;
-    uint8_t ch;
 
     /* Add Systick as Power Down wakeup source, depending on SYSTICK_WUU_WAKEUP_EVENT value. */
     WUU_SetInternalWakeUpModulesConfig(WUU0, WUU_MODULE_SYSTICK, SYSTICK_WUU_WAKEUP_EVENT);
@@ -928,130 +899,6 @@ void PowerModeSwitchTask(void *pvParameters)
         (SIM_SEC->DGO_CTRL1 & ~(SIM_SEC_DGO_CTRL1_UPDATE_DGO_GP11_MASK)) | SIM_SEC_DGO_CTRL1_WR_ACK_DGO_GP11_MASK;
 
     SIM_RTD->PTC_COMPCELL = 0x0; // PTC compensation off
-
-    for (;;)
-    {
-        freq = CLOCK_GetFreq(kCLOCK_Cm33CorePlatClk);
-        PRINTF("\r\n####################  Power Mode Switch Task ####################\n\r\n");
-        PRINTF("    Build Time: %s--%s \r\n", __DATE__, __TIME__);
-        PRINTF("    Core Clock: %dHz \r\n", freq);
-        PRINTF("    Boot Type: %s \r\n", BOARD_GetBootTypeName());
-        PRINTF("\r\nSelect the desired operation \n\r\n");
-        PRINTF("Press  %c to enter: Active mode\r\n", kAPP_PowerModeActive);
-        PRINTF("Press  %c to enter: Cortex M33 Wait mode\r\n", kAPP_PowerModeWait);
-        PRINTF("Press  %c to enter: Cortex M33 STOP mode\r\n", kAPP_PowerModeStop);
-        PRINTF("Press  %c to enter: Sleep mode\r\n", kAPP_PowerModeSleep);
-        PRINTF("Press  %c to enter: Deep Sleep mode\r\n", kAPP_PowerModeDeepSleep);
-        PRINTF("Press  %c to enter: Power Down(PD) mode\r\n", kAPP_PowerModePowerDown);
-        PRINTF("Press  %c to enter: Deep Power Down(DPD) mode\r\n", kAPP_PowerModeDeepPowerDown);
-        PRINTF("Press  W for wake up CA35 core from PD/DPD mode\r\n");
-        PRINTF("Press  T for reboot CA35 core\r\n");
-        PRINTF("Press  U for shutdown CA35 core.\r\n");
-        PRINTF("Press  V for boot CA35 core.\r\n");
-        PRINTF("Press  S for showing supported LPM Mode Combination.\r\n");
-        PRINTF("Press  Y to replay console\r\n");
-        // clang-format off
-        /*
-         * OD: Over Drive Mode
-         * ND: Norminal Drive Mode
-         * Ud: Under Drive Mode
-         *+-----------------------------------------------------------------------------------------------------+
-         *|      Drive Mode of Cortex-M33   |           OD          |           ND         |          UD        |
-         *+-----------------------------------------------------------------------------------------------------+
-         *|         Voltage of BUCK2        |    1.05 V ~ 1.10 V    |     0.95 V ~ 1.00 V  |         0.9 V      |
-         *+-----------------------------------------------------------------------------------------------------+
-         *|         Biasing Option          |         AFBB          |         AFBB         |         ARBB       |
-         *+-----------------------------------------------------------------------------------------------------+
-         *|         Maximum frequency       |        216 MHz        |        160 MHz       |      38.4 MHz      |
-         *+-----------------------------------------------------------------------------------------------------+
-         */
-        // clang-format on
-        PRINTF("Press  M for switch Voltage Drive Mode between OD/ND/UD.\r\n");
-        PRINTF(
-            "Press  N for supporting Deep Sleep Mode(Pls set it when the option IMX8ULP_DSL_SUPPORT of TF-A is "
-            "enabled) of Linux. support_dsl_for_apd = %d\r\n",
-            APP_SRTM_GetSupportDSLForApd());
-        PRINTF("Press  X to toggle wake with linux.\r\n");
-        PRINTF("Press  Z to toggle sleep with linux.\r\n");
-        PRINTF("Press  R to force reset\r\n");
-        PRINTF("\r\nWaiting for power mode select..\r\n\r\n");
-
-        /* Wait for user response */
-        do
-        {
-            ch = getchar();
-        } while (ch == '\r' || ch == '\n');
-
-        if ((ch >= 'a') && (ch <= 'z'))
-        {
-            ch -= 'a' - 'A';
-        }
-        targetPowerMode = (lpm_rtd_power_mode_e)(ch - 'A');
-        if (targetPowerMode <= LPM_PowerModeDeepPowerDown)
-        {
-            /* prompt for timer and switch */
-            APP_PowerModeSwitch(targetPowerMode, kAPP_WakeupSourceLptmr);
-        }
-        else if ('W' == ch)
-        {
-            APP_SRTM_WakeupCA35();
-        }
-        else if ('T' == ch)
-        {
-            APP_RebootCA35();
-        }
-        else if ('U' == ch)
-        {
-            APP_ShutdownCA35();
-        }
-        else if ('V' == ch)
-        {
-            option_v_boot_flag = true;
-            APP_BootCA35();
-        }
-        else if ('S' == ch)
-        {
-            APP_ShowModeCombi();
-        }
-        else if ('M' == ch)
-        {
-            BOARD_SwitchDriveMode();
-        }
-        else if ('N' == ch)
-        {
-            PRINTF("Warning: Pls ensure that the option IMX8ULP_DSL_SUPPORT is enabled in TF-A\r\n");
-            APP_SRTM_SetSupportDSLForApd(true);
-        }
-        else if ('X' == ch)
-        {
-            wakeWithLinux = !wakeWithLinux;
-            PRINTF("Wake with linux: %s\r\n", wakeWithLinux ? "true" : "false");
-        }
-        else if ('Z' == ch)
-        {
-            sleepWithLinux = !sleepWithLinux;
-            PRINTF("Sleep with linux: %s\r\n", sleepWithLinux ? "true" : "false");
-        }
-        else if ('R' == ch)
-        {
-            PRINTF("confirm? y/N\r\n");
-            ch = getchar();
-            if ('y' == ch || 'Y' == ch)
-            {
-                PRINTF("Cold reset\r\n");
-                PMIC_Reset();
-            }
-        }
-        else if ('Y' == ch)
-        {
-            DebugConsole_Replay();
-        }
-        else
-        {
-            PRINTF("Invalid command %c[0x%x]\r\n", ch, ch);
-        }
-        PRINTF("\r\nNext loop\r\n");
-    }
 }
 
 void vApplicationMallocFailedHook(void)
@@ -1196,10 +1043,12 @@ int main(void)
     s_wakeupSig      = xSemaphoreCreateBinary();
     handleSuspendSig = xSemaphoreCreateBinary();
 
-    /* suspend task must have higher priority than main task to properly
+    PowerModeSwitchInit();
+
+    /* suspend task must have higher priority than CLI task to properly
      * run and suspend main */
     BUILD_BUG_ON(MAIN_TASK_PRIORITY >= SUSPEND_TASK_PRIORITY);
-    xTaskCreate(PowerModeSwitchTask, "Main Task", 512U, NULL, MAIN_TASK_PRIORITY, &mainTask);
+    xTaskCreate(CLI_Task, "CLI Task", 512U, NULL, MAIN_TASK_PRIORITY, &cliTask);
     /* fails with task size of 256 and async debug console... */
     xTaskCreate(HandleSuspendTask, "HandleSuspendTask", 512U, NULL, SUSPEND_TASK_PRIORITY, NULL);
 

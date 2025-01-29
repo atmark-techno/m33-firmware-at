@@ -84,26 +84,9 @@ char getchar(void)
  * output
  *********************************************************/
 
-void putchar_(char c)
+static void flush(void)
 {
-    uint8_t ch = c;
-
-    consoleBuffer[consoleBufferEnd++] = c;
-    if (consoleBufferEnd == CONSOLE_BUFLEN)
-    {
-        consoleBufferEnd  = 0;
-        consoleBufferFull = true;
-    }
-    if (consoleBufferEnd == consoleBufferStart)
-        consoleBufferStart++;
-    if (consoleBufferStart == CONSOLE_BUFLEN)
-        consoleBufferStart = 0;
-
     if (consoleSuspended)
-        return;
-
-    /* newline-buffered by default */
-    if (ch != '\n')
         return;
 
     /* we will buffer in an intermediate buffer next */
@@ -115,6 +98,30 @@ void putchar_(char c)
     }
     LPUART_WriteBlocking(DBG_UART, consoleBuffer + consoleBufferStart, consoleBufferEnd - consoleBufferStart);
     consoleBufferStart = consoleBufferEnd;
+}
+
+void putchar(char c, bool is_last)
+{
+    consoleBuffer[consoleBufferEnd++] = c;
+    if (consoleBufferEnd == CONSOLE_BUFLEN)
+    {
+        consoleBufferEnd  = 0;
+        consoleBufferFull = true;
+    }
+    if (consoleBufferEnd == consoleBufferStart)
+        consoleBufferStart++;
+    if (consoleBufferStart == CONSOLE_BUFLEN)
+        consoleBufferStart = 0;
+
+    if (is_last)
+        flush();
+}
+
+/* for printf */
+void putchar_(char c)
+{
+    /* line buffered */
+    putchar(c, c == '\n');
 }
 
 void DebugConsole_Replay(void)
