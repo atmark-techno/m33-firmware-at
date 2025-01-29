@@ -11,7 +11,7 @@
 /* for printf, output one char to console, line-buffered */
 void putchar_(char c);
 /* more generic */
-void putchar(char c, bool is_last);
+void putchar(char c, bool is_last, bool ignore_quiet);
 
 /* input from console */
 char getchar(void);
@@ -21,6 +21,8 @@ void DebugConsole_Init(void);
 void DebugConsole_Suspend(void);
 void DebugConsole_Resume(void);
 void DebugConsole_Replay(void);
+void DebugConsole_Clear(void);
+void DebugConsole_Quiet(bool quiet);
 
 /* abort, gone as fsl's implem depended on its debug console at cmake level */
 __attribute__((__noreturn__)) void _abort(const char *condstr, const char *func, const char *file, int line);

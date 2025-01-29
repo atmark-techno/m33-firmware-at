@@ -30,6 +30,7 @@
 
 /* can't use immediately on boot */
 static bool consoleSuspended = true;
+static bool consoleQuiet;
 
 /* internal buffer */
 #define CONSOLE_BUFLEN 4096
@@ -116,8 +117,14 @@ static void flush(void)
     consoleBufferStart = consoleBufferEnd;
 }
 
-void putchar(char c, bool is_last)
+void putchar(char c, bool is_last, bool ignore_quiet)
 {
+    if (consoleQuiet && !ignore_quiet && consoleBufferEnd != consoleBufferStart)
+    {
+        /* If quiet we need to flush now to avoid buffer mixing together */
+        flush();
+    }
+
     consoleBuffer[consoleBufferEnd++] = c;
     if (consoleBufferEnd == CONSOLE_BUFLEN)
     {
@@ -129,6 +136,13 @@ void putchar(char c, bool is_last)
     if (consoleBufferStart == CONSOLE_BUFLEN)
         consoleBufferStart = 0;
 
+    if (consoleQuiet && !ignore_quiet)
+    {
+        /* if quiet, also advance start so message is not printed on next flush */
+        consoleBufferStart = consoleBufferEnd;
+        return;
+    }
+
     if (is_last)
         flush();
 }
@@ -137,7 +151,7 @@ void putchar(char c, bool is_last)
 void putchar_(char c)
 {
     /* line buffered */
-    putchar(c, c == '\n');
+    putchar(c, /* is_last */ c == '\n', /* ignore_quiet */ false);
 }
 
 void DebugConsole_Replay(void)
@@ -147,6 +161,18 @@ void DebugConsole_Replay(void)
         send_all(consoleBuffer + consoleBufferEnd, CONSOLE_BUFLEN - consoleBufferEnd);
     }
     send_all(consoleBuffer, consoleBufferEnd);
+}
+
+void DebugConsole_Clear(void)
+{
+    consoleBufferFull  = 0;
+    consoleBufferEnd   = 0;
+    consoleBufferStart = 0;
+}
+
+void DebugConsole_Quiet(bool quiet)
+{
+    consoleQuiet = quiet;
 }
 
 /**********************************************************

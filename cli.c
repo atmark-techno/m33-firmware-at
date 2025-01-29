@@ -14,12 +14,18 @@
 
 #include "power_mode_switch.h"
 
+/* remember quiet state as we toggle it everytime we run a command */
+static bool cli_quiet;
+
 static int CLI_help(int argc, char **argv)
 {
     PRINTF("Available commands:\r\n");
-    PRINTF("log   - replay logs in buffer\r\n");
-    PRINTF("reset - cold reset\r\n");
-    PRINTF("help  - this message\r\n");
+    PRINTF("reset   - cold reset\r\n");
+    PRINTF("log     - replay logs in buffer\r\n");
+    PRINTF("clear   - clear logs in buffer\r\n");
+    PRINTF("quiet   - disable background logs\r\n");
+    PRINTF("verbose - enable background logs\r\n");
+    PRINTF("help    - this message\r\n");
     return CLI_Custom_help();
 }
 
@@ -36,10 +42,33 @@ static int CLI_log(int argc, char **argv)
     return 0;
 }
 
+static int CLI_quiet(int argc, char **argv)
+{
+    DebugConsole_Quiet(true);
+    cli_quiet = true;
+    return 0;
+}
+
+static int CLI_verbose(int argc, char **argv)
+{
+    DebugConsole_Quiet(false);
+    cli_quiet = false;
+    return 0;
+}
+
+static int CLI_clear(int argc, char **argv)
+{
+    DebugConsole_Clear();
+    return 0;
+}
+
 static struct CLI_command CLI_commands[] = {
     { "help", CLI_help },
     { "reset", CLI_reset },
     { "log", CLI_log },
+    { "quiet", CLI_quiet },
+    { "verbose", CLI_verbose },
+    { "clear", CLI_clear },
     {
         0,
     }, /* sentinel */
@@ -47,7 +76,7 @@ static struct CLI_command CLI_commands[] = {
 
 static void putch_wrapper(void *data, char ch, bool is_last)
 {
-    putchar(ch, is_last);
+    putchar(ch, is_last, /* ignore_quiet */ true);
 }
 
 static bool try_commands(struct CLI_command *commands, int argc, char **argv)
@@ -93,6 +122,9 @@ void CLI_Task(void *pvParameters)
         if (argc < 1 || !argv[0] || !argv[0][0])
             goto next;
 
+        /* Temporarily re-allow output for our commands */
+        DebugConsole_Quiet(false);
+
         if (try_commands(CLI_Custom_commands, argc, argv))
             goto next;
         if (try_commands(CLI_commands, argc, argv))
@@ -102,5 +134,8 @@ void CLI_Task(void *pvParameters)
 
     next:
         embedded_cli_prompt(&cli);
+
+        if (cli_quiet)
+            DebugConsole_Quiet(true);
     }
 }
