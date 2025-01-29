@@ -27,6 +27,12 @@
 /* can't use immediately on boot */
 static bool consoleSuspended = true;
 
+/* internal buffer */
+#define CONSOLE_BUFLEN 4096
+static uint8_t consoleBuffer[CONSOLE_BUFLEN];
+static int consoleBufferStart, consoleBufferEnd;
+static bool consoleBufferFull;
+
 /**********************************************************
  * init/PM hooks
  *********************************************************/
@@ -81,11 +87,43 @@ char getchar(void)
 void putchar_(char c)
 {
     uint8_t ch = c;
+
+    consoleBuffer[consoleBufferEnd++] = c;
+    if (consoleBufferEnd == CONSOLE_BUFLEN)
+    {
+        consoleBufferEnd  = 0;
+        consoleBufferFull = true;
+    }
+    if (consoleBufferEnd == consoleBufferStart)
+        consoleBufferStart++;
+    if (consoleBufferStart == CONSOLE_BUFLEN)
+        consoleBufferStart = 0;
+
     if (consoleSuspended)
         return;
 
+    /* newline-buffered by default */
+    if (ch != '\n')
+        return;
+
     /* we will buffer in an intermediate buffer next */
-    LPUART_WriteBlocking(DBG_UART, &ch, 1);
+    if (consoleBufferEnd < consoleBufferStart)
+    {
+        /* looped */
+        LPUART_WriteBlocking(DBG_UART, consoleBuffer + consoleBufferStart, CONSOLE_BUFLEN - consoleBufferStart);
+        consoleBufferStart = 0;
+    }
+    LPUART_WriteBlocking(DBG_UART, consoleBuffer + consoleBufferStart, consoleBufferEnd - consoleBufferStart);
+    consoleBufferStart = consoleBufferEnd;
+}
+
+void DebugConsole_Replay(void)
+{
+    if (consoleBufferFull)
+    {
+        LPUART_WriteBlocking(DBG_UART, consoleBuffer + consoleBufferEnd, CONSOLE_BUFLEN - consoleBufferEnd);
+    }
+    LPUART_WriteBlocking(DBG_UART, consoleBuffer, consoleBufferEnd);
 }
 
 /**********************************************************

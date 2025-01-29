@@ -949,6 +949,7 @@ void PowerModeSwitchTask(void *pvParameters)
         PRINTF("Press  U for shutdown CA35 core.\r\n");
         PRINTF("Press  V for boot CA35 core.\r\n");
         PRINTF("Press  S for showing supported LPM Mode Combination.\r\n");
+        PRINTF("Press  Y to replay console\r\n");
         // clang-format off
         /*
          * OD: Over Drive Mode
@@ -1040,6 +1041,10 @@ void PowerModeSwitchTask(void *pvParameters)
                 PRINTF("Cold reset\r\n");
                 PMIC_Reset();
             }
+        }
+        else if ('Y' == ch)
+        {
+            DebugConsole_Replay();
         }
         else
         {
