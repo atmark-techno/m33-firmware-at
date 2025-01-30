@@ -76,6 +76,7 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../app_tty.c"
 "${ProjDirPath}/../app_tty.h"
 "${ProjDirPath}/../app_tty_lpuart.c"
+"${ProjDirPath}/../app_tty_flexio.c"
 "${ProjDirPath}/../custom/app_tty_custom.c"
 "${ProjDirPath}/../app_tty_console.c"
 "${ProjDirPath}/../app_tty_console.h"

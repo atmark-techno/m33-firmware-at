@@ -35,6 +35,7 @@ enum tty_rpmsg_init_type
     TTY_TYPE_LPUART,
     TTY_TYPE_CUSTOM,
     TTY_TYPE_M33_CONSOLE,
+    TTY_TYPE_FLEXIO,
     _TTY_TYPE_COUNT,
 };
 
@@ -56,6 +57,15 @@ struct srtm_tty_init_payload
         {
             char name[32];
         } custom;
+        // nothing for m33 console
+        struct srtm_tty_init_flexio_payload
+        {
+            uint32_t flexio_index;
+            uint32_t flexio_rx_pin;
+            uint32_t flexio_tx_pin;
+            uint32_t suspend_wakeup_gpio;
+            uint32_t cflag;
+        } flexio;
     };
 };
 
