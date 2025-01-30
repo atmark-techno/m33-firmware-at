@@ -6,6 +6,7 @@
  */
 
 #include "srtm_io_service.h"
+#include "fsl_reset.h"
 
 #include "app_tty.h"
 #include "tty.h"
@@ -23,6 +24,7 @@ struct lpuart_tty_settings
     uint32_t uart_irqn;
     uint32_t clock_ip_name;
     uint32_t clock_ip_src;
+    uint32_t reset;
     uint32_t rs485_flags;
     uint32_t rs485_de_gpio;
     uint32_t cflag;
@@ -158,6 +160,7 @@ static int lpuart_init_device(struct tty_settings *settings)
 
     NVIC_SetPriority(lpuart->uart_irqn, APP_LPUART_IRQ_PRIO);
     CLOCK_SetIpSrc(lpuart->clock_ip_name, lpuart->clock_ip_src);
+    RESET_PeripheralReset(lpuart->reset);
 
     lpuart_rtos_config_t config = {
         .base = lpuart->uart_base,
@@ -201,12 +204,14 @@ static int lpuart_init(struct tty_settings *settings, struct srtm_tty_init_paylo
             lpuart->uart_irqn     = LPUART0_IRQn;
             lpuart->clock_ip_name = kCLOCK_Lpuart0;
             lpuart->clock_ip_src  = kCLOCK_Pcc1BusIpSrcSysOscDiv2;
+            lpuart->reset         = kRESET_Lpuart0;
             break;
         case 1:
             lpuart->uart_base     = LPUART1;
             lpuart->uart_irqn     = LPUART1_IRQn;
             lpuart->clock_ip_name = kCLOCK_Lpuart1;
             lpuart->clock_ip_src  = kCLOCK_Pcc1BusIpSrcSysOscDiv2;
+            lpuart->reset         = kRESET_Lpuart1;
             break;
         default:
             PRINTF("lpuart index %d not supported\r\n", init->uart_index);
