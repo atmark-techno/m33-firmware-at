@@ -39,7 +39,24 @@ typedef enum
     /* I2C Service Request Command definition */
     SRTM_I2C_CMD_READ = 0U,
     SRTM_I2C_CMD_WRITE,
+    SRTM_I2C_CMD_INIT,
 } srtm_i2c_cmd_t;
+
+struct srtm_i2c_init_payload
+{
+    uint32_t i2c_type;
+    uint32_t i2c_index;
+    uint32_t baudrate;
+    union
+    {
+        // nothing for lpi2c
+        struct
+        {
+            uint32_t scl_pin;
+            uint32_t sda_pin;
+        } flexio;
+    };
+};
 
 /**
  * @brief SRTM I2C payload structure
@@ -84,6 +101,7 @@ typedef struct _i2c_bus
     srtm_i2c_type_t type;
     uint8_t switch_idx;
     srtm_i2c_switch_channel switch_channel;
+    uint32_t baudrate;
 } * i2c_bus_t;
 
 typedef struct _i2c_switch
@@ -120,6 +138,7 @@ struct _srtm_i2c_adapter
                           uint8_t *buf, uint16_t len, uint16_t flags);
     srtm_status_t (*write)(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type, uint16_t slaveAddr,
                            uint8_t *buf, uint16_t len, uint16_t flags);
+    srtm_status_t (*init)(srtm_i2c_adapter_t adapter, int bus_id, struct srtm_i2c_init_payload *init);
     srtm_status_t (*switchchannel)(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
                                    uint16_t slaveAddr, srtm_i2c_switch_channel channel);
 };

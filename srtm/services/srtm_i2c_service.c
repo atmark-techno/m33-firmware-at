@@ -66,7 +66,13 @@ static i2c_bus_t SRTM_I2C_SearchBus(srtm_i2c_adapter_t adapter, uint8_t busID)
         }
     }
 
-    return (i == bus_num) ? NULL : (busArray + i);
+    if (i == bus_num)
+    {
+        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "i2c bus %d not found!\r\n", busID);
+        return NULL;
+    }
+
+    return busArray + i;
 }
 
 static srtm_status_t SRTM_I2CService_ReadBus(srtm_service_t service, uint8_t busID, uint16_t slaveAddr, uint8_t *buf,
@@ -83,7 +89,9 @@ static srtm_status_t SRTM_I2CService_ReadBus(srtm_service_t service, uint8_t bus
     srtm_i2c_type_t type;
     i2c_switch_t switch_inst;
 
-    targetBus    = SRTM_I2C_SearchBus(adapter, busID);
+    targetBus = SRTM_I2C_SearchBus(adapter, busID);
+    if (!targetBus)
+        return SRTM_Status_Error;
     base_addr    = targetBus->base_addr;
     switch_index = targetBus->switch_idx;
     type         = targetBus->type;
@@ -122,7 +130,9 @@ static srtm_status_t SRTM_I2CService_WriteBus(srtm_service_t service, uint8_t bu
     srtm_i2c_type_t type;
     i2c_switch_t switch_inst;
 
-    targetBus    = SRTM_I2C_SearchBus(adapter, busID);
+    targetBus = SRTM_I2C_SearchBus(adapter, busID);
+    if (!targetBus)
+        return SRTM_Status_Error;
     base_addr    = targetBus->base_addr;
     switch_index = targetBus->switch_idx;
     type         = targetBus->type;
@@ -144,6 +154,23 @@ static srtm_status_t SRTM_I2CService_WriteBus(srtm_service_t service, uint8_t bu
      * Write
      */
     status = adapter->write(adapter, base_addr, type, slaveAddr, buf, len, flags); // APP_SRTM_I2C_Write
+    return status;
+}
+static srtm_status_t SRTM_I2CService_Init(srtm_service_t service, uint8_t busID, uint8_t *buf, uint16_t len)
+{
+    srtm_i2c_service_t handle  = (srtm_i2c_service_t)(void *)service;
+    srtm_i2c_adapter_t adapter = handle->adapter;
+    struct srtm_i2c_init_payload init;
+    srtm_status_t status;
+
+    if (len != sizeof(init))
+    {
+        return SRTM_Status_InvalidParameter;
+    }
+
+    memcpy(&init, buf, sizeof(init));
+
+    status = adapter->init(adapter, busID, &init);
     return status;
 }
 
@@ -195,7 +222,7 @@ static srtm_status_t SRTM_I2CService_Request(srtm_service_t service, srtm_reques
     srtm_channel_t channel;
     uint8_t retCode = SRTM_I2C_RETURN_CODE_SUCCESS;
     uint8_t command;
-    uint16_t responseLen, requestLen;
+    uint16_t responseLen = 0, requestLen = 0;
     uint32_t payloadLen;
     srtm_response_t response;
     struct _srtm_i2c_payload *i2cReq;
@@ -215,16 +242,13 @@ static srtm_status_t SRTM_I2CService_Request(srtm_service_t service, srtm_reques
     {
         case SRTM_I2C_CMD_READ:
             responseLen = i2cReq->len;
-            requestLen  = 0;
             break;
         case SRTM_I2C_CMD_WRITE:
-            responseLen = 0;
-            requestLen  = i2cReq->len;
+        case SRTM_I2C_CMD_INIT:
+            requestLen = i2cReq->len;
             break;
         default:
             // bad req will fail with unsupported below
-            responseLen = 0;
-            requestLen  = 0;
             break;
     }
     if (payloadLen < sizeof(struct _srtm_i2c_payload) + requestLen ||
@@ -274,16 +298,21 @@ retry_alloc:
 
     switch (command)
     {
-        case (uint8_t)SRTM_I2C_CMD_READ:
+        case SRTM_I2C_CMD_READ:
             status = SRTM_I2CService_ReadBus(service, i2cResp->busID, i2cResp->slaveAddr, i2cResp->data, responseLen,
                                              i2cReq->flags);
             i2cResp->retCode = status == SRTM_Status_Success ? SRTM_I2C_RETURN_CODE_SUCCESS : SRTM_I2C_RETURN_CODE_FAIL;
             break;
-        case (uint8_t)SRTM_I2C_CMD_WRITE:
+        case SRTM_I2C_CMD_WRITE:
             status = SRTM_I2CService_WriteBus(service, i2cResp->busID, i2cResp->slaveAddr, i2cReq->data, requestLen,
                                               i2cReq->flags);
             i2cResp->retCode = status == SRTM_Status_Success ? SRTM_I2C_RETURN_CODE_SUCCESS : SRTM_I2C_RETURN_CODE_FAIL;
             break;
+        case SRTM_I2C_CMD_INIT:
+            status           = SRTM_I2CService_Init(service, i2cResp->busID, i2cReq->data, requestLen);
+            i2cResp->retCode = status == SRTM_Status_Success ? SRTM_I2C_RETURN_CODE_SUCCESS : SRTM_I2C_RETURN_CODE_FAIL;
+            break;
+
         default:
             SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: command %d unsupported!\r\n", __func__, command);
             i2cResp->retCode = SRTM_I2C_RETURN_CODE_UNSUPPORTED;

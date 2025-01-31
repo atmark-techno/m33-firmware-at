@@ -18,7 +18,6 @@
 void BOARD_InitBootPins(void)
 {
     BOARD_InitConsolePins();
-    BOARD_InitI2cPins();
     BOARD_InitPmicI2cPins();
     BOARD_InitTpmPins();
     BOARD_InitHdmiIntPins();
@@ -53,22 +52,6 @@ void BOARD_DeinitConsolePins(void)
 
 /* FUNCTION ************************************************************************************************************
  *
- * Function Name : BOARD_InitI2cPins
- * Description   : Configures pin routing and optionally pin electrical features.
- *
- * END ****************************************************************************************************************/
-void BOARD_InitI2cPins(void)
-{ /*!< Function assigned for the core: Cortex-M33[cm33] */
-    IOMUXC_SetPinMux(IOMUXC_PTA4_LPI2C1_SCL, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA4_LPI2C1_SCL,
-                        IOMUXC_PCR_ODE_MASK | IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK); // nc
-    IOMUXC_SetPinMux(IOMUXC_PTA5_LPI2C1_SDA, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA5_LPI2C1_SDA,
-                        IOMUXC_PCR_ODE_MASK | IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK); // nc
-}
-
-/* FUNCTION ************************************************************************************************************
- *
  * Function Name : BOARD_InitPmicI2cPins
  * Description   : Configures pin routing and optionally pin electrical features.
  *
@@ -79,11 +62,6 @@ void BOARD_InitPmicI2cPins(void)
     IOMUXC_SetPinConfig(IOMUXC_PTB10_PMIC0_SDA, IOMUXC_PCR_ODE_MASK);
     IOMUXC_SetPinMux(IOMUXC_PTB11_PMIC0_SCL, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTB11_PMIC0_SCL, IOMUXC_PCR_ODE_MASK);
-
-    IOMUXC_SetPinMux(IOMUXC_PTB4_FXIO0_D20, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTB4_FXIO0_D20, IOMUXC_PCR_SRE_MASK);
-    IOMUXC_SetPinMux(IOMUXC_PTB5_FXIO0_D21, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTB5_FXIO0_D21, IOMUXC_PCR_SRE_MASK);
 }
 
 /* FUNCTION ************************************************************************************************************

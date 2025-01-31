@@ -28,7 +28,6 @@ extern "C" {
 void BOARD_InitBootPins(void);
 void BOARD_InitConsolePins(void);
 void BOARD_DeinitConsolePins(void);
-void BOARD_InitI2cPins(void);
 void BOARD_InitPmicI2cPins(void);
 void BOARD_InitTpmPins(void);
 void BOARD_InitHdmiIntPins(void);
