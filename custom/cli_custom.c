@@ -16,16 +16,10 @@ static int customize_me(int argc, char **argv)
     return 0;
 }
 
-static struct CLI_command custom_commands[] = {
-    { "customize_me", customize_me },
+const static struct CLI_command custom_commands[] = {
+    { "customize_me", customize_me, /* help message if non-null */ NULL },
     {
         0,
     }, /* sentinel */
 };
-struct CLI_command *CLI_Custom_commands = custom_commands;
-
-int CLI_Custom_help(void)
-{
-    // PRINTF("command\r\n");
-    return 0;
-}
+const struct CLI_command *CLI_Custom_commands = custom_commands;

@@ -17,18 +17,6 @@
 /* remember quiet state as we toggle it everytime we run a command */
 static bool cli_quiet;
 
-static int CLI_help(int argc, char **argv)
-{
-    PRINTF("Available commands:\r\n");
-    PRINTF("reset   - cold reset\r\n");
-    PRINTF("log     - replay logs in buffer\r\n");
-    PRINTF("clear   - clear logs in buffer\r\n");
-    PRINTF("quiet   - disable background logs\r\n");
-    PRINTF("verbose - enable background logs\r\n");
-    PRINTF("help    - this message\r\n");
-    return CLI_Custom_help();
-}
-
 static int CLI_reset(int argc, char **argv)
 {
     PRINTF("Cold reset\r\n");
@@ -62,36 +50,65 @@ static int CLI_clear(int argc, char **argv)
     return 0;
 }
 
-static struct CLI_command CLI_commands[] = {
-    { "help", CLI_help },
-    { "reset", CLI_reset },
-    { "log", CLI_log },
-    { "quiet", CLI_quiet },
-    { "verbose", CLI_verbose },
-    { "clear", CLI_clear },
+static int CLI_help(int argc, char **argv);
+static const struct CLI_command CLI_commands[] = {
+    { "?", CLI_help, NULL },
+    { "help", CLI_help, "this help" },
+    { "reset", CLI_reset, "cold reset" },
+    { "log", CLI_log, "print buffer log" },
+    { "clear", CLI_clear, "clear buffer log" },
+    { "quiet", CLI_quiet, "disable background messages" },
+    { "verbose", CLI_verbose, "enable background messages" },
     {
         0,
     }, /* sentinel */
 };
+
+#define foreach_command(command)                                                                       \
+    for (const struct CLI_command *commands = CLI_Custom_commands; commands;                           \
+         commands                           = (commands == CLI_Custom_commands) ? CLI_commands : NULL) \
+        for (command = commands; command->command; command++)
+
+static int CLI_help(int argc, char **argv)
+{
+    int maxlength = 0;
+    const struct CLI_command *command;
+
+    foreach_command(command)
+    {
+        if (!command->help)
+            continue;
+        int len   = strlen(command->command);
+        maxlength = MAX(len, maxlength);
+    }
+    foreach_command(command)
+    {
+        if (!command->help)
+            continue;
+        PRINTF("%*s - %s\r\n", -maxlength, command->command, command->help);
+    }
+    return 0;
+}
 
 static void putch_wrapper(void *data, char ch, bool is_last)
 {
     putchar(ch, is_last, /* ignore_quiet */ true);
 }
 
-static bool try_commands(struct CLI_command *commands, int argc, char **argv)
+static bool try_commands(int argc, char **argv)
 {
-    while (commands->command)
+    const struct CLI_command *command;
+
+    foreach_command(command)
     {
-        if (!strcmp(commands->command, argv[0]))
+        if (!strcmp(command->command, argv[0]))
         {
-            int rc = commands->cb(argc, argv);
+            int rc = command->cb(argc, argv);
             if (rc)
                 PRINTF("'%s' exited with %d\r\n", argv[0], rc);
 
             return true;
         }
-        commands++;
     }
 
     return false;
@@ -125,9 +142,7 @@ void CLI_Task(void *pvParameters)
         /* Temporarily re-allow output for our commands */
         DebugConsole_Quiet(false);
 
-        if (try_commands(CLI_Custom_commands, argc, argv))
-            goto next;
-        if (try_commands(CLI_commands, argc, argv))
+        if (try_commands(argc, argv))
             goto next;
 
         PRINTF("Unknown command '%s'\r\n", argv[0]);
