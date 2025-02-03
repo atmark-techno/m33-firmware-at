@@ -65,12 +65,6 @@ void BOARD_InitI2cPins(void)
     IOMUXC_SetPinMux(IOMUXC_PTA5_LPI2C1_SDA, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTA5_LPI2C1_SDA,
                         IOMUXC_PCR_ODE_MASK | IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK); // nc
-    IOMUXC_SetPinMux(IOMUXC_PTA8_LPI2C0_SCL, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA8_LPI2C0_SCL,
-                        IOMUXC_PCR_ODE_MASK | IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK); // nc
-    IOMUXC_SetPinMux(IOMUXC_PTA9_LPI2C0_SDA, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA9_LPI2C0_SDA,
-                        IOMUXC_PCR_ODE_MASK | IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK); // nc
 }
 
 /* FUNCTION ************************************************************************************************************

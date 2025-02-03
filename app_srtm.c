@@ -95,9 +95,6 @@ volatile app_srtm_state_t srtmState;
 bool option_v_boot_flag          = false;
 static bool need_reset_peer_core = false;
 
-pca9460_buck3ctrl_t buck3_ctrl;
-pca9460_ldo1_cfg_t ldo1_cfg;
-
 /* For CMC1_IRQHandler */
 static int64_t apd_boot_cnt = 0; /* it's cold boot when apd_boot_cnt(Application Domain, A Core) == 1 */
 
@@ -1482,8 +1479,6 @@ static void SRTM_MonitorTask(void *pvParameters)
                         APP_PowerOnCA35();
                     }
                 }
-                BOARD_InitMipiDsiPins();
-                BOARD_EnableMipiDsiBacklight();
 
                 /* process messages from uboot, including handshake */
                 process_uboot_messages();
