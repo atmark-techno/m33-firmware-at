@@ -9,6 +9,7 @@
 #include "fsl_flexio_uart.h"
 #include "fsl_reset.h"
 
+#include "app_srtm_internal.h"
 #include "app_tty.h"
 #include "tty.h"
 #include "build_bug.h"
@@ -280,6 +281,13 @@ static int flexio_init(struct tty_settings *settings, struct srtm_tty_init_paylo
             PRINTF("flexio index %d not supported\r\n", init->flexio_index);
             return kStatus_Fail;
     }
+
+    if (flexio_used)
+    {
+        PRINTF("tty: flexio %d already used by another driver, refusing to init\r\n", init->flexio_index);
+        return kStatus_Fail;
+    }
+    flexio_used = true;
 
     flexio->uart_dev.TxPinIndex      = init->flexio_tx_pin;
     flexio->uart_dev.RxPinIndex      = init->flexio_rx_pin;

@@ -11,6 +11,9 @@
 /* Required to register srtm dispatchers from app_*.c */
 extern srtm_dispatcher_t disp;
 
+/* Used by drivers allowing flexio to ensure only one use it at the same time */
+extern bool flexio_used;
+
 /* app_adc.c */
 void APP_ADC_InitService(void);
 void APP_ADC_Resume(void);

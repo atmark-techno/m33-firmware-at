@@ -248,6 +248,14 @@ static srtm_status_t i2c_init(srtm_i2c_adapter_t adapter, int bus_id, struct srt
                 PRINTF("I2C %d invalid i2c index %d\r\n", init->i2c_index);
                 return SRTM_Status_Error;
             }
+
+            if (flexio_used)
+            {
+                PRINTF("i2c: flexio %d already used by another driver, refusing to init\r\n", init->i2c_index);
+                return kStatus_Fail;
+            }
+            flexio_used = true;
+
             struct flexio_i2c *flexio;
             flexio = pvPortMalloc(sizeof(*flexio));
             if (!flexio)

@@ -94,6 +94,7 @@ static srtm_status_t APP_IO_InputInit(srtm_service_t service, srtm_peercore_t co
 volatile app_srtm_state_t srtmState;
 bool option_v_boot_flag          = false;
 static bool need_reset_peer_core = false;
+bool flexio_used;
 
 /* For CMC1_IRQHandler */
 static int64_t apd_boot_cnt = 0; /* it's cold boot when apd_boot_cnt(Application Domain, A Core) == 1 */
