@@ -1624,7 +1624,6 @@ void APP_SRTM_Resume(bool resume)
     /*
      * IO has restored in APP_Resume(), so don't need init io again in here.
      */
-    APP_PWM_Resume();
     APP_ADC_Resume();
     APP_TTY_Resume();
     HAL_RtcInit(rtcHandle, 0);

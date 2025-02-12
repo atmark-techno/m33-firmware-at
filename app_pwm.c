@@ -45,8 +45,3 @@ void APP_PWM_InitService(void)
     pwmService = SRTM_PwmService_Create(pwmAdapter);
     SRTM_Dispatcher_RegisterService(disp, pwmService);
 }
-
-void APP_PWM_Resume(void)
-{
-    pwm_init_device();
-}

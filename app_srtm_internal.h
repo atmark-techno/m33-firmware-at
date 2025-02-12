@@ -24,4 +24,3 @@ void APP_I2C_Resume(void);
 
 /* app_pwm.c */
 void APP_PWM_InitService(void);
-void APP_PWM_Resume(void);
