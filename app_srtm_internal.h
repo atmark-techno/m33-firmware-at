@@ -21,3 +21,7 @@ void APP_ADC_Resume(void);
 /* app_i2c.c */
 void APP_I2C_InitService(void);
 void APP_I2C_Resume(void);
+
+/* app_pwm.c */
+void APP_PWM_InitService(void);
+void APP_PWM_Resume(void);

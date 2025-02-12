@@ -12,8 +12,6 @@
 
 #include "srtm_dispatcher.h"
 #include "srtm_peercore.h"
-#include "srtm_pwm_adapter.h"
-#include "srtm_pwm_service.h"
 #include "srtm_message.h"
 #include "srtm_rpmsg_endpoint.h"
 
@@ -166,7 +164,6 @@ const uint8_t wuuPins[] = {
 
 srtm_dispatcher_t disp;
 static srtm_peercore_t core;
-static srtm_service_t pwmService;
 static srtm_service_t rtcService;
 static srtm_rtc_adapter_t rtcAdapter;
 static srtm_service_t ioService;
@@ -188,16 +185,10 @@ static TimerHandle_t
 static app_irq_handler_t irqHandler;
 static void *irqHandlerParam;
 
-static HAL_PWM_HANDLE_DEFINE(pwmHandle0);
-
 static HAL_RTC_HANDLE_DEFINE(rtcHandle);
 
 lpm_ad_power_mode_e AD_CurrentMode   = AD_UNKOWN;
 lpm_ad_power_mode_e AD_WillEnterMode = AD_UNKOWN;
-
-/* pwmHandles must strictly follow TPM instances. If you don't provide service for some TPM instance,
- * set the corresponding handle to NULL. */
-static hal_pwm_handle_t pwmHandles[2] = { (hal_pwm_handle_t)pwmHandle0, NULL };
 
 static RGPIO_Type *const gpios[] = RGPIO_BASE_PTRS;
 #define IO_PINCTRL_UNSET 0xffffffffU
@@ -1062,24 +1053,6 @@ static void APP_SRTM_DeinitPeerCore(void)
     UPOWER_SetRtdUseDdr(false);
 }
 
-static void APP_SRTM_InitPwmDevice(void)
-{
-    HAL_PwmInit(pwmHandles[0], 0U, CLOCK_GetTpmClkFreq(0U));
-}
-
-static void APP_SRTM_InitPwmService(void)
-{
-    srtm_pwm_adapter_t pwmAdapter;
-
-    APP_SRTM_InitPwmDevice();
-    pwmAdapter = SRTM_PwmAdapter_Create(pwmHandles, ARRAY_SIZE(pwmHandles));
-    assert(pwmAdapter);
-
-    /* Create and register pwm service */
-    pwmService = SRTM_PwmService_Create(pwmAdapter);
-    SRTM_Dispatcher_RegisterService(disp, pwmService);
-}
-
 static void APP_SRTM_InitIoKeyService(void)
 {
     /* Enable interrupt for GPIO. */
@@ -1377,7 +1350,7 @@ static void APP_SRTM_InitServices(void)
 {
     APP_I2C_InitService();
     APP_SRTM_InitIoKeyService();
-    APP_SRTM_InitPwmService();
+    APP_PWM_InitService();
     APP_ADC_InitService();
     APP_SRTM_InitRtcService();
     APP_SRTM_InitLfclService();
@@ -1651,7 +1624,7 @@ void APP_SRTM_Resume(bool resume)
     /*
      * IO has restored in APP_Resume(), so don't need init io again in here.
      */
-    APP_SRTM_InitPwmDevice();
+    APP_PWM_Resume();
     APP_ADC_Resume();
     APP_TTY_Resume();
     HAL_RtcInit(rtcHandle, 0);

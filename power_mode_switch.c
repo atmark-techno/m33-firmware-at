@@ -992,7 +992,6 @@ int main(void)
 
     UPOWER_PowerOnMemPart(0U, (uint32_t)kUPOWER_MP1_DMA0);
 
-    CLOCK_SetIpSrcDiv(kCLOCK_Tpm0, kCLOCK_Pcc1BusIpSrcCm33Bus, 1U, 0U);
     /* Use Pll1Pfd2Div clock source 12.288MHz. */
 
     CLOCK_EnableClock(kCLOCK_Dma0Ch16);
@@ -1003,7 +1002,6 @@ int main(void)
     CLOCK_EnableClock(kCLOCK_Wuu0);
     CLOCK_EnableClock(kCLOCK_Bbnsm);
 
-    RESET_PeripheralReset(kRESET_Tpm0);
     RESET_PeripheralReset(kRESET_Lpuart0);
 
     // XXX check what accesses these early, should not be needed
