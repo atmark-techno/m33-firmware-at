@@ -19,7 +19,6 @@ void BOARD_InitBootPins(void)
 {
     BOARD_InitConsolePins();
     BOARD_InitPmicI2cPins();
-    BOARD_InitHdmiIntPins();
     BOARD_InitPmicModePins();
     BOARD_InitWdogPins();
 }
@@ -41,14 +40,6 @@ void BOARD_InitConsolePins(void)
     IOMUXC_SetPinConfig(IOMUXC_PTA23_LPUART1_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
 }
 
-void BOARD_DeinitConsolePins(void)
-{
-    IOMUXC_SetPinMux(IOMUXC_PTA22_LPUART1_TX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA22_LPUART1_TX, 0U);
-    IOMUXC_SetPinMux(IOMUXC_PTA23_LPUART1_RX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA23_LPUART1_RX, 0U);
-}
-
 /* FUNCTION ************************************************************************************************************
  *
  * Function Name : BOARD_InitPmicI2cPins
@@ -61,19 +52,6 @@ void BOARD_InitPmicI2cPins(void)
     IOMUXC_SetPinConfig(IOMUXC_PTB10_PMIC0_SDA, IOMUXC_PCR_ODE_MASK);
     IOMUXC_SetPinMux(IOMUXC_PTB11_PMIC0_SCL, 0U);
     IOMUXC_SetPinConfig(IOMUXC_PTB11_PMIC0_SCL, IOMUXC_PCR_ODE_MASK);
-}
-
-/* FUNCTION ************************************************************************************************************
- *
- * Function Name : BOARD_InitHdmiIntPins
- * Description   : Configures pin routing and optionally pin electrical features.
- *
- * END ****************************************************************************************************************/
-void BOARD_InitHdmiIntPins(void)
-{ /*!< Function assigned for the core: Cortex-M33[cm33] */
-    IOMUXC_SetPinMux(IOMUXC_PTA19_PTA19, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA19_PTA19,
-                        0U); // ogasawara preEVA: nc, ogasawara gateway: usb2422 reset_n (pull-down)
 }
 
 /* FUNCTION ************************************************************************************************************
