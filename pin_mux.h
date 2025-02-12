@@ -29,7 +29,6 @@ void BOARD_InitBootPins(void);
 void BOARD_InitConsolePins(void);
 void BOARD_DeinitConsolePins(void);
 void BOARD_InitPmicI2cPins(void);
-void BOARD_InitTpmPins(void);
 void BOARD_InitHdmiIntPins(void);
 void BOARD_InitPmicModePins(void);
 void BOARD_InitWdogPins(void);

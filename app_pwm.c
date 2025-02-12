@@ -18,13 +18,18 @@ static srtm_service_t pwmService;
 /* pwmHandles must strictly follow TPM instances. If you don't provide service for some TPM instance,
  * set the corresponding handle to NULL. */
 static HAL_PWM_HANDLE_DEFINE(pwmHandle0);
-static hal_pwm_handle_t pwmHandles[2] = { (hal_pwm_handle_t)pwmHandle0, NULL };
+static HAL_PWM_HANDLE_DEFINE(pwmHandle1);
+static hal_pwm_handle_t pwmHandles[2] = { pwmHandle0, pwmHandle1 };
 
 static void pwm_init_device(void)
 {
     CLOCK_SetIpSrcDiv(kCLOCK_Tpm0, kCLOCK_Pcc1BusIpSrcCm33Bus, 1U, 0U);
     RESET_PeripheralReset(kRESET_Tpm0);
     HAL_PwmInit(pwmHandles[0], 0U, CLOCK_GetTpmClkFreq(0U));
+
+    CLOCK_SetIpSrcDiv(kCLOCK_Tpm1, kCLOCK_Pcc1BusIpSrcCm33Bus, 1U, 0U);
+    RESET_PeripheralReset(kRESET_Tpm1);
+    HAL_PwmInit(pwmHandles[1], 1U, CLOCK_GetTpmClkFreq(1U));
 }
 
 /**********************************************************
