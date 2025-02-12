@@ -73,6 +73,7 @@ typedef int (*srtm_tty_service_tx_t)(uint8_t port_idx, uint8_t *buf, uint16_t le
 typedef int (*srtm_tty_service_set_cflag_t)(uint8_t port_idx, tcflag_t cflag);
 typedef int (*srtm_tty_service_set_wake_t)(uint8_t port_idx, bool enable);
 typedef int (*srtm_tty_service_init_t)(uint8_t port_idx, struct srtm_tty_init_payload *init);
+typedef int (*srtm_tty_service_activate_t)(uint8_t port_idx, bool active);
 
 /*******************************************************************************
  * API
@@ -87,7 +88,8 @@ extern "C" {
  * @return SRTM service handle on success and NULL on failure.
  */
 srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service_set_cflag_t setCflag,
-                                      srtm_tty_service_set_wake_t setWake, srtm_tty_service_init_t init);
+                                      srtm_tty_service_set_wake_t setWake, srtm_tty_service_init_t init,
+                                      srtm_tty_service_activate_t activate);
 
 /*!
  * @brief Destroy TTY service.

@@ -33,8 +33,6 @@ struct flexio_tty_settings
     uint8_t tx_pin;
     uint32_t suspend_wakeup_gpio;
     uint32_t cflag;
-    bool in_suspend;
-    bool device_init;
     bool wakeup_source;
     TaskHandle_t rx_task;
     EventGroupHandle_t rx_event;
@@ -80,6 +78,10 @@ static void flexio_tty_rx_task(void *pvParameters)
     assert(setting);
     assert(setting->type == TTY_TYPE_FLEXIO);
 
+    /* if task was created during suspend make it wait here... */
+    if (settings->state & TTY_SUSPENDED)
+        vTaskSuspend(NULL);
+
     uint8_t *buf, *tmp_buf;
     uint16_t maxlen, next_maxlen, tmp_maxlen, tmp_maxlen2, recv_len;
     srtm_notification_t notif, next_notif, tmp_notif, tmp_notif2;
@@ -96,7 +98,8 @@ static void flexio_tty_rx_task(void *pvParameters)
 
     while (true)
     {
-        if (flexio->in_suspend)
+        /* suspend if not active or suspended */
+        if ((settings->state & (TTY_ACTIVE | TTY_SUSPENDED)) != TTY_ACTIVE)
             vTaskSuspend(NULL);
 
         /* 3 cases:
@@ -186,10 +189,9 @@ static int flexio_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
                .dataSize = len,
     };
 
-    // not yet ready (still in suspend?)
-    if (!flexio->device_init)
+    if (settings->state & TTY_SUSPENDED)
     {
-        PRINTF("tty %d write before device init\r\n", settings->port_idx);
+        PRINTF("tty %d write while not ready (state %x)\r\n", settings->port_idx, settings->state);
         return kStatus_Fail;
     }
 
@@ -203,6 +205,12 @@ static int flexio_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
 static int flexio_setcflag(struct tty_settings *settings, tcflag_t cflag)
 {
     struct flexio_tty_settings *flexio = get_flexio(settings);
+
+    if (settings->state & TTY_SUSPENDED)
+    {
+        PRINTF("tty %d setcflags while not ready (state %x)\r\n", settings->port_idx, settings->state);
+        return kStatus_Fail;
+    }
 
     PRINTF("TODO: flexio cflags ignored\r\n");
     /* XXX re-do device init?
@@ -222,6 +230,30 @@ static int flexio_setwake(struct tty_settings *settings, bool enable)
         return enable; /* failure if enabled */
 
     flexio->wakeup_source = enable;
+    return 0;
+}
+
+static int flexio_activate(struct tty_settings *settings)
+{
+    struct flexio_tty_settings *flexio = get_flexio(settings);
+
+    if (settings->state & TTY_ACTIVE)
+    {
+        /* create task on first open */
+        if (!flexio->rx_task)
+        {
+            /* we need this task to be higher priority than HandleSuspendTask in main,
+             * in order to exit out of LPUART_RTOS_Receive safely as suspend deinits it */
+            BUILD_BUG_ON(TTY_RX_TASK_PRIORITY <= SUSPEND_TASK_PRIORITY);
+            xTaskCreate(flexio_tty_rx_task, "flexio rx task", 256U, (void *)settings, TTY_RX_TASK_PRIORITY,
+                        &flexio->rx_task);
+        }
+        else
+        {
+            vTaskResume(flexio->rx_task);
+        }
+    }
+
     return 0;
 }
 
@@ -254,8 +286,6 @@ static int flexio_init_device(struct tty_settings *settings)
         PRINTF("port %d flexio handle init fail: %d\r\n", settings->port_idx, rc);
         return rc;
     }
-
-    flexio->device_init = true;
 
     return 0;
 }
@@ -328,34 +358,23 @@ static int flexio_init(struct tty_settings *settings, struct srtm_tty_init_paylo
     if (rc)
         return rc;
 
-    /* we need this task to be higher priority than HandleSuspendTask in main,
-     * in order to exit out of LPUART_RTOS_Receive safely as suspend deinits it */
-    BUILD_BUG_ON(TTY_RX_TASK_PRIORITY <= SUSPEND_TASK_PRIORITY);
-    xTaskCreate(flexio_tty_rx_task, "flexio rx task", 256U, (void *)settings, TTY_RX_TASK_PRIORITY, &flexio->rx_task);
-
     return 0;
-}
-
-void flexio_suspendTask(struct tty_settings *settings)
-{
-    struct flexio_tty_settings *flexio = get_flexio(settings);
-
-    flexio->in_suspend = true;
 }
 
 void flexio_resumeTask(struct tty_settings *settings)
 {
     struct flexio_tty_settings *flexio = get_flexio(settings);
 
-    flexio->in_suspend = false;
-    vTaskResume(flexio->rx_task);
+    if (settings->state & TTY_ACTIVE)
+    {
+        vTaskResume(flexio->rx_task);
+    }
 }
 
 void flexio_suspend(struct tty_settings *settings)
 {
     struct flexio_tty_settings *flexio = get_flexio(settings);
 
-    flexio->device_init = false;
     FLEXIO_UART_Deinit(&flexio->uart_dev);
 
     if (flexio->suspend_wakeup_gpio == -1)
@@ -384,8 +403,8 @@ const struct tty_hooks tty_flexio_hooks = {
     .tx            = flexio_tx,
     .setcflag      = flexio_setcflag,
     .setwake       = flexio_setwake,
+    .activate      = flexio_activate,
     .init          = flexio_init,
-    .suspendTask   = flexio_suspendTask,
     .resumeTask    = flexio_resumeTask,
     .suspend       = flexio_suspend,
     .resume        = flexio_resume,

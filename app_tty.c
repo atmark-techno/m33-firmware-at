@@ -92,6 +92,32 @@ static int APP_TTY_setwake(uint8_t port_idx, bool enable)
     return tty_hooks[settings->type]->setwake(settings, enable);
 }
 
+static int APP_TTY_activate(uint8_t port_idx, bool active)
+{
+    struct tty_settings *settings = get_settings(port_idx, "activate");
+
+    if (!settings)
+        return kStatus_Fail;
+
+    if (((active && (settings->state & TTY_ACTIVE)) || ((!active && !(settings->state & TTY_ACTIVE)))))
+    {
+        PRINTF("active state re-set ? (active %d, state %x)\r\n", active, settings->state);
+        return kStatus_Success;
+    }
+
+    if (active)
+        settings->state |= TTY_ACTIVE;
+    else
+        settings->state &= ~TTY_ACTIVE;
+
+    if (!tty_hooks[settings->type]->activate)
+        return kStatus_Success;
+
+    PRINTF("tty port %d activate %d\r\n", port_idx, active);
+
+    return tty_hooks[settings->type]->activate(settings);
+}
+
 static int APP_TTY_init(uint8_t port_idx, struct srtm_tty_init_payload *init)
 {
     struct tty_settings *settings;
@@ -145,7 +171,7 @@ static int APP_TTY_init(uint8_t port_idx, struct srtm_tty_init_payload *init)
 
 void APP_TTY_InitService(void)
 {
-    ttyService = SRTM_TtyService_Create(APP_TTY_tx, APP_TTY_setcflag, APP_TTY_setwake, APP_TTY_init);
+    ttyService = SRTM_TtyService_Create(APP_TTY_tx, APP_TTY_setcflag, APP_TTY_setwake, APP_TTY_init, APP_TTY_activate);
     SRTM_Dispatcher_RegisterService(disp, ttyService);
 }
 
@@ -159,6 +185,8 @@ void APP_TTY_SuspendTask(void)
 
         if (!settings)
             continue;
+
+        settings->state |= TTY_SUSPENDED;
 
         if (tty_hooks[settings->type]->suspendTask)
             tty_hooks[settings->type]->suspendTask(settings);
@@ -175,6 +203,8 @@ void APP_TTY_ResumeTask(void)
 
         if (!settings)
             continue;
+
+        settings->state &= ~TTY_SUSPENDED;
 
         if (tty_hooks[settings->type]->resumeTask)
             tty_hooks[settings->type]->resumeTask(settings);

@@ -14,7 +14,7 @@
 static char rx_buf[RX_BUF_LEN];
 static uint16_t rx_start;
 static uint16_t rx_end;
-static uint8_t port_idx = 255;
+static struct tty_settings *console_settings;
 
 /* tx from linux = send to m33 console.
  * We can't interrupt it so keep in rx_buf until we're polled */
@@ -61,7 +61,13 @@ static int console_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
 
 static int console_init(struct tty_settings *settings, struct srtm_tty_init_payload *generic_init)
 {
-    port_idx = settings->port_idx;
+    if (console_settings)
+    {
+        PRINTF("Trying to init m33 console multiple times! (%d -> %d)\r\n", console_settings->port_idx,
+               settings->port_idx);
+        return 1;
+    }
+    console_settings = settings;
 
     PRINTF("initialized tty %d for M33 console\r\n", settings->port_idx);
 
@@ -92,14 +98,18 @@ int APP_TTY_Console_Getchar(uint8_t *ch)
 void APP_TTY_Console_Write(uint8_t *buf, uint16_t len)
 {
     /* not init */
-    if (port_idx == 255)
+    if (!console_settings)
+        return;
+
+    /* skip if not active or suspended */
+    if ((console_settings->state & (TTY_ACTIVE | TTY_SUSPENDED)) != TTY_ACTIVE)
         return;
 
     while (len > 0)
     {
         uint8_t *back_buf;
         uint16_t maxlen;
-        srtm_notification_t notif = SRTM_TtyService_NotifyAlloc(port_idx, &back_buf, &maxlen);
+        srtm_notification_t notif = SRTM_TtyService_NotifyAlloc(console_settings->port_idx, &back_buf, &maxlen);
 
         /* truncate to whatever srtm sent us */
         uint16_t num = MIN(maxlen, len);

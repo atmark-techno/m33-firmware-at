@@ -29,7 +29,7 @@ struct lpuart_tty_settings
     uint32_t rs485_de_gpio;
     uint32_t cflag;
     uint32_t suspend_wakeup_gpio; /* rx pin to use for wakeup */
-    bool in_suspend;
+    enum tty_state state;
     bool wakeup_source;
     TaskHandle_t rx_task;
     lpuart_rtos_handle_t lpuart_rtos_handle;
@@ -52,6 +52,10 @@ static void lpuart_tty_rx_task(void *pvParameters)
     assert(setting);
     assert(setting->type == TTY_TYPE_LPUART);
 
+    /* if task was created during suspend make it wait here... */
+    if (settings->state & TTY_SUSPENDED)
+        vTaskSuspend(NULL);
+
     uint8_t *buf;
     uint16_t maxlen;
     while (true)
@@ -69,7 +73,9 @@ static void lpuart_tty_rx_task(void *pvParameters)
         do
         {
             LPUART_RTOS_Receive(&lpuart->lpuart_rtos_handle, buf, maxlen, &recvlen);
-            if (lpuart->in_suspend)
+
+            /* suspend if not active or suspended */
+            if ((settings->state & (TTY_ACTIVE | TTY_SUSPENDED)) != TTY_ACTIVE)
                 vTaskSuspend(NULL);
         } while (recvlen == 0);
 
@@ -82,10 +88,9 @@ static int lpuart_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
     struct lpuart_tty_settings *lpuart = get_lpuart(settings);
     int rc;
 
-    // not yet ready (still in suspend?)
-    if (!lpuart->lpuart_rtos_handle.base)
+    if (settings->state & TTY_SUSPENDED)
     {
-        PRINTF("tty %d write before device init\r\n", settings->port_idx);
+        PRINTF("tty %d write while not ready (state %x)\r\n", settings->port_idx, settings->state);
         return kStatus_Fail;
     }
 
@@ -105,6 +110,12 @@ static int lpuart_setcflag(struct tty_settings *settings, tcflag_t cflag)
     bool cmsparity                     = tty_cmsparity(cflag);
     lpuart_data_bits_t databits        = tty_databits(cflag);
     lpuart_stop_bit_count_t stopbits   = tty_stopbits(cflag);
+
+    if (settings->state & TTY_SUSPENDED)
+    {
+        PRINTF("tty %d setcflags while not ready (state %x)\r\n", settings->port_idx, settings->state);
+        return kStatus_Fail;
+    }
 
     /*
      * only support CS8 and CS7, and for CS7 must enable parity.
@@ -150,6 +161,30 @@ static int lpuart_setwake(struct tty_settings *settings, bool enable)
         return enable; /* failure if enabled */
 
     lpuart->wakeup_source = enable;
+    return 0;
+}
+
+static int lpuart_activate(struct tty_settings *settings)
+{
+    struct lpuart_tty_settings *lpuart = get_lpuart(settings);
+
+    if (settings->state & TTY_ACTIVE)
+    {
+        /* create task on first open */
+        if (!lpuart->rx_task)
+        {
+            /* we need this task to be higher priority than HandleSuspendTask in main,
+             * in order to exit out of LPUART_RTOS_Receive safely as suspend deinits it */
+            BUILD_BUG_ON(TTY_RX_TASK_PRIORITY <= SUSPEND_TASK_PRIORITY);
+            xTaskCreate(lpuart_tty_rx_task, "lpuart rx task", 256U, (void *)settings, TTY_RX_TASK_PRIORITY,
+                        &lpuart->rx_task);
+        }
+        else
+        {
+            vTaskResume(lpuart->rx_task);
+        }
+    }
+
     return 0;
 }
 
@@ -258,27 +293,17 @@ static int lpuart_init(struct tty_settings *settings, struct srtm_tty_init_paylo
     if (rc)
         return rc;
 
-    /* we need this task to be higher priority than HandleSuspendTask in main,
-     * in order to exit out of LPUART_RTOS_Receive safely as suspend deinits it */
-    BUILD_BUG_ON(TTY_RX_TASK_PRIORITY <= SUSPEND_TASK_PRIORITY);
-    xTaskCreate(lpuart_tty_rx_task, "lpuart rx task", 256U, (void *)settings, TTY_RX_TASK_PRIORITY, &lpuart->rx_task);
-
     return 0;
-}
-
-void lpuart_suspendTask(struct tty_settings *settings)
-{
-    struct lpuart_tty_settings *lpuart = get_lpuart(settings);
-
-    lpuart->in_suspend = true;
 }
 
 void lpuart_resumeTask(struct tty_settings *settings)
 {
     struct lpuart_tty_settings *lpuart = get_lpuart(settings);
 
-    lpuart->in_suspend = false;
-    vTaskResume(lpuart->rx_task);
+    if (lpuart->state & TTY_ACTIVE)
+    {
+        vTaskResume(lpuart->rx_task);
+    }
 }
 
 void lpuart_suspend(struct tty_settings *settings)
@@ -313,8 +338,8 @@ const struct tty_hooks tty_lpuart_hooks = {
     .tx            = lpuart_tx,
     .setcflag      = lpuart_setcflag,
     .setwake       = lpuart_setwake,
+    .activate      = lpuart_activate,
     .init          = lpuart_init,
-    .suspendTask   = lpuart_suspendTask,
     .resumeTask    = lpuart_resumeTask,
     .suspend       = lpuart_suspend,
     .resume        = lpuart_resume,
