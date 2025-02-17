@@ -81,3 +81,10 @@ static inline void uboot_send_many(void *buf, int len)
  * (no reply)
  */
 #define UBOOT_RESET 2
+
+/* pinctrl
+ * uboot -> m33: pinctrl command, pinctrl values (u32 x6)
+ * m33 -> uboot: ack
+ * (Unlike linux's this is not registered anywhere on m33 side)
+ */
+#define UBOOT_PINCTRL 3

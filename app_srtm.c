@@ -573,6 +573,13 @@ static uint32_t pinFuncId[][PIN_FUNC_ID_SIZE] = {
     { 0 }, /* no PTC24 */
 };
 
+static void pinctrl_set(uint32_t pinctrl0, uint32_t pinctrl1, uint32_t pinctrl2, uint32_t pinctrl3, uint32_t pinctrl4,
+                        uint32_t pinctrl5)
+{
+    IOMUXC_SetPinMux(pinctrl0, pinctrl1, pinctrl2, pinctrl3, pinctrl4, 0);
+    IOMUXC_SetPinConfig(pinctrl0, pinctrl1, pinctrl2, pinctrl3, pinctrl4, pinctrl5);
+}
+
 /*
  * @brief Set pad control register
  * @param asInput    use gpio as input, unless use as output
@@ -587,10 +594,8 @@ static void APP_IO_SetPinConfig(uint16_t ioId, uint32_t defaultPinctrl)
 
     assert(index < APP_IO_NUM);
 
-    IOMUXC_SetPinMux(pinFuncId[index][0], pinFuncId[index][1], pinFuncId[index][2], pinFuncId[index][3],
-                     pinFuncId[index][4], 0U);
-    IOMUXC_SetPinConfig(pinFuncId[index][0], pinFuncId[index][1], pinFuncId[index][2], pinFuncId[index][3],
-                        pinFuncId[index][4], pinFuncId[index][5] == -1 ? defaultPinctrl : pinFuncId[index][5]);
+    pinctrl_set(pinFuncId[index][0], pinFuncId[index][1], pinFuncId[index][2], pinFuncId[index][3], pinFuncId[index][4],
+                pinFuncId[index][5] == -1 ? defaultPinctrl : pinFuncId[index][5]);
 }
 
 static bool APP_IO_PinIsGPIO(uint16_t ioId)
@@ -1407,6 +1412,17 @@ static void process_uboot_messages(void)
                 PRINTF("uboot: reset\r\n");
                 PMIC_Reset(); /* does not return */
                 break;
+            case UBOOT_PINCTRL:
+            {
+                uint32_t pinctrl[6];
+
+                uboot_recv_many(pinctrl, sizeof(pinctrl));
+
+                pinctrl_set(pinctrl[0], pinctrl[1], pinctrl[2], pinctrl[3], pinctrl[4], pinctrl[5]);
+
+                uboot_send(0);
+                break;
+            }
         }
     }
 }
