@@ -74,18 +74,6 @@ typedef enum
     CORE_PD   = CMC_AD_AD_A35CORE0_LPMODE_A35CORE0_LPMODE(0x3U),
 } core_low_power_mode_t; /* A35 core0/1 low power mode */
 
-typedef struct
-{
-    uint32_t cnt; /* step counter now. */
-} app_pedometer_t;
-
-/*******************************************************************************
- * Prototypes
- ******************************************************************************/
-
-static srtm_status_t APP_IO_InputInit(srtm_service_t service, srtm_peercore_t core, uint16_t ioId,
-                                      srtm_io_event_t event, bool wakeup);
-
 /*******************************************************************************
  * Variables
  ******************************************************************************/
