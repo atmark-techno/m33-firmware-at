@@ -1382,7 +1382,7 @@ static void process_uboot_messages(void)
     MU_SetFlags(MU0_MUA, 0);
     while (true)
     {
-        uint32_t command = MU_ReceiveMsg(MU0_MUA, 0);
+        uint32_t command = uboot_recv();
         switch (command)
         {
             case UBOOT_HANDSHAKE:
@@ -1391,7 +1391,7 @@ static void process_uboot_messages(void)
                 /* Set Trdc config then reply OK; then do other CMC configs expected after handshake. */
                 BOARD_SetTrdcGlobalConfig();
 
-                MU_SendMsg(MU0_MUA, 0, 0);
+                uboot_send(0);
 
                 /* CMC1(CMC_AD) is belongs to Application Domain, so if want to access these registers of CMC1,
                  * pls make sure that mcore can access CMC1(mcore can access CMC1 after

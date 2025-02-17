@@ -6,6 +6,62 @@
  */
 #pragma once
 
+#include "fsl_mu.h"
+
+/* helpers for m33 implementation */
+static inline uint32_t uboot_recv(void)
+{
+    return MU_ReceiveMsg(MU0_MUA, 0);
+}
+
+static inline void uboot_recv_many(void *buf, int len)
+{
+    int i;
+    uint32_t *word_buf = buf;
+
+    for (i = 0; i < len / 4; i++)
+    {
+        word_buf[i] = uboot_recv();
+    }
+
+    if (len % 4)
+    {
+        uint32_t last  = uboot_recv();
+        char *byte_buf = (char *)(&word_buf[len / 4]);
+        for (i = 0; i < len % 4; i++)
+        {
+            byte_buf[i] = (last >> (i * 8)) & 0xff;
+        }
+    }
+}
+
+static inline void uboot_send(uint32_t val)
+{
+    MU_SendMsg(MU0_MUA, 0, val);
+}
+
+static inline void uboot_send_many(void *buf, int len)
+{
+    int i;
+    uint32_t *word_buf = buf;
+
+    for (i = 0; i < len / 4; i++)
+    {
+        uboot_send(word_buf[i]);
+    }
+
+    if (len % 4)
+    {
+        uint32_t last  = 0;
+        char *byte_buf = (char *)(&word_buf[len / 4]);
+        for (i = 0; i < len % 4; i++)
+        {
+            last |= byte_buf[i] << (i * 8);
+        }
+        uboot_send(last);
+    }
+}
+
 /* uboot protocol as per arch/arm/include/asm/arch-imx8ulp/sys_proto.h in uboot sources */
 /* protocol for uboot <-> m33 */
 /* handshake
