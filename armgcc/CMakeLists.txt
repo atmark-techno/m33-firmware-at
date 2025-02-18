@@ -81,6 +81,10 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../custom/app_tty_custom.c"
 "${ProjDirPath}/../app_tty_console.c"
 "${ProjDirPath}/../app_tty_console.h"
+"${ProjDirPath}/../app_can.c"
+"${ProjDirPath}/../app_can.h"
+"${ProjDirPath}/../can.h"
+"${ProjDirPath}/../can_netlink.h"
 "${ProjDirPath}/../lpuart.c"
 "${ProjDirPath}/../lpuart.h"
 "${ProjDirPath}/../termbits.h"
@@ -118,6 +122,8 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../srtm/services/srtm_wdog_service.c"
 "${ProjDirPath}/../srtm/services/srtm_tty_service.h"
 "${ProjDirPath}/../srtm/services/srtm_tty_service.c"
+"${ProjDirPath}/../srtm/services/srtm_can_service.h"
+"${ProjDirPath}/../srtm/services/srtm_can_service.c"
 )
 
 target_include_directories(${MCUX_SDK_PROJECT_NAME} PRIVATE

@@ -21,6 +21,7 @@
 #include "srtm_rtc_adapter.h"
 #include "srtm_wdog_service.h"
 
+#include "app_can.h"
 #include "app_srtm.h"
 #include "app_srtm_internal.h"
 #include "app_tty.h"
@@ -981,6 +982,10 @@ static void APP_SRTM_Linkup(void)
     chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
     SRTM_PeerCore_AddChannel(core, chan);
 
+    rpmsgConfig.epName = APP_SRTM_CAN_CHANNEL_NAME;
+    chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
+    SRTM_PeerCore_AddChannel(core, chan);
+
     SRTM_Dispatcher_AddPeerCore(disp, core);
 }
 
@@ -1344,6 +1349,7 @@ static void APP_SRTM_InitServices(void)
     APP_SRTM_InitLfclService();
     APP_SRTM_InitWdogService();
     APP_TTY_InitService();
+    APP_CAN_InitService();
 }
 
 void APP_PowerOffCA35(void)
@@ -1604,6 +1610,7 @@ void APP_SRTM_Suspend(void)
 #endif
     APP_TTY_Suspend();
     APP_SRTM_WdogSuspend();
+    APP_CAN_Suspend();
 }
 
 void APP_SRTM_Resume(void)
@@ -1618,6 +1625,7 @@ void APP_SRTM_Resume(void)
      */
     APP_ADC_Resume();
     APP_TTY_Resume();
+    APP_CAN_Resume();
     HAL_RtcInit(rtcHandle, 0);
 }
 
