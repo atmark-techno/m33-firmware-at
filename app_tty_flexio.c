@@ -13,7 +13,7 @@
 #include "app_tty.h"
 #include "tty.h"
 #include "build_bug.h"
-#include "power_mode_switch.h"
+#include "main.h"
 
 #define TTY_RX_TASK_PRIORITY (3U)
 #define APP_FLEXIO_IRQ_PRIO (5U)

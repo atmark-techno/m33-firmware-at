@@ -36,11 +36,11 @@ SET(EXECUTABLE_OUTPUT_PATH ${ProjDirPath}/${CMAKE_BUILD_TYPE})
 SET(LIBRARY_OUTPUT_PATH ${ProjDirPath}/${CMAKE_BUILD_TYPE})
 
 
-project(power_mode_switch)
+project(m33_firmware_at)
 
 set(MCUX_BUILD_TYPES debug release flash_debug flash_release)
 
-set(MCUX_SDK_PROJECT_NAME power_mode_switch.elf)
+set(MCUX_SDK_PROJECT_NAME m33-firmware-at.elf)
 
 if (NOT DEFINED SdkRootDirPath)
     SET(SdkRootDirPath ${SdkRootDirPath})
@@ -56,8 +56,8 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../remoteproc.h"
 "${ProjDirPath}/../rpmsg_config.h"
 "${ProjDirPath}/../srtm_config.h"
-"${ProjDirPath}/../power_mode_switch.c"
-"${ProjDirPath}/../power_mode_switch.h"
+"${ProjDirPath}/../main.c"
+"${ProjDirPath}/../main.h"
 "${ProjDirPath}/../lpm.c"
 "${ProjDirPath}/../lpm.h"
 "${ProjDirPath}/../FreeRTOSConfig.h"
@@ -144,7 +144,7 @@ target_link_libraries(${MCUX_SDK_PROJECT_NAME} PRIVATE ${TARGET_LINK_SYSTEM_LIBR
 TARGET_LINK_LIBRARIES(${MCUX_SDK_PROJECT_NAME} PRIVATE -Wl,--end-group)
 
 ADD_CUSTOM_COMMAND(TARGET ${MCUX_SDK_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_OBJCOPY}
--Obinary ${EXECUTABLE_OUTPUT_PATH}/${MCUX_SDK_PROJECT_NAME} ${EXECUTABLE_OUTPUT_PATH}/sdk20-app.bin)
+	-Obinary ${EXECUTABLE_OUTPUT_PATH}/${MCUX_SDK_PROJECT_NAME} ${EXECUTABLE_OUTPUT_PATH}/m33-firmware-at.bin)
 
-set_target_properties(${MCUX_SDK_PROJECT_NAME} PROPERTIES ADDITIONAL_CLEAN_FILES "output.map;${EXECUTABLE_OUTPUT_PATH}/sdk20-app.bin")
+set_target_properties(${MCUX_SDK_PROJECT_NAME} PROPERTIES ADDITIONAL_CLEAN_FILES "output.map;${EXECUTABLE_OUTPUT_PATH}/m33-firmware-at.bin")
 

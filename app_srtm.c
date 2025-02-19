@@ -8,7 +8,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "timers.h"
-#include "power_mode_switch.h"
+#include "main.h"
 
 #include "srtm_dispatcher.h"
 #include "srtm_peercore.h"

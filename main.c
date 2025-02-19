@@ -26,7 +26,7 @@
 #include "app_srtm.h"
 #include "cli.h"
 #include "lpm.h"
-#include "power_mode_switch.h"
+#include "main.h"
 #include "fsl_rtd_cmc.h"
 #include "fsl_sentinel.h"
 #include "fsl_rgpio.h"

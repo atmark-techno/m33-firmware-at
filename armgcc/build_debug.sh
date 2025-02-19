@@ -18,11 +18,11 @@ cd "$workdir" || exit 1
 if ! [ -e Makefile ] \
     || ! grep -q CMAKE_BUILD_TYPE:STRING=debug CMakeCache.txt \
     || ! grep -q "CMAKE_TOOLCHAIN_FILE:FILEPATH=$SdkRootDirPath/core/tools/cmake_toolchain_files/armgcc.cmake" CMakeCache.txt; then
-	rm -rf CMakeFiles Makefile cmake_install.cmake CMakeCache.txt debug/sdk20-app.bin
+	rm -rf CMakeFiles Makefile cmake_install.cmake CMakeCache.txt debug/m33-firmware-at.bin
 	cmake -DCMAKE_TOOLCHAIN_FILE="$SdkRootDirPath/core/tools/cmake_toolchain_files/armgcc.cmake" \
 		-G "Unix Makefiles" -DCMAKE_BUILD_TYPE=debug
 fi
 
 make -j 2>&1 | tee build_log.txt
 
-cp debug/sdk20-app.bin ../m33-firmware-at.bin
+cp debug/m33-firmware-at.bin ../

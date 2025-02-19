@@ -12,7 +12,7 @@
 #include "debug_console.h"
 #include "printf.h"
 
-#include "power_mode_switch.h"
+#include "main.h"
 
 /* remember quiet state as we toggle it everytime we run a command */
 static bool cli_quiet;

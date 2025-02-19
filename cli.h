@@ -15,5 +15,5 @@ struct CLI_command
 };
 extern const struct CLI_command *CLI_Custom_commands;
 
-/* for power_mode_switch main loop */
+/* for main loop */
 void CLI_Task(void *pvParameters);
