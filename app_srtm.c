@@ -722,7 +722,7 @@ static srtm_status_t APP_IO_ConfInput(uint16_t ioId, srtm_io_event_t event, bool
     assert(inputIdx < APP_IO_NUM);
     if (wakeup && wuuIdx == 255)
     {
-        PRINTF("Wakeup requested on %x which has no wakeup\r\n", ioId);
+        PRINTF("Wakeup requested on %d/%d which has no wakeup\r\n", gpioIdx, pinIdx);
         return SRTM_Status_Error;
     }
     if (!APP_IO_PinIsGPIO(ioId))
@@ -731,7 +731,7 @@ static srtm_status_t APP_IO_ConfInput(uint16_t ioId, srtm_io_event_t event, bool
         return SRTM_Status_Error;
     }
     if (wakeup)
-        PRINTF("Wakeup requested on %d/%d, mode %d\r\n", gpioIdx, pinIdx, event);
+        PRINTF("Wakeup requested on %d/%d (WUU %d), mode %d\r\n", gpioIdx, pinIdx, wuuIdx, event);
     suspendContext.io.data[inputIdx].wakeup = wakeup;
 
     APP_IO_SetPinConfig(ioId, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
