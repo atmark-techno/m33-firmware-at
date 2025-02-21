@@ -695,9 +695,8 @@ void APP_IO_SetupWUU(uint8_t wuuIdx, wuu_external_pin_edge_detection_t wuuEdge)
 
     wuu_external_wakeup_pin_config_t config = {
         .event = kWUU_ExternalPinInterrupt,
-        /* To correctly determine the WUU0->PF wakeup source, do not specify kWUU_ExternalPinActiveAlways. */
-        .mode = kWUU_ExternalPinActiveDSPD,
-        .edge = wuuEdge,
+        .mode  = kWUU_ExternalPinActiveAlways,
+        .edge  = wuuEdge,
     };
     WUU_SetExternalWakeUpPinsConfig(WUU0, wuuIdx, &config);
 }
@@ -1189,7 +1188,7 @@ int32_t MU0_A_IRQHandler(void)
         AD_WillEnterMode = AD_ACT;
 
         /* make m33 core sleep */
-        APP_PowerModeSwitch(LPM_PowerModePowerDown, kAPP_WakeupSourcePin);
+        APP_PowerModeSwitch(LPM_PowerModeDeepSleep, kAPP_WakeupSourcePin);
     }
 
     return RPMsg_MU0_A_IRQHandler();
