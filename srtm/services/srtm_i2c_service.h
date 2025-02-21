@@ -85,6 +85,19 @@ typedef enum
     SRTM_I2C_TYPE_FLEXIO_I2C,
 } srtm_i2c_type_t;
 
+static inline const char *srtm_i2c_type_to_str(srtm_i2c_type_t type)
+{
+    switch (type)
+    {
+        case SRTM_I2C_TYPE_LPI2C:
+            return "lpi2c";
+        case SRTM_I2C_TYPE_FLEXIO_I2C:
+            return "flexio";
+        default:
+            return "???";
+    }
+}
+
 typedef enum
 {
     SRTM_I2C_SWITCH_CHANNEL0 = 0U,

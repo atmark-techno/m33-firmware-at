@@ -120,6 +120,10 @@ static srtm_status_t i2c_read(srtm_i2c_adapter_t adapter, i2c_bus_t bus, uint16_
         default:
             break;
     }
+    if (retVal)
+    {
+        PRINTF("i2c %d addr %#x read failed: %d\r\n", bus->bus_id, slaveAddr, retVal);
+    }
     return (retVal == kStatus_Success) ? SRTM_Status_Success : SRTM_Status_TransferFailed;
 }
 static srtm_status_t i2c_write(srtm_i2c_adapter_t adapter, i2c_bus_t bus, uint16_t slaveAddr, uint8_t *buf,
@@ -157,6 +161,10 @@ static srtm_status_t i2c_write(srtm_i2c_adapter_t adapter, i2c_bus_t bus, uint16
             flexio->completionFlag = false;
             break;
         }
+    }
+    if (retVal)
+    {
+        PRINTF("i2c %d addr %#x write failed: %d\r\n", bus->bus_id, slaveAddr, retVal);
     }
     return (retVal == kStatus_Success) ? SRTM_Status_Success : SRTM_Status_TransferFailed;
 }
@@ -257,7 +265,7 @@ static srtm_status_t i2c_init(srtm_i2c_adapter_t adapter, int bus_id, struct srt
         return SRTM_Status_Error;
     }
 
-    PRINTF("initializing i2c %d\r\n", bus_id);
+    PRINTF("initializing i2c %d (%s%d)\r\n", bus_id, srtm_i2c_type_to_str(init->i2c_type), init->i2c_index);
 
     i = adapter->bus_structure.bus_num;
 
