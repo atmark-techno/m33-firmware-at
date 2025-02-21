@@ -81,20 +81,16 @@ static srtm_status_t SRTM_I2CService_ReadBus(srtm_service_t service, uint8_t bus
     srtm_i2c_service_t handle  = (srtm_i2c_service_t)(void *)service;
     srtm_i2c_adapter_t adapter = handle->adapter;
     i2c_bus_t targetBus;
-    uint32_t base_addr;
     uint8_t switch_index;
     uint16_t switch_addr;
     srtm_i2c_switch_channel switch_channel;
     srtm_status_t status;
-    srtm_i2c_type_t type;
     i2c_switch_t switch_inst;
 
     targetBus = SRTM_I2C_SearchBus(adapter, busID);
     if (!targetBus)
         return SRTM_Status_Error;
-    base_addr    = targetBus->base_addr;
     switch_index = targetBus->switch_idx;
-    type         = targetBus->type;
     /*
      * Switch Channel
      */
@@ -105,14 +101,14 @@ static srtm_status_t SRTM_I2CService_ReadBus(srtm_service_t service, uint8_t bus
         switch_channel = targetBus->switch_channel;
         if (switch_inst->cur_channel != switch_channel)
         {
-            (void)adapter->switchchannel(adapter, base_addr, type, switch_addr, switch_channel);
+            (void)adapter->switchchannel(adapter, targetBus, switch_addr, switch_channel);
             switch_inst->cur_channel = switch_channel;
         }
     }
     /*
      * Read
      */
-    status = adapter->read(adapter, base_addr, type, slaveAddr, buf, len, flags); // APP_SRTM_I2C_Read
+    status = adapter->read(adapter, targetBus, slaveAddr, buf, len, flags); // APP_SRTM_I2C_Read
     return status;
 }
 
@@ -122,20 +118,16 @@ static srtm_status_t SRTM_I2CService_WriteBus(srtm_service_t service, uint8_t bu
     srtm_i2c_service_t handle  = (srtm_i2c_service_t)(void *)service;
     srtm_i2c_adapter_t adapter = handle->adapter;
     i2c_bus_t targetBus;
-    uint32_t base_addr;
     uint8_t switch_index;
     uint16_t switch_addr;
     srtm_i2c_switch_channel switch_channel;
     srtm_status_t status;
-    srtm_i2c_type_t type;
     i2c_switch_t switch_inst;
 
     targetBus = SRTM_I2C_SearchBus(adapter, busID);
     if (!targetBus)
         return SRTM_Status_Error;
-    base_addr    = targetBus->base_addr;
     switch_index = targetBus->switch_idx;
-    type         = targetBus->type;
     /*
      * Switch Channel
      */
@@ -146,14 +138,14 @@ static srtm_status_t SRTM_I2CService_WriteBus(srtm_service_t service, uint8_t bu
         switch_channel = targetBus->switch_channel;
         if (switch_inst->cur_channel != switch_channel)
         {
-            (void)adapter->switchchannel(adapter, base_addr, type, switch_addr, switch_channel);
+            (void)adapter->switchchannel(adapter, targetBus, switch_addr, switch_channel);
             switch_inst->cur_channel = switch_channel;
         }
     }
     /*
      * Write
      */
-    status = adapter->write(adapter, base_addr, type, slaveAddr, buf, len, flags); // APP_SRTM_I2C_Write
+    status = adapter->write(adapter, targetBus, slaveAddr, buf, len, flags); // APP_SRTM_I2C_Write
     return status;
 }
 static srtm_status_t SRTM_I2CService_Init(srtm_service_t service, uint8_t busID, uint8_t *buf, uint16_t len)

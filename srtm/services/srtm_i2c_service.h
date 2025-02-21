@@ -134,13 +134,13 @@ struct _srtm_i2c_adapter
     i2c_bus_structure_t bus_structure;
 
     /* Interfaces implemented by I2C adapter */
-    srtm_status_t (*read)(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type, uint16_t slaveAddr,
-                          uint8_t *buf, uint16_t len, uint16_t flags);
-    srtm_status_t (*write)(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type, uint16_t slaveAddr,
-                           uint8_t *buf, uint16_t len, uint16_t flags);
+    srtm_status_t (*read)(srtm_i2c_adapter_t adapter, i2c_bus_t bus, uint16_t slaveAddr, uint8_t *buf, uint16_t len,
+                          uint16_t flags);
+    srtm_status_t (*write)(srtm_i2c_adapter_t adapter, i2c_bus_t bus, uint16_t slaveAddr, uint8_t *buf, uint16_t len,
+                           uint16_t flags);
     srtm_status_t (*init)(srtm_i2c_adapter_t adapter, int bus_id, struct srtm_i2c_init_payload *init);
-    srtm_status_t (*switchchannel)(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
-                                   uint16_t slaveAddr, srtm_i2c_switch_channel channel);
+    srtm_status_t (*switchchannel)(srtm_i2c_adapter_t adapter, i2c_bus_t bus, uint16_t slaveAddr,
+                                   srtm_i2c_switch_channel channel);
 };
 /*******************************************************************************
  * API

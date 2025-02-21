@@ -18,13 +18,13 @@
 
 #define I2C_MAX_BUSES 4
 
-static srtm_status_t i2c_read(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type, uint16_t slaveAddr,
-                              uint8_t *buf, uint16_t len, uint16_t flags);
-static srtm_status_t i2c_write(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type, uint16_t slaveAddr,
-                               uint8_t *buf, uint16_t len, uint16_t flags);
+static srtm_status_t i2c_read(srtm_i2c_adapter_t adapter, i2c_bus_t bus, uint16_t slaveAddr, uint8_t *buf, uint16_t len,
+                              uint16_t flags);
+static srtm_status_t i2c_write(srtm_i2c_adapter_t adapter, i2c_bus_t bus, uint16_t slaveAddr, uint8_t *buf,
+                               uint16_t len, uint16_t flags);
 static srtm_status_t i2c_init(srtm_i2c_adapter_t adapter, int bus_id, struct srtm_i2c_init_payload *init);
-static srtm_status_t i2c_switchChannel(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
-                                       uint16_t slaveAddr, srtm_i2c_switch_channel channel);
+static srtm_status_t i2c_switchChannel(srtm_i2c_adapter_t adapter, i2c_bus_t bus, uint16_t slaveAddr,
+                                       srtm_i2c_switch_channel channel);
 
 static srtm_service_t i2cService;
 
@@ -82,17 +82,17 @@ static int i2c_find_bus(int bus_id)
  * SRTM callbacks
  *********************************************************/
 
-static srtm_status_t i2c_read(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type, uint16_t slaveAddr,
-                              uint8_t *buf, uint16_t len, uint16_t flags)
+static srtm_status_t i2c_read(srtm_i2c_adapter_t adapter, i2c_bus_t bus, uint16_t slaveAddr, uint8_t *buf, uint16_t len,
+                              uint16_t flags)
 {
     status_t retVal = kStatus_Fail;
     uint32_t needStop;
 
-    switch (type)
+    switch (bus->type)
     {
         case SRTM_I2C_TYPE_LPI2C:
             needStop = (flags & SRTM_I2C_FLAG_NEED_STOP) ? kLPI2C_TransferDefaultFlag : kLPI2C_TransferNoStopFlag;
-            retVal   = BOARD_LPI2C_Receive((LPI2C_Type *)base_addr, slaveAddr, 0, 0, buf, len, needStop);
+            retVal   = BOARD_LPI2C_Receive((LPI2C_Type *)bus->base_addr, slaveAddr, 0, 0, buf, len, needStop);
             break;
         case SRTM_I2C_TYPE_FLEXIO_I2C:
         {
@@ -104,7 +104,7 @@ static srtm_status_t i2c_read(srtm_i2c_adapter_t adapter, uint32_t base_addr, sr
                 .data     = buf,
                 .dataSize = len,
             };
-            struct flexio_i2c *flexio = (void *)base_addr;
+            struct flexio_i2c *flexio = (void *)bus->base_addr;
 
             retVal = FLEXIO_I2C_MasterTransferNonBlocking(&flexio->dev, &flexio->handle, &xfer);
             while ((!flexio->nakFlag) && (!flexio->completionFlag))
@@ -122,17 +122,17 @@ static srtm_status_t i2c_read(srtm_i2c_adapter_t adapter, uint32_t base_addr, sr
     }
     return (retVal == kStatus_Success) ? SRTM_Status_Success : SRTM_Status_TransferFailed;
 }
-static srtm_status_t i2c_write(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type, uint16_t slaveAddr,
-                               uint8_t *buf, uint16_t len, uint16_t flags)
+static srtm_status_t i2c_write(srtm_i2c_adapter_t adapter, i2c_bus_t bus, uint16_t slaveAddr, uint8_t *buf,
+                               uint16_t len, uint16_t flags)
 {
     status_t retVal = kStatus_Fail;
     uint32_t needStop;
 
-    switch (type)
+    switch (bus->type)
     {
         case SRTM_I2C_TYPE_LPI2C:
             needStop = (flags & SRTM_I2C_FLAG_NEED_STOP) ? kLPI2C_TransferDefaultFlag : kLPI2C_TransferNoStopFlag;
-            retVal   = BOARD_LPI2C_Send((LPI2C_Type *)base_addr, slaveAddr, 0, 0, buf, len, needStop);
+            retVal   = BOARD_LPI2C_Send((LPI2C_Type *)bus->base_addr, slaveAddr, 0, 0, buf, len, needStop);
             break;
         case SRTM_I2C_TYPE_FLEXIO_I2C:
         {
@@ -144,7 +144,7 @@ static srtm_status_t i2c_write(srtm_i2c_adapter_t adapter, uint32_t base_addr, s
                 .data     = buf,
                 .dataSize = len,
             };
-            struct flexio_i2c *flexio = (void *)base_addr;
+            struct flexio_i2c *flexio = (void *)bus->base_addr;
 
             retVal = FLEXIO_I2C_MasterTransferNonBlocking(&flexio->dev, &flexio->handle, &xfer);
             while ((!flexio->nakFlag) && (!flexio->completionFlag))
@@ -161,8 +161,8 @@ static srtm_status_t i2c_write(srtm_i2c_adapter_t adapter, uint32_t base_addr, s
     return (retVal == kStatus_Success) ? SRTM_Status_Success : SRTM_Status_TransferFailed;
 }
 
-static srtm_status_t i2c_switchChannel(srtm_i2c_adapter_t adapter, uint32_t base_addr, srtm_i2c_type_t type,
-                                       uint16_t slaveAddr, srtm_i2c_switch_channel channel)
+static srtm_status_t i2c_switchChannel(srtm_i2c_adapter_t adapter, i2c_bus_t bus, uint16_t slaveAddr,
+                                       srtm_i2c_switch_channel channel)
 {
     return SRTM_Status_Error; // error is ignored...
 }
@@ -437,7 +437,7 @@ void APP_I2C_uboot(uint32_t command)
                 return;
             }
 
-            rc = i2c_read(&i2c_adapter, platform_i2c_buses[i].base_addr, platform_i2c_buses[i].type, addr, buf, len, 0);
+            rc = i2c_read(&i2c_adapter, platform_i2c_buses + i, addr, buf, len, 0);
 
             uboot_send(rc);
             if (rc)
@@ -475,8 +475,7 @@ void APP_I2C_uboot(uint32_t command)
                 return;
             }
 
-            rc =
-                i2c_write(&i2c_adapter, platform_i2c_buses[i].base_addr, platform_i2c_buses[i].type, addr, buf, len, 0);
+            rc = i2c_write(&i2c_adapter, platform_i2c_buses + i, addr, buf, len, 0);
 
             uboot_send(rc);
             break;
