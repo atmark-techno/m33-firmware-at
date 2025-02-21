@@ -31,6 +31,8 @@ void DebugConsole_Quiet(bool quiet);
 __attribute__((__noreturn__)) void _abort(const char *condstr, const char *func, const char *file, int line);
 #define STRINGIFY(X) #X
 
+#define abort_msg(msg) _abort(msg, __func__, __FILE__, __LINE__)
+
 /* defined as noop by newlib in some files for some reason... override */
 #undef assert
 #define assert(cond) \

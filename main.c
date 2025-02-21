@@ -301,10 +301,47 @@ static bool IsWuuPinGPIOIrqcInterruptEdge(uint8_t wuuPin)
     return false;
 }
 
-void PinMuxPrepareSuspend(uint8_t gpioIdx, uint8_t pinIdx)
+void IoSuspendOne(uint8_t gpioIdx, uint8_t pinIdx, uint32_t backupIndex)
 {
-    uint8_t wuuIndex      = APP_IO_GetWUUPin(gpioIdx, pinIdx);
-    __IO uint32_t *IOMUXC = &(gpioIdx == 0 ? IOMUXC0->PCR0_IOMUXCARRAY0 : IOMUXC0->PCR0_IOMUXCARRAY1)[pinIdx];
+    uint8_t wuuIndex = APP_IO_GetWUUPin(gpioIdx, pinIdx);
+    __IO uint32_t *IOMUXC;
+    RGPIO_Type *GPIO;
+
+    switch (gpioIdx)
+    {
+        case 0:
+            IOMUXC = IOMUXC0->PCR0_IOMUXCARRAY0 + pinIdx;
+            GPIO   = GPIOA;
+            break;
+        case 1:
+            IOMUXC = IOMUXC0->PCR0_IOMUXCARRAY1 + pinIdx;
+            GPIO   = GPIOB;
+            break;
+        case 2:
+            IOMUXC = IOMUXC0->PCR0_IOMUXCARRAY2 + pinIdx;
+            GPIO   = GPIOC;
+            break;
+        default:
+            abort_msg("IoSuspendOne called with invalid index?");
+    }
+    iomuxBackup[backupIndex]   = *IOMUXC;
+    gpioICRBackup[backupIndex] = GPIO->ICR[pinIdx];
+    GPIO->ICR[pinIdx]          = 0; /* disable interrupts */
+
+    /* regroup skipped pins logic here */
+    /* JTAG pins, for easier debugging -- PTA[20-23] skipped if DEBUG_SUSPEND_SKIP_JTAG_PINS set */
+#if DEBUG_SUSPEND_SKIP_JTAG_PINS
+    if (gpioIdx == 0 && (pinIdx >= 20 && pinIdx <= 23))
+        return;
+#endif
+    /* PTB[10-11] for upower i2c */
+    if (gpioIdx == 1 && (pinIdx == 10 || pinIdx == 11))
+        return;
+
+    /* preserve output gpios.
+     * iomux mode 0x1 is gpio, PDDR is direction output */
+    if ((*IOMUXC & IOMUXC_PCR_MUX_MODE(0x1)) && (GPIO->PDDR & 1 << pinIdx))
+        return;
 
     if (wuuIndex == 255)
     {
@@ -344,22 +381,8 @@ static void IoSuspend(void)
     /* Backup PTA IOMUXC and GPIOA ICR registers then disable */
     for (i = 0; i <= 24; i++)
     {
-        iomuxBackup[backupIndex] = IOMUXC0->PCR0_IOMUXCARRAY0[i];
+        IoSuspendOne(0, i, backupIndex);
 
-        gpioICRBackup[backupIndex] = GPIOA->ICR[i];
-
-        GPIOA->ICR[i] = 0; /* Disable interrupts */
-
-        /*
-         * Skip PTA20 ~ 23(JTAG pins)[define DEBUG_SUSPEND_SKIP_JTAG_PINS as 1] if want to debug code with JTAG before
-         * entering power down/deep sleep mode
-         */
-#if DEBUG_SUSPEND_SKIP_JTAG_PINS
-        if (i < 20 || i > 23)
-#endif
-        {
-            PinMuxPrepareSuspend(0, i);
-        }
         backupIndex++;
     }
     gpioOutputBackup[0].pdor = GPIOA->PDOR;
@@ -368,16 +391,8 @@ static void IoSuspend(void)
     /* Backup PTB IOMUXC and GPIOB ICR registers then disable */
     for (i = 0; i <= 15; i++)
     {
-        iomuxBackup[backupIndex] = IOMUXC0->PCR0_IOMUXCARRAY1[i];
+        IoSuspendOne(1, i, backupIndex);
 
-        gpioICRBackup[backupIndex] = GPIOB->ICR[i];
-
-        GPIOB->ICR[i] = 0; /* disable interrupts */
-
-        if ((i != 10) && (i != 11)) /* PTB10 and PTB11 is used as i2c function by upower */
-        {
-            PinMuxPrepareSuspend(1, i);
-        }
         backupIndex++;
     }
     gpioOutputBackup[1].pdor = GPIOB->PDOR;
@@ -386,17 +401,7 @@ static void IoSuspend(void)
     /* Backup PTC IOMUXC and GPIOC ICR registers then disable */
     for (i = 0; i <= 23; i++)
     {
-        iomuxBackup[backupIndex] = IOMUXC0->PCR0_IOMUXCARRAY2[i];
-
-        gpioICRBackup[backupIndex] = GPIOC->ICR[i];
-
-        GPIOC->ICR[i] = 0; /* disable interrupts */
-
-        /* Skip PTC0 ~ 10(FlexSPI0 pins) if run on flash(XiP) */
-        if ((i > 10) || !BOARD_IS_XIP_FLEXSPI0())
-        {
-            IOMUXC0->PCR0_IOMUXCARRAY2[i] = 0;
-        }
+        IoSuspendOne(2, i, backupIndex);
 
         backupIndex++;
     }
@@ -419,13 +424,8 @@ static void IoResume(void)
     GPIOA->PDDR = gpioOutputBackup[0].pddr;
     for (i = 0; i <= 24; i++)
     {
-#if DEBUG_SUSPEND_SKIP_JTAG_PINS
-        if (i < 20 || i > 23)
-#endif
-        {
-            IOMUXC0->PCR0_IOMUXCARRAY0[i] = iomuxBackup[backupIndex];
-            GPIOA->ICR[i]                 = gpioICRBackup[backupIndex];
-        }
+        IOMUXC0->PCR0_IOMUXCARRAY0[i] = iomuxBackup[backupIndex];
+        GPIOA->ICR[i]                 = gpioICRBackup[backupIndex];
         backupIndex++;
     }
 
