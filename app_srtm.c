@@ -1055,8 +1055,6 @@ static void APP_SRTM_InitIoKeyService(void)
     NVIC_SetPriority(GPIOB_INT1_IRQn, APP_GPIO_IRQ_PRIO);
     NVIC_SetPriority(GPIOC_INT0_IRQn, APP_GPIO_IRQ_PRIO);
     NVIC_SetPriority(GPIOC_INT1_IRQn, APP_GPIO_IRQ_PRIO);
-    /* Setup WUU priority of interrupt */
-    NVIC_SetPriority(WUU0_IRQn, APP_WUU_IRQ_PRIO);
 
     EnableIRQ(GPIOA_INT0_IRQn);
     EnableIRQ(GPIOA_INT1_IRQn);

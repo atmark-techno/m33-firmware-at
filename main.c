@@ -452,8 +452,6 @@ static void APP_Resume(void)
         backupIndex++;
     }
 
-    EnableIRQ(WUU0_IRQn);
-
     APP_SRTM_Resume();
 }
 
@@ -718,6 +716,8 @@ static void APP_SetWakeupConfig(lpm_rtd_power_mode_e targetMode)
             PCC1->PCC_LPTMR1 |= PCC1_PCC_LPTMR1_SSADO(1);
         }
     }
+
+    EnableIRQ(WUU0_IRQn);
 }
 
 static void APP_ClearWakeupConfig(lpm_rtd_power_mode_e targetMode)
@@ -726,6 +726,7 @@ static void APP_ClearWakeupConfig(lpm_rtd_power_mode_e targetMode)
     {
         WUU_ClearInternalWakeUpModulesConfig(WUU0, WUU_MODULE_LPTMR1, LPTMR1_WUU_WAKEUP_EVENT);
     }
+    DisableIRQ(WUU0_IRQn);
 }
 
 static void APP_CreateTask(void) {}
