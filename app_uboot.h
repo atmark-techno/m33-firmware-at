@@ -11,7 +11,12 @@
 /* helpers for m33 implementation */
 static inline uint32_t uboot_recv(void)
 {
-    return MU_ReceiveMsg(MU0_MUA, 0);
+    /* open code MU_ReceiveMsg(MU0_MUA, 0) but yield to allow CLI to work in uboot */
+    while (0U == (MU0_MUA->RSR & 1))
+    {
+        vTaskDelay(1);
+    }
+    return MU0_MUA->RR[0];
 }
 
 static inline void uboot_recv_many(void *buf, int len)
