@@ -6,6 +6,7 @@
  */
 
 #include <string.h>
+#include <ctype.h>
 
 #include "cli.h"
 #include "3rdparty/EmbeddedCLI/embedded_cli.h"
@@ -50,15 +51,197 @@ static int CLI_clear(int argc, char **argv)
     return 0;
 }
 
+#ifdef CLI_RAW_MEM
+static int parse_size_switch(const char *arg)
+{
+    if (arg[0] != '-' || arg[1] == 0 || arg[2] != 0)
+        return -1;
+    switch (arg[1])
+    {
+        case 'b':
+            return 1;
+        case 'w':
+            return 2;
+        case 'l':
+            return 4;
+        case 'q':
+            return 8;
+    }
+    return -1;
+}
+
+static int CLI_memdump(int argc, char **argv)
+{
+    uintptr_t addr;
+    size_t i, count = 1;
+    int size = 4;
+    char *end;
+
+    if (argc < 2)
+        return CLI_help_usage("md", 1);
+
+    if (argv[1][0] == '-')
+    {
+        size = parse_size_switch(argv[1]);
+        if (size < 0)
+        {
+            PRINTF("Invalid switch %s\r\n", argv[1]);
+            return 1;
+        }
+        argv++;
+        argc--;
+
+        if (argc < 2)
+            return CLI_help_usage("md", 1);
+    }
+    if (argc > 3)
+        return CLI_help_usage("md", 1);
+
+    addr = strtoul(argv[1], &end, 16);
+    if (!end || end[0] != 0)
+    {
+        PRINTF("Invalid addr %s\r\n", argv[1]);
+        return CLI_help_usage("md", 1);
+    }
+    if (argc == 3)
+    {
+        count = strtoul(argv[2], &end, 16);
+        if (!end || end[0] != 0)
+        {
+            PRINTF("Invalid count %s\r\n", argv[2]);
+            return CLI_help_usage("md", 1);
+        }
+    }
+
+    int line_length = 16 / size;
+    char buf[17]    = { 0 };
+    for (i = 0; i < count; i++)
+    {
+        if (i % line_length == 0)
+        {
+            if (buf[0])
+                PRINTF("    %s\r\n", buf);
+            PRINTF("%08x: ", addr);
+            memset(buf, 0, sizeof(buf));
+        }
+
+        uint64_t val;
+        switch (size)
+        {
+            case 1:
+                val = *(uint8_t *)addr;
+                break;
+            case 2:
+                val = *(uint16_t *)addr;
+                break;
+            case 4:
+                val = *(uint32_t *)addr;
+                break;
+            case 8:
+                val = *(uint64_t *)addr;
+                break;
+            default:
+                __builtin_unreachable();
+        }
+        addr += size;
+
+        PRINTF("%0*llx ", size * 2, val);
+        for (int j = 0; j < size; j++)
+        {
+            char c = (val >> (j * 8)) & 0xff;
+            if (!isprint(c))
+                c = '.';
+            sprintf(buf + (i % line_length) * size + j, "%c", c);
+        }
+    }
+    /* fill line with spaces if not round */
+    for (; i % line_length != 0; i++)
+        PRINTF("%*s ", size * 2, "");
+    PRINTF("    %s\r\n", buf);
+
+    return 0;
+}
+
+static int CLI_memwrite(int argc, char **argv)
+{
+    uintptr_t addr;
+    uint64_t value;
+    int size = 4;
+    char *end;
+
+    if (argc < 2)
+        return CLI_help_usage("mw", 1);
+
+    if (argv[1][0] == '-')
+    {
+        size = parse_size_switch(argv[1]);
+        if (size < 0)
+        {
+            PRINTF("Invalid switch %s\r\n", argv[1]);
+            return 1;
+        }
+        argv++;
+        argc--;
+
+        if (argc < 2)
+            return CLI_help_usage("mw", 1);
+    }
+    if (argc > 3)
+        return CLI_help_usage("mw", 1);
+
+    addr = strtoul(argv[1], &end, 16);
+    if (!end || end[0] != 0)
+    {
+        PRINTF("Invalid addr %s\r\n", argv[1]);
+        return CLI_help_usage("mw", 1);
+    }
+    value = strtoul(argv[2], &end, 16);
+    if (!end || end[0] != 0)
+    {
+        PRINTF("Invalid value %s\r\n", argv[2]);
+        return CLI_help_usage("mw", 1);
+    }
+    if (size < 8 && value >= (1ULL << (size * 8)))
+    {
+        PRINTF("%llx too big\r\n", value);
+        return 1;
+    }
+
+    switch (size)
+    {
+        case 1:
+            *(uint8_t *)addr = value;
+            break;
+        case 2:
+            *(uint16_t *)addr = value;
+            break;
+        case 4:
+            *(uint32_t *)addr = value;
+            break;
+        case 8:
+            *(uint64_t *)addr = value;
+            break;
+        default:
+            __builtin_unreachable();
+    }
+
+    return 0;
+}
+#endif
+
 static int CLI_help(int argc, char **argv);
 static const struct CLI_command CLI_commands[] = {
-    { "?", CLI_help, NULL },
+    { "?", CLI_help },
     { "help", CLI_help, "this help" },
     { "reset", CLI_reset, "cold reset" },
     { "log", CLI_log, "print buffer log" },
     { "clear", CLI_clear, "clear buffer log" },
     { "quiet", CLI_quiet, "disable background messages" },
     { "verbose", CLI_verbose, "enable background messages" },
+#ifdef CLI_RAW_MEM
+    { "md", CLI_memdump, "memory dump", "md -[bwlq] addr [count]" },
+    { "mw", CLI_memwrite, "memory write", "mw -[bwlq] addr value" },
+#endif
     {
         0,
     }, /* sentinel */
@@ -69,11 +252,44 @@ static const struct CLI_command CLI_commands[] = {
          commands                           = (commands == CLI_Custom_commands) ? CLI_commands : NULL) \
         for (command = commands; command->command; command++)
 
+int CLI_help_usage(const char *cmd, int retval)
+{
+    const struct CLI_command *command;
+
+    foreach_command(command)
+    {
+        if (strcmp(cmd, command->command))
+            continue;
+
+        if (!command->help)
+            PRINTF("%s\r\n", cmd);
+        else
+            PRINTF("%s - %s\r\n", cmd, command->help);
+
+        if (command->usage)
+            PRINTF("\r\nUsage:\r\n%s\r\n", command->usage);
+
+        return retval;
+    }
+
+    return 1;
+}
+
 static int CLI_help(int argc, char **argv)
 {
     int maxlength = 0;
     const struct CLI_command *command;
 
+    if (argc > 1)
+    {
+        int rc = 0;
+
+        for (int i = 1; i < argc; i++)
+        {
+            rc += CLI_help_usage(argv[i], 0);
+        }
+        return rc;
+    }
     foreach_command(command)
     {
         if (!command->help)

@@ -21,6 +21,9 @@
 /* do not reset jtag pinmux on suspend */
 // #define DEBUG_SUSPEND_SKIP_JTAG_PINS 1
 
+/* add md/mw commands to cli */
+// #define CLI_RAW_MEM
+
 /* Also see SRTM_DEBUG_VERBOSE_LEVEL in srtm_config.h and each srtm/services .c file */
 
 /*******************************************************************************

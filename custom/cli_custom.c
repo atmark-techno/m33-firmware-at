@@ -17,7 +17,7 @@ static int customize_me(int argc, char **argv)
 }
 
 const static struct CLI_command custom_commands[] = {
-    { "customize_me", customize_me, /* help message if non-null */ NULL },
+    { "customize_me", customize_me, /* help message */ NULL, /* usage message */ NULL },
     {
         0,
     }, /* sentinel */
