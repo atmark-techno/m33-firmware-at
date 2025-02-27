@@ -12,6 +12,7 @@
 #include "3rdparty/EmbeddedCLI/embedded_cli.h"
 #include "debug_console.h"
 #include "printf.h"
+#include "version.h"
 
 #include "main.h"
 
@@ -42,6 +43,12 @@ static int CLI_verbose(int argc, char **argv)
 {
     DebugConsole_Quiet(false);
     cli_quiet = false;
+    return 0;
+}
+
+static int CLI_version(int argc, char **argv)
+{
+    PRINTF("%s version %s\r\n", M33_FW_NAME, M33_FW_VERSION);
     return 0;
 }
 
@@ -238,6 +245,7 @@ static const struct CLI_command CLI_commands[] = {
     { "clear", CLI_clear, "clear buffer log" },
     { "quiet", CLI_quiet, "disable background messages" },
     { "verbose", CLI_verbose, "enable background messages" },
+    { "version", CLI_version, "print firmware version" },
 #ifdef CLI_RAW_MEM
     { "md", CLI_memdump, "memory dump", "md -[bwlq] addr [count]" },
     { "mw", CLI_memwrite, "memory write", "mw -[bwlq] addr value" },

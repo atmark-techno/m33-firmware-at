@@ -1,0 +1,11 @@
+/*
+ * Copyright 2025 Atmark Techno
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+#pragma once
+
+/* generated from git describe --tags */
+#define M33_FW_VERSION "@M33_FW_VERSION@"
+#define M33_FW_NAME "m33-firmware-at"

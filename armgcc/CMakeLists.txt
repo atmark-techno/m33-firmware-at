@@ -127,6 +127,7 @@ target_include_directories(${MCUX_SDK_PROJECT_NAME} PRIVATE
     ${ProjDirPath}/../boards/a900
     ${ProjDirPath}/../srtm/channels
     ${ProjDirPath}/../srtm/services
+    ${CMAKE_BINARY_DIR}/CMakeFiles/
 )
 
 set_source_files_properties("${ProjDirPath}/../FreeRTOSConfig.h" PROPERTIES COMPONENT_CONFIG_FILE "middleware_freertos-kernel_template")
@@ -148,3 +149,10 @@ ADD_CUSTOM_COMMAND(TARGET ${MCUX_SDK_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_OB
 
 set_target_properties(${MCUX_SDK_PROJECT_NAME} PROPERTIES ADDITIONAL_CLEAN_FILES "output.map;${EXECUTABLE_OUTPUT_PATH}/m33-firmware-at.bin")
 
+# generate version
+add_custom_target(version
+	${CMAKE_COMMAND} -D SRC=${ProjDirPath}/../version.h.in
+	-D DST=${CMAKE_BINARY_DIR}/CMakeFiles/version.h
+		-P ${CMAKE_SOURCE_DIR}/generate_version.cmake
+)
+add_dependencies(${MCUX_SDK_PROJECT_NAME} version)
