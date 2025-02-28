@@ -164,8 +164,67 @@ mode_combi_t mode_combi_array_for_dual_or_lp_boot[] = {
 };
 // clang-format on
 
+char hardfault_buf[32];
 void HardFault_Handler(void)
 {
+    /* volatile apparently helps compiler not optimize these variables away,
+     * making access easier in debugger */
+    volatile uint32_t HFSR;
+    volatile uint32_t CFSR;
+    volatile uint32_t MMFAR;
+    volatile uint32_t BFAR;
+
+    /* These do not seem to have any define provided...
+     * https://developer.arm.com/documentation/100235/0004/the-cortex-m33-peripherals/system-control-block/system-control-block-registers-summary?lang=en
+     * https://interrupt.memfault.com/blog/cortex-m-hardfault-debug
+     */
+    HFSR = *(uint32_t *)(0xE000ED2C);
+#define HFSR_FORCED (1 << 30)
+    CFSR = *(uint32_t *)(0xE000ED28);
+#define CFSR_MMFSR_MMARVALID (1 << 7)
+#define CFSR_BFSR_BFARVALID (1 << (8 + 7))
+#define CFSR_UFSR_DIVBYZERO (1 << (16 + 9))
+#define CFSR_UFSR_UNALIGNED (1 << (16 + 8))
+#define CFSR_UFSR_STKOF (1 << (16 + 4))
+#define CFSR_UFSR_INVPC (1 << (16 + 2))
+#define CFSR_UFSR_INVSTATE (1 << (16 + 1))
+#define CFSR_UFSR_UNDEFINSTR (1 << (16 + 0))
+    MMFAR = *(uint32_t *)(0xE000ED34);
+    BFAR  = *(uint32_t *)(0xE000ED38);
+
+    /* If jtag is attached, give them a chance to look at it first */
+    if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
+        __asm("bkpt 1");
+
+    DebugConsole_Emergency("\r\n\r\n====================\r\n\r\nHARDFAULT!\r\n");
+    if (HFSR & HFSR_FORCED)
+    {
+        if (CFSR & CFSR_MMFSR_MMARVALID)
+        {
+            sprintf(hardfault_buf, "MMFAR %x\r\n", MMFAR);
+            DebugConsole_Emergency(hardfault_buf);
+        }
+        if (CFSR & CFSR_BFSR_BFARVALID)
+        {
+            sprintf(hardfault_buf, "BFAR %x\r\n", BFAR);
+            DebugConsole_Emergency(hardfault_buf);
+        }
+        /* XXX try to print which task caused that? */
+        if (CFSR & CFSR_UFSR_DIVBYZERO)
+            DebugConsole_Emergency("Divide by zero\r\n");
+        if (CFSR & CFSR_UFSR_UNALIGNED)
+            DebugConsole_Emergency("Unaligned access\r\n");
+        if (CFSR & CFSR_UFSR_STKOF)
+            DebugConsole_Emergency("Stack overflow\r\n");
+        if (CFSR & CFSR_UFSR_INVPC)
+            DebugConsole_Emergency("Invalid PC\r\n");
+        if (CFSR & CFSR_UFSR_INVSTATE)
+            DebugConsole_Emergency("Invalid state flag\r\n");
+        if (CFSR & CFSR_UFSR_UNDEFINSTR)
+            DebugConsole_Emergency("Undefined instruction\r\n");
+    }
+    DebugConsole_Emergency("====================\r\n\r\n");
+
     /* we don't know if it's safe to print something in console here, just reset in doubt..
      * Ideally try to store a flag in something that survives reset (rtc?) and use that? */
     PMIC_Reset();

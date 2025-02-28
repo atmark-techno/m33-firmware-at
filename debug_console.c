@@ -187,3 +187,19 @@ __attribute__((__noreturn__)) void _abort(const char *condstr, const char *func,
     while (1)
         ;
 }
+
+void _DebugConsole_Emergency(const char *buf, int len)
+{
+    /* TODO: check if tty is enabled once it becomes configurable */
+    /* manual flush */
+    if (consoleBufferEnd < consoleBufferStart)
+    {
+        LPUART_WriteBlocking(DBG_UART, consoleBuffer + consoleBufferStart, CONSOLE_BUFLEN - consoleBufferStart);
+        consoleBufferStart = 0;
+    }
+    LPUART_WriteBlocking(DBG_UART, consoleBuffer + consoleBufferStart, consoleBufferEnd - consoleBufferStart);
+    consoleBufferStart = consoleBufferEnd;
+
+    /* And then directly print to uart */
+    LPUART_WriteBlocking(DBG_UART, (uint8_t *)buf, len);
+}

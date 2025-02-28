@@ -12,6 +12,9 @@
 void putchar_(char c);
 /* more generic */
 void putchar(char c, bool is_last, bool ignore_quiet);
+/* for hardfault */
+void _DebugConsole_Emergency(const char *buf, int len);
+#define DebugConsole_Emergency(buf) _DebugConsole_Emergency(buf, strlen(buf))
 
 /* input from console */
 char getchar(void);
