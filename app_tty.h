@@ -56,7 +56,5 @@ extern srtm_service_t ttyService;
 void APP_TTY_InitService(void);
 
 /* PM hooks from app_srtm.c */
-void APP_TTY_SuspendTask(void);
-void APP_TTY_ResumeTask(void);
 void APP_TTY_Suspend(void);
 void APP_TTY_Resume(void);

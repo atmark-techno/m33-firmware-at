@@ -325,12 +325,6 @@ void lpuart_suspend(struct tty_settings *settings)
 
     APP_IO_SetupWUU(APP_IO_GetWUUPin(gpioIdx, pinIdx),
                     lpuart->wakeup_source ? kWUU_ExternalPinRisingEdge : kWUU_ExternalPinDisable);
-    if (lpuart->wakeup_source)
-    {
-        /* This runs after APP_Suspend() that does this for other IOs,
-         * so set pinmux to wuu manually. Restore is handled by APP_Resume() */
-        PinMuxPrepareSuspend(gpioIdx, pinIdx);
-    }
 }
 
 void lpuart_resume(struct tty_settings *settings)

@@ -334,7 +334,7 @@ void PinMuxPrepareSuspend(uint8_t gpioIdx, uint8_t pinIdx)
     *PE |= setting;
 }
 
-static void APP_Suspend(void)
+static void IoSuspend(void)
 {
     uint32_t i;
     uint32_t backupIndex;
@@ -405,12 +405,9 @@ static void APP_Suspend(void)
 
     /* Clear any potential interrupts before enter Power Down */
     WUU0->PF = WUU0->PF;
-
-    /* Save SRTM context */
-    APP_SRTM_Suspend();
 }
 
-static void APP_Resume(void)
+static void IoResume(void)
 {
     uint32_t i;
     uint32_t backupIndex;
@@ -451,8 +448,6 @@ static void APP_Resume(void)
         GPIOC->ICR[i]                 = gpioICRBackup[backupIndex];
         backupIndex++;
     }
-
-    APP_SRTM_Resume();
 }
 
 void APP_PowerPreSwitchHook(lpm_rtd_power_mode_e targetMode)
@@ -731,19 +726,18 @@ static void APP_ClearWakeupConfig(lpm_rtd_power_mode_e targetMode)
 
 static void APP_CreateTask(void) {}
 
-static void APP_SuspendTask(void)
+static void APP_Suspend(void)
 {
-    APP_SRTM_SuspendTask();
+    APP_SRTM_Suspend();
     vTaskSuspend(cliTask);
-
-    APP_Suspend();
+    IoSuspend();
 }
 
-static void APP_ResumeTask(void)
+static void APP_Resume(void)
 {
-    APP_Resume();
+    IoResume();
 
-    APP_SRTM_ResumeTask();
+    APP_SRTM_Resume();
     vTaskResume(cliTask);
 }
 
@@ -797,7 +791,7 @@ static void HandleSuspendTask(void *pvParameters)
             /* clear any previous wakeup we might have had */
             xSemaphoreTake(s_wakeupSig, 0);
 
-            APP_SuspendTask();
+            APP_Suspend();
             APP_GetWakeupConfig(source);
             APP_SetWakeupConfig(targetPowerMode);
 
@@ -812,7 +806,7 @@ static void HandleSuspendTask(void *pvParameters)
             PRINTF("Waking up...\r\n");
             /* The call might be blocked by SRTM dispatcher task. Must be called after power mode reset. */
             APP_ClearWakeupConfig(targetPowerMode);
-            APP_ResumeTask();
+            APP_Resume();
         }
 
         /*update Mode state*/

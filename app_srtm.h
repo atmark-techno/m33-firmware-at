@@ -186,8 +186,6 @@ void APP_SRTM_SetIRQHandler(app_irq_handler_t handler, void *param);
  */
 void APP_SRTM_SetWakeupPin(uint16_t ioId, uint16_t event);
 
-void APP_SRTM_SuspendTask(void);
-void APP_SRTM_ResumeTask(void);
 void APP_SRTM_Suspend(void);
 void APP_SRTM_Resume(void);
 

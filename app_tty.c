@@ -175,7 +175,7 @@ void APP_TTY_InitService(void)
     SRTM_Dispatcher_RegisterService(disp, ttyService);
 }
 
-void APP_TTY_SuspendTask(void)
+void APP_TTY_Suspend(void)
 {
     uint8_t i;
 
@@ -190,37 +190,6 @@ void APP_TTY_SuspendTask(void)
 
         if (tty_hooks[settings->type]->suspendTask)
             tty_hooks[settings->type]->suspendTask(settings);
-    }
-}
-
-void APP_TTY_ResumeTask(void)
-{
-    uint8_t i;
-
-    for (i = 0; i < TTY_MAX_PORTS; i++)
-    {
-        struct tty_settings *settings = get_settings(i, NULL);
-
-        if (!settings)
-            continue;
-
-        settings->state &= ~TTY_SUSPENDED;
-
-        if (tty_hooks[settings->type]->resumeTask)
-            tty_hooks[settings->type]->resumeTask(settings);
-    }
-}
-
-void APP_TTY_Suspend(void)
-{
-    uint8_t i;
-
-    for (i = 0; i < TTY_MAX_PORTS; i++)
-    {
-        struct tty_settings *settings = get_settings(i, NULL);
-
-        if (!settings)
-            continue;
 
         if (tty_hooks[settings->type]->suspend)
             tty_hooks[settings->type]->suspend(settings);
@@ -240,5 +209,10 @@ void APP_TTY_Resume(void)
 
         if (tty_hooks[settings->type]->resume)
             tty_hooks[settings->type]->resume(settings);
+
+        settings->state &= ~TTY_SUSPENDED;
+
+        if (tty_hooks[settings->type]->resumeTask)
+            tty_hooks[settings->type]->resumeTask(settings);
     }
 }
