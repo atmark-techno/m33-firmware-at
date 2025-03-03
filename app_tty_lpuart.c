@@ -102,7 +102,7 @@ static int lpuart_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
     return rc;
 }
 
-static int lpuart_setcflag(struct tty_settings *settings, tcflag_t cflag)
+static int setcflag(struct tty_settings *settings, tcflag_t cflag)
 {
     struct lpuart_tty_settings *lpuart = get_lpuart(settings);
     speed_t baudrate                   = tty_baudrate(cflag);
@@ -110,12 +110,6 @@ static int lpuart_setcflag(struct tty_settings *settings, tcflag_t cflag)
     bool cmsparity                     = tty_cmsparity(cflag);
     lpuart_data_bits_t databits        = tty_databits(cflag);
     lpuart_stop_bit_count_t stopbits   = tty_stopbits(cflag);
-
-    if (settings->state & TTY_SUSPENDED)
-    {
-        PRINTF("tty %d setcflags while not ready (state %x)\r\n", settings->port_idx, settings->state);
-        return kStatus_Fail;
-    }
 
     /*
      * only support CS8 and CS7, and for CS7 must enable parity.
@@ -151,6 +145,17 @@ static int lpuart_setcflag(struct tty_settings *settings, tcflag_t cflag)
     lpuart->cflag = cflag;
 
     return 0;
+}
+
+static int lpuart_setcflag(struct tty_settings *settings, tcflag_t cflag)
+{
+    if (settings->state & TTY_SUSPENDED)
+    {
+        PRINTF("tty %d setcflags while not ready (state %x)\r\n", settings->port_idx, settings->state);
+        return kStatus_Fail;
+    }
+
+    return setcflag(settings, cflag);
 }
 
 static int lpuart_setwake(struct tty_settings *settings, bool enable)
@@ -221,7 +226,7 @@ static int lpuart_init_device(struct tty_settings *settings)
     LPUART_RTOS_SetRxTimeout(&lpuart->lpuart_rtos_handle, 1, 0); /* short timeout to give data back asap */
     LPUART_RTOS_SetTxTimeout(&lpuart->lpuart_rtos_handle, 0, 0); /* XXX no timeout, depends on baud rate */
 
-    return lpuart_setcflag(settings, lpuart->cflag);
+    return setcflag(settings, lpuart->cflag);
 }
 
 static int lpuart_init(struct tty_settings *settings, struct srtm_tty_init_payload *generic_init)
