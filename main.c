@@ -403,14 +403,14 @@ static void APP_Suspend(void)
     gpioOutputBackup[2].pdor = GPIOC->PDOR;
     gpioOutputBackup[2].pddr = GPIOC->PDDR;
 
-    /* Cleare any potential interrupts before enter Power Down */
+    /* Clear any potential interrupts before enter Power Down */
     WUU0->PF = WUU0->PF;
 
     /* Save SRTM context */
     APP_SRTM_Suspend();
 }
 
-static void APP_Resume(bool resume)
+static void APP_Resume(void)
 {
     uint32_t i;
     uint32_t backupIndex;
@@ -454,52 +454,7 @@ static void APP_Resume(bool resume)
 
     EnableIRQ(WUU0_IRQn);
 
-    APP_SRTM_Resume(resume);
-}
-
-/* Disable gpio to save power */
-void APP_DisableGPIO(void)
-{
-    int i = 0;
-
-    /* Disable PTA and set PTA to Analog/HiZ state to save power */
-    for (i = 0; i <= 24; i++)
-    {
-        GPIOA->ICR[i] = 0; /* Disable interrupts */
-
-        /*
-         * Skip PTA20 ~ 23(JTAG pins)[define DEBUG_SUSPEND_SKIP_JTAG_PINS as 1] if want to debug code with JTAG before
-         * entering deep power down mode
-         */
-#if DEBUG_SUSPEND_SKIP_JTAG_PINS
-        if (i < 20 || i > 23)
-#endif
-        {
-            PinMuxPrepareSuspend(0, i);
-        }
-    }
-
-    /* Disable PTB and set PTB to Analog/HiZ state to save power */
-    for (i = 0; i <= 15; i++)
-    {
-        if ((i != 10) && (i != 11)) /* PTB10 and PTB11 is used as i2c function by upower */
-        {
-            GPIOB->ICR[i] = 0; /* Disable interrupts */
-            PinMuxPrepareSuspend(1, i);
-        }
-    }
-
-    /* Disable PTC and set PTC to Analog/HiZ state to save power */
-    for (i = 0; i <= 23; i++)
-    {
-        GPIOC->ICR[i] = 0; /* Disable interrupts */
-
-        /* Skip PTC0 ~ 10(FlexSPI0 pins) if run on flash(XiP) */
-        if ((i > 10) || !BOARD_IS_XIP_FLEXSPI0())
-        {
-            IOMUXC0->PCR0_IOMUXCARRAY2[i] = 0; /* Set to Analog/HiZ state */
-        }
-    }
+    APP_SRTM_Resume();
 }
 
 void APP_PowerPreSwitchHook(lpm_rtd_power_mode_e targetMode)
@@ -512,18 +467,6 @@ void APP_PowerPreSwitchHook(lpm_rtd_power_mode_e targetMode)
         PRINTF("Preparing for %s\r\n", s_modeNames[targetMode]);
 
         DebugConsole_Suspend();
-
-        if (LPM_PowerModePowerDown == targetMode || LPM_PowerModeDeepSleep == targetMode)
-        {
-            APP_Suspend();
-        }
-        else if (LPM_PowerModeDeepPowerDown == targetMode)
-        {
-            APP_DisableGPIO();
-
-            /* Cleare any potential interrupts before enter Deep Power Down */
-            WUU0->PF = WUU0->PF;
-        }
     }
 }
 
@@ -536,11 +479,6 @@ void APP_PowerPostSwitchHook(lpm_rtd_power_mode_e targetMode, bool result)
     {
         /* init clock first as apps use it indirectly */
         BOARD_InitClock();
-
-        if (LPM_PowerModePowerDown == targetMode || LPM_PowerModeDeepSleep == targetMode)
-        {
-            APP_Resume(result);
-        }
 
         DebugConsole_Resume();
     }
@@ -796,10 +734,14 @@ static void APP_SuspendTask(void)
 {
     APP_SRTM_SuspendTask();
     vTaskSuspend(cliTask);
+
+    APP_Suspend();
 }
 
 static void APP_ResumeTask(void)
 {
+    APP_Resume();
+
     APP_SRTM_ResumeTask();
     vTaskResume(cliTask);
 }

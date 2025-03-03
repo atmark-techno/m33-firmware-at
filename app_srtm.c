@@ -1625,7 +1625,7 @@ void APP_SRTM_Suspend(void)
     APP_TTY_Suspend();
 }
 
-void APP_SRTM_Resume(bool resume)
+void APP_SRTM_Resume(void)
 {
 #ifdef DEBUG_SUSPEND
     PRINTF("%s\r\n", __func__);
