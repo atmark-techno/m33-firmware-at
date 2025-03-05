@@ -5,9 +5,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
-#ifndef __SRTM_IO_SERVICE_H__
-#define __SRTM_IO_SERVICE_H__
+#pragma once
 
 #include "srtm_service.h"
 
@@ -126,5 +124,3 @@ srtm_status_t SRTM_IoService_NotifyInputEvent(srtm_service_t service, uint16_t i
 #endif
 
 /*! @} */
-
-#endif /* __SRTM_IO_SERVICE_H__ */

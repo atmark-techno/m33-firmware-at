@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+/* /!\ same guard as 3rdparty/printf/printf.h */
 #ifndef PRINTF_H_
 
 /* some files in nxp tree hardcode fsl_debug_console.h so provide it:

@@ -5,9 +5,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
-#ifndef __SRTM_PWM_SERVICE_H__
-#define __SRTM_PWM_SERVICE_H__
+#pragma once
 
 #include "srtm_service.h"
 
@@ -91,5 +89,3 @@ void SRTM_PwmService_Destroy(srtm_service_t service);
 #endif
 
 /*! @} */
-
-#endif /* __SRTM_PWM_SERVICE_H__ */

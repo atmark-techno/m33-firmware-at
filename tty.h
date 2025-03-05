@@ -2,8 +2,7 @@
 /*
  * Copyright (c) 2025 Atmark Techno, Inc. All Rights Reserved.
  */
-#ifndef _TTY_H_
-#define _TTY_H_
+#pragma once
 
 #include "fsl_lpuart.h"
 
@@ -13,5 +12,3 @@ bool tty_cmsparity(tcflag_t cflag);
 lpuart_data_bits_t tty_databits(tcflag_t cflag);
 lpuart_stop_bit_count_t tty_stopbits(tcflag_t cflag);
 bool tty_rtscts(tcflag_t cflag);
-
-#endif

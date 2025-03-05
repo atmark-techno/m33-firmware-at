@@ -5,9 +5,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
-#ifndef __SRTM_RTC_ADAPTER_H__
-#define __SRTM_RTC_ADAPTER_H__
+#pragma once
 
 #include "srtm_rtc_service.h"
 #include "fsl_adapter_rtc.h"
@@ -59,5 +57,3 @@ void SRTM_RtcAdapter_DisableAlarmInt(srtm_rtc_adapter_t adapter);
 #endif
 
 /*! @} */
-
-#endif /* __SRTM_RTC_ADAPTER_H__ */

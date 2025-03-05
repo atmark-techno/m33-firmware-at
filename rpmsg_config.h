@@ -7,9 +7,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
-#ifndef RPMSG_CONFIG_H_
-#define RPMSG_CONFIG_H_
+#pragma once
 
 /*!
  * @addtogroup config
@@ -108,5 +106,3 @@
 //!
 //! MU0_A_IRQHandler handled by application, rename the handler name in RPMsg.
 #define MU0_A_IRQHandler RPMsg_MU0_A_IRQHandler
-
-#endif /* RPMSG_CONFIG_H_ */

@@ -4,8 +4,7 @@
  *
  * Based on: linux-5.10/include/uapi/asm-generic/termbits.h
  */
-#ifndef _TERMBITS_H
-#define _TERMBITS_H
+#pragma once
 
 typedef unsigned char cc_t;
 typedef unsigned int speed_t;
@@ -202,5 +201,3 @@ struct ktermios
 #define TCSANOW 0
 #define TCSADRAIN 1
 #define TCSAFLUSH 2
-
-#endif /* _TERMBITS_H */

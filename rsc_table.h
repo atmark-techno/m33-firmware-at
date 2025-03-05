@@ -7,12 +7,10 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
+#pragma once
 
 /* This file populates resource table for BM remote
  * for use by the Linux Master */
-
-#ifndef RSC_TABLE_H_
-#define RSC_TABLE_H_
 
 #include <stddef.h>
 #include <remoteproc.h>
@@ -52,5 +50,3 @@ void copyResourceTable(void);
 #if defined __cplusplus
 }
 #endif
-
-#endif /* RSC_TABLE_H_ */

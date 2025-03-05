@@ -5,9 +5,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
-#ifndef __SRTM_I2C_SERVICE_H__
-#define __SRTM_I2C_SERVICE_H__
+#pragma once
 
 #include "srtm_service.h"
 
@@ -188,5 +186,3 @@ void SRTM_I2CService_Reset(srtm_service_t service, srtm_peercore_t core);
 #endif
 
 /*! @} */
-
-#endif /* __SRTM_I2C_SERVICE_H__ */

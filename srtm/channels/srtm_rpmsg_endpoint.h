@@ -5,9 +5,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
-#ifndef __SRTM_RPMSG_ENDPOINT_H__
-#define __SRTM_RPMSG_ENDPOINT_H__
+#pragma once
 
 #include "srtm_channel.h"
 #include "rpmsg_lite.h"
@@ -82,5 +80,3 @@ srtm_status_t SRTM_RPMsgEndpoint_OverrideRxHandler(srtm_channel_t channel, srtm_
 #endif
 
 /*! @} */
-
-#endif /* __SRTM_RPMSG_ENDPOINT_H__ */

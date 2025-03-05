@@ -4,9 +4,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
-#ifndef _LPM_H_
-#define _LPM_H_
+#pragma once
 
 #include "fsl_common.h"
 
@@ -141,5 +139,3 @@ void LPM_UnregisterPowerListener(lpm_power_mode_callback_t callback, void *data)
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus*/
-
-#endif /* _LPM_H_ */

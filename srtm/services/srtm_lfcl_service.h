@@ -5,9 +5,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
-#ifndef __SRTM_LFCL_SERVICE_H__
-#define __SRTM_LFCL_SERVICE_H__
+#pragma once
 
 #include "srtm_service.h"
 
@@ -99,5 +97,3 @@ srtm_status_t SRTM_LfclService_Unsubscribe(srtm_service_t service, srtm_lfcl_ser
 #endif
 
 /*! @} */
-
-#endif /* __SRTM_LFCL_SERVICE_H__ */

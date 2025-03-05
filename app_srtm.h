@@ -4,9 +4,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
-#ifndef _APP_SRTM_H_
-#define _APP_SRTM_H_
+#pragma once
 
 #include "rpmsg_lite.h"
 #include "fsl_wuu.h"
@@ -196,5 +194,3 @@ void APP_SRTM_EmulateGPIOHandler(uint8_t wuuPin);
 #if defined(__cplusplus)
 }
 #endif
-
-#endif /* _APP_SRTM_H_ */

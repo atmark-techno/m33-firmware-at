@@ -5,9 +5,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
-#ifndef __SRTM_ADC_SERVICE_H__
-#define __SRTM_ADC_SERVICE_H__
+#pragma once
 
 #include "srtm_service.h"
 #include "fsl_lpadc.h"
@@ -102,5 +100,3 @@ void SRTM_AdcService_Destroy(srtm_service_t service);
 #endif
 
 /*! @} */
-
-#endif /* __SRTM_ADC_SERVICE_H__ */

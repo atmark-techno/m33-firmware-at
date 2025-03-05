@@ -9,9 +9,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
-#ifndef REMOTEPROC_H
-#define REMOTEPROC_H
+#pragma once
 
 #include <stdint.h>
 
@@ -368,5 +366,3 @@ struct fw_rsc_vendor
 #if defined __cplusplus
 }
 #endif
-
-#endif /* REMOTEPROC_H_ */

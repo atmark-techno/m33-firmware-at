@@ -5,9 +5,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
-#ifndef _SRTM_CONFIG_H
-#define _SRTM_CONFIG_H
+#pragma once
 
 #ifdef SDK_OS_FREE_RTOS
 #include "FreeRTOS.h"
@@ -60,4 +58,3 @@ typedef StaticSemaphore_t srtm_mutex_buf_t;
 #ifdef __cplusplus
 }
 #endif
-#endif /* _SRTM_CONFIG_H */

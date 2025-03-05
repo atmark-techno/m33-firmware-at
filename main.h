@@ -4,9 +4,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
-#ifndef _POWER_MODE_SWITCH_H_
-#define _POWER_MODE_SWITCH_H_
+#pragma once
 
 #include "app_srtm.h"
 #include "lpm.h"
@@ -96,8 +94,6 @@ void APP_PowerModeSwitch(lpm_rtd_power_mode_e targetPowerMode, app_wakeup_source
 #if defined(__cplusplus)
 }
 #endif
-
-#endif /* _POWER_MODE_SWITCH_H_ */
 
 /*******************************************************************************
  * EOF

@@ -5,9 +5,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
-#ifndef __SRTM_TTY_SERVICE_H__
-#define __SRTM_TTY_SERVICE_H__
+#pragma once
 
 #include "srtm_service.h"
 #include "termbits.h"
@@ -119,5 +117,3 @@ srtm_status_t SRTM_TtyService_NotifySend(srtm_service_t service, srtm_notificati
 #endif
 
 /*! @} */
-
-#endif /* __SRTM_TTY_SERVICE_H__ */
