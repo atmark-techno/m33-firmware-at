@@ -34,14 +34,12 @@ static int CLI_log(int argc, char **argv)
 
 static int CLI_quiet(int argc, char **argv)
 {
-    DebugConsole_Quiet(true);
     cli_quiet = true;
     return 0;
 }
 
 static int CLI_verbose(int argc, char **argv)
 {
-    DebugConsole_Quiet(false);
     cli_quiet = false;
     return 0;
 }
