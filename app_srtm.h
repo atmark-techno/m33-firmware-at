@@ -96,16 +96,16 @@ static inline uint16_t APP_IO_GetIndex(uint16_t ioId)
     uint8_t gpio_idx = APP_GPIO_IDX(ioId);
     uint8_t pin_idx  = APP_PIN_IDX(ioId);
 
-    if (gpio_idx > APP_IO_CHIPS)
+    if (gpio_idx >= APP_IO_CHIPS)
         return 0xffff;
-    if (pin_idx > APP_IO_PINS_PER_CHIP)
+    if (pin_idx >= APP_IO_PINS_PER_CHIP)
         return 0xffff;
 
     return gpio_idx * APP_IO_PINS_PER_CHIP + pin_idx;
 }
 static inline uint16_t APP_IO_GetId(uint8_t inputIdx)
 {
-    if (inputIdx > APP_IO_NUM)
+    if (inputIdx >= APP_IO_NUM)
         return 0xffff;
     return ((inputIdx / APP_IO_PINS_PER_CHIP) << 8U) | (inputIdx % APP_IO_PINS_PER_CHIP);
 }
@@ -115,7 +115,7 @@ static inline uint8_t APP_IO_GetWUUPin(uint8_t gpio_idx, uint8_t pin_idx)
     /* only PTA/PTB */
     if (gpio_idx > 1)
         return 255;
-    if (pin_idx > APP_IO_PINS_PER_CHIP)
+    if (pin_idx >= APP_IO_PINS_PER_CHIP)
         return 255;
     return wuuPins[APP_IO_IDX(gpio_idx, pin_idx)];
 }
