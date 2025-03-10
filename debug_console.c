@@ -97,7 +97,22 @@ static void send_all(uint8_t *buf, int len)
 {
     LPUART_WriteBlocking(DBG_UART, buf, len);
 #ifndef DISABLE_RPMSG
-    APP_TTY_Console_Write(buf, len);
+    /* split one line at a time so as to not send \r to linux.
+     * This is suboptimal but debug console is not meant to be high
+     * throughput... */
+    int start, end;
+    for (start = 0, end = 0; end < len; end++)
+    {
+        if (buf[end] != '\r')
+            continue;
+        if (start != end)
+        {
+            APP_TTY_Console_Write(buf + start, end - start);
+        }
+        start = end + 1;
+    }
+    if (start != end)
+        APP_TTY_Console_Write(buf + start, end - start);
 #endif
 }
 
