@@ -49,8 +49,8 @@ static void lpuart_tty_rx_task(void *pvParameters)
     struct tty_settings *settings      = pvParameters;
     struct lpuart_tty_settings *lpuart = get_lpuart(settings);
 
-    assert(setting);
-    assert(setting->type == TTY_TYPE_LPUART);
+    assert(settings);
+    assert(settings->type == TTY_TYPE_LPUART);
 
     /* if task was created during suspend make it wait here... */
     if (settings->state & TTY_SUSPENDED)
