@@ -7,6 +7,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
 
 /* for printf, output one char to console, line-buffered */
 void putchar_(char c);
@@ -21,6 +22,8 @@ char getchar(void);
 
 /* lifecycle */
 void DebugConsole_Init(void);
+void *DebugConsole_get_uart(void);
+int DebugConsole_uboot(uint32_t command);
 void DebugConsole_Suspend(void);
 void DebugConsole_Resume(void);
 void DebugConsole_Replay(void);

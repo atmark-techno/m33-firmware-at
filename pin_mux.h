@@ -24,7 +24,6 @@ extern "C" {
 #endif
 
 void BOARD_InitBootPins(void);
-void BOARD_InitConsolePins(void);
 void BOARD_InitPmicI2cPins(void);
 void BOARD_InitPmicModePins(void);
 void BOARD_InitWdogPins(void);

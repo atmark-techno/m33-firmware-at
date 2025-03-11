@@ -9,9 +9,10 @@
 #include "fsl_reset.h"
 
 #include "app_tty.h"
-#include "tty.h"
 #include "build_bug.h"
+#include "debug_console.h"
 #include "main.h"
+#include "tty.h"
 
 #define TTY_RX_TASK_PRIORITY (3U)
 #define APP_LPUART_IRQ_PRIO (5U)
@@ -256,6 +257,12 @@ static int lpuart_init(struct tty_settings *settings, struct srtm_tty_init_paylo
         default:
             PRINTF("lpuart index %d not supported\r\n", init->uart_index);
             return kStatus_Fail;
+    }
+
+    if (DebugConsole_get_uart() == lpuart->uart_base)
+    {
+        PRINTF("Refusing to reuse debug console as srtm console (LPUART%d)\r\n", init->uart_index);
+        return kStatus_Fail;
     }
 
     lpuart->rs485_flags         = init->rs485_flags;

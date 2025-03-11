@@ -17,27 +17,9 @@
  * END ****************************************************************************************************************/
 void BOARD_InitBootPins(void)
 {
-    BOARD_InitConsolePins();
     BOARD_InitPmicI2cPins();
     BOARD_InitPmicModePins();
     BOARD_InitWdogPins();
-}
-
-/* FUNCTION ************************************************************************************************************
- *
- * Function Name : BOARD_InitConsolePins
- * Description   : Configures pin routing and optionally pin electrical features.
- *
- * END ****************************************************************************************************************/
-void BOARD_InitConsolePins(void)
-{ /*!< Function assigned for the core: Cortex-M33[cm33] */
-    /*
-     * LPUART1 is the debug console for RTD.
-     */
-    IOMUXC_SetPinMux(IOMUXC_PTA22_LPUART1_TX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA22_LPUART1_TX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
-    IOMUXC_SetPinMux(IOMUXC_PTA23_LPUART1_RX, 0U);
-    IOMUXC_SetPinConfig(IOMUXC_PTA23_LPUART1_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
 }
 
 /* FUNCTION ************************************************************************************************************

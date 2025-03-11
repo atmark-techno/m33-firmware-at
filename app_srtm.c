@@ -23,22 +23,23 @@
 
 #include "app_srtm.h"
 #include "app_srtm_internal.h"
-#include "app_uboot.h"
 #include "app_tty.h"
+#include "app_uboot.h"
 #include "board.h"
-#include "pin_mux.h"
 #include "build_bug.h"
-#include "fsl_mu.h"
-#include "printf.h"
-#include "fsl_rgpio.h"
-#include "fsl_wuu.h"
-#include "fsl_upower.h"
-#include "fsl_iomuxc.h"
-#include "rsc_table.h"
+#include "debug_console.h"
 #include "fsl_bbnsm.h"
-#include "fsl_sentinel.h"
-#include "fsl_reset.h"
 #include "fsl_ewm.h"
+#include "fsl_iomuxc.h"
+#include "fsl_mu.h"
+#include "fsl_reset.h"
+#include "fsl_rgpio.h"
+#include "fsl_sentinel.h"
+#include "fsl_upower.h"
+#include "fsl_wuu.h"
+#include "pin_mux.h"
+#include "printf.h"
+#include "rsc_table.h"
 
 /*******************************************************************************
  * Definitions
@@ -1414,6 +1415,9 @@ static void process_uboot_messages(void)
             case UBOOT_I2C:
                 /* handles replies */
                 APP_I2C_uboot(command);
+                break;
+            case UBOOT_DEBUG_CONSOLE:
+                uboot_send(DebugConsole_uboot(command));
                 break;
         }
     }

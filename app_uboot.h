@@ -120,3 +120,9 @@ static inline void uboot_send_many(void *buf, int len)
  * m33 -> uboot: status
  */
 #define UBOOT_I2C_WRITE 3
+
+/* debug console
+ * uboot -> m33: this | (pin_tx << 8) | (pin_rx << 16)
+ * m33 -> uboot: ack
+ */
+#define UBOOT_DEBUG_CONSOLE 5
