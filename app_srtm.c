@@ -633,6 +633,10 @@ static srtm_status_t APP_IO_OutputInit(srtm_service_t service, srtm_peercore_t c
         return SRTM_Status_Error;
     }
 
+    /* clear any WUU config if any... */
+    uint8_t wuuIdx = APP_IO_GetWUUPin(gpioIdx, pinIdx);
+    APP_IO_SetupWUU(wuuIdx, kWUU_ExternalPinDisable);
+
     APP_IO_SetPinConfig(ioId, IOMUXC_PCR_OBE_MASK);
 
     rgpio_pin_config_t config = {
