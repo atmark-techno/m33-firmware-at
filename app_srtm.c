@@ -708,9 +708,11 @@ static srtm_status_t APP_IO_ConfInput(uint16_t ioId, srtm_io_event_t event, bool
     uint8_t inputIdx                          = APP_IO_GetIndex(ioId);
     wuu_external_pin_edge_detection_t wuuEdge = kWUU_ExternalPinDisable;
 
-    assert(gpioIdx < APP_IO_CHIPS); /* Only support GPIOA, GPIOB and GPIOC */
-    assert(pinIdx < APP_IO_PINS_PER_CHIP);
-    assert(inputIdx < APP_IO_NUM);
+    if (gpioIdx >= APP_IO_CHIPS || pinIdx >= APP_IO_PINS_PER_CHIP || inputIdx >= APP_IO_NUM)
+    {
+        PRINTF("Invalid pin 0x%x\r\n", ioId);
+        return SRTM_Status_Error;
+    }
     if (wakeup && wuuIdx == 255)
     {
         PRINTF("Wakeup requested on %d/%d which has no wakeup\r\n", gpioIdx, pinIdx);
