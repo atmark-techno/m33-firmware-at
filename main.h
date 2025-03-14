@@ -91,6 +91,9 @@ extern "C" {
 void PMIC_Reset(void);
 void APP_PowerModeSwitch(lpm_rtd_power_mode_e targetPowerMode, app_wakeup_source_t source);
 
+extern lpm_rtd_power_mode_e sleepWithLinux;
+void APP_SleepWithLinux(void);
+
 #if defined(__cplusplus)
 }
 #endif

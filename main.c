@@ -66,7 +66,6 @@
  ******************************************************************************/
 extern void APP_PowerPreSwitchHook(lpm_rtd_power_mode_e targetMode);
 extern void APP_PowerPostSwitchHook(lpm_rtd_power_mode_e targetMode, bool result);
-extern void APP_SRTM_WakeupCA35(void);
 extern void APP_RebootCA35(void);
 extern void APP_ShutdownCA35(void);
 extern void APP_BootCA35(void);
@@ -79,8 +78,8 @@ static TaskHandle_t cliTask;
 static uint32_t s_wakeupTimeout;           /* Wakeup timeout. (Unit: Second) */
 static app_wakeup_source_t s_wakeupSource; /* Wakeup source.                 */
 static uint32_t s_wakeupPinFlag;           /* Wakeup pin flag.               */
-static bool wakeWithLinux  = true;
-static bool sleepWithLinux = true;
+static bool wakeWithLinux           = true;
+lpm_rtd_power_mode_e sleepWithLinux = LPM_PowerModeDeepSleep;
 static SemaphoreHandle_t s_wakeupSig;
 static SemaphoreHandle_t handleSuspendSig;
 static lpm_rtd_power_mode_e suspendPowerMode;
@@ -765,11 +764,6 @@ static void HandleSuspendTask(void *pvParameters)
         xSemaphoreTake(handleSuspendSig, portMAX_DELAY);
         targetPowerMode = suspendPowerMode;
         source          = suspendWakeupSource;
-        if (source == kAPP_WakeupSourcePin && !sleepWithLinux)
-        {
-            PRINTF("Not sleeping with linux\r\n");
-            continue;
-        }
         PRINTF("HandleSuspendTask: target %d / %d\r\n", targetPowerMode, source);
         if (targetPowerMode == s_curMode)
         {
@@ -797,8 +791,11 @@ static void HandleSuspendTask(void *pvParameters)
 
             PRINTF("Suspended tasks...\r\n");
 
-            // xSemaphoreTake(s_wakeupSig, portMAX_DELAY);
-            while (!xSemaphoreTake(s_wakeupSig, 5000))
+            TickType_t delay = 5000;
+            if (sleepWithLinux == LPM_PowerModeActive)
+                delay = portMAX_DELAY;
+
+            while (!xSemaphoreTake(s_wakeupSig, delay))
             {
                 PRINTF("not sleeping?\r\n");
             }
@@ -853,6 +850,13 @@ void APP_PowerModeSwitch(lpm_rtd_power_mode_e targetPowerMode, app_wakeup_source
     suspendPowerMode    = targetPowerMode;
     suspendWakeupSource = source;
     xSemaphoreGive(handleSuspendSig);
+}
+
+void APP_SleepWithLinux(void)
+{
+    if (sleepWithLinux == LPM_PowerModeIgnore)
+        return;
+    APP_PowerModeSwitch(sleepWithLinux, kAPP_WakeupSourcePin);
 }
 
 /* Power Mode Switch task */

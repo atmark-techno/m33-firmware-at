@@ -56,6 +56,34 @@ static int CLI_clear(int argc, char **argv)
     return 0;
 }
 
+static int CLI_sleepMode(int argc, char **argv)
+{
+    if (argc != 2)
+        goto usage;
+
+    if (!strcmp(argv[1], "deepsleep"))
+        sleepWithLinux = LPM_PowerModeDeepSleep;
+    else if (!strcmp(argv[1], "active"))
+        sleepWithLinux = LPM_PowerModeActive;
+    else if (!strcmp(argv[1], "ignore"))
+        sleepWithLinux = LPM_PowerModeIgnore;
+    else
+        goto usage;
+
+    return 0;
+
+usage:
+    if (argc == 2)
+        PRINTF("Invalid mode %s\r\n", argv[1]);
+    return CLI_help_usage("sleep_mode", 1);
+}
+
+static int CLI_wakeup(int argc, char **argv)
+{
+    APP_SRTM_WakeupCA35();
+    return 0;
+}
+
 #ifdef CLI_RAW_MEM
 static int parse_size_switch(const char *arg)
 {
@@ -244,6 +272,8 @@ static const struct CLI_command CLI_commands[] = {
     { "quiet", CLI_quiet, "disable background messages" },
     { "verbose", CLI_verbose, "enable background messages" },
     { "version", CLI_version, "print firmware version" },
+    { "sleep_mode", CLI_sleepMode, NULL /* debug function, not listed */, "sleep_mode <deepsleep|active|ignore>" },
+    { "wakeup", CLI_wakeup }, /* wake up linux if sleeping (only used for testing) */
 #ifdef CLI_RAW_MEM
     { "md", CLI_memdump, "memory dump", "md -[bwlq] addr [count]" },
     { "mw", CLI_memwrite, "memory write", "mw -[bwlq] addr value" },

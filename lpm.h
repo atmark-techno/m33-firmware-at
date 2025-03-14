@@ -87,6 +87,7 @@ typedef enum _lpm_rtd_power_mode
     LPM_PowerModeDeepSleep,     /* Deep Sleep mode. */
     LPM_PowerModePowerDown,     /* Power Down mode. */
     LPM_PowerModeDeepPowerDown, /* Deep Power Down mode */
+    LPM_PowerModeIgnore,        /* Do not enter transition at all */
 } lpm_rtd_power_mode_e;
 
 typedef bool (*lpm_power_mode_callback_t)(lpm_rtd_power_mode_e curMode, lpm_rtd_power_mode_e newMode, void *data);

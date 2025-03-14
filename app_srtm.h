@@ -160,6 +160,9 @@ typedef void (*app_irq_handler_t)(IRQn_Type irq, void *param);
 extern "C" {
 #endif
 
+/* Wake linux */
+void APP_SRTM_WakeupCA35(void);
+
 /* Initialize SRTM contexts */
 void APP_SRTM_Init(void);
 

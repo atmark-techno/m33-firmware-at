@@ -44,8 +44,6 @@
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
-void APP_SRTM_WakeupCA35(void);
-
 typedef struct
 {
     bool wakeup;
@@ -1187,7 +1185,7 @@ int32_t MU0_A_IRQHandler(void)
         AD_WillEnterMode = AD_ACT;
 
         /* make m33 core sleep */
-        APP_PowerModeSwitch(LPM_PowerModeDeepSleep, kAPP_WakeupSourcePin);
+        APP_SleepWithLinux();
     }
 
     return RPMsg_MU0_A_IRQHandler();
