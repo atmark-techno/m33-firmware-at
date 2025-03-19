@@ -17,8 +17,6 @@
 
 #include "srtm_io_service.h"
 #include "srtm_lfcl_service.h"
-#include "srtm_rtc_service.h"
-#include "srtm_rtc_adapter.h"
 #include "srtm_wdog_service.h"
 
 #include "app_can.h"
@@ -152,8 +150,6 @@ const uint8_t wuuPins[] = {
 
 srtm_dispatcher_t disp;
 static srtm_peercore_t core;
-static srtm_service_t rtcService;
-static srtm_rtc_adapter_t rtcAdapter;
 static srtm_service_t ioService;
 static srtm_service_t wdogService;
 static SemaphoreHandle_t monSig;
@@ -162,8 +158,6 @@ static app_rpmsg_monitor_t rpmsgMonitor;
 static void *rpmsgMonitorParam;
 static TimerHandle_t linkupTimer;
 static TimerHandle_t refreshS400WdgTimer;
-static TimerHandle_t rtcAlarmEventTimer; /* It is used to send alarm event to acore after acore(acore entered power down
-                                            mode) is waken by rtc alarm(Avoid losting a rtc alarm event) */
 static TimerHandle_t restoreRegValOfMuTimer; /* use the timer to restore register's value of mu(To make sure that
                                                 register's value of mu is restored if cmc1 interrupt is not comming) */
 
@@ -172,8 +166,6 @@ static TimerHandle_t
 
 static app_irq_handler_t irqHandler;
 static void *irqHandlerParam;
-
-static HAL_RTC_HANDLE_DEFINE(rtcHandle);
 
 lpm_ad_power_mode_e AD_CurrentMode   = AD_UNKOWN;
 lpm_ad_power_mode_e AD_WillEnterMode = AD_UNKOWN;
@@ -385,93 +377,6 @@ void GPIOC_INT0_IRQHandler(void)
 void GPIOC_INT1_IRQHandler(void)
 {
     APP_HandleGPIOHander(2U);
-}
-
-static void rtcAlarmEventTimer_Callback(TimerHandle_t xTimer)
-{
-    uint32_t status = MU_GetCoreStatusFlags(MU0_MUA);
-
-    if (status & kMU_OtherSideEnterRunFlag) /* A Core in run mode */
-    {
-        /* Send rpmsg to A Core when Application Domain in active mode(Make sure that DDR is working) */
-        SRTM_RtcAdapter_NotifyAlarm(
-            rtcAdapter); /* The function SRTM_RtcAdapter_NotifyAlarm will clear alarm interrupt flag */
-
-        xTimerStop(rtcAlarmEventTimer, portMAX_DELAY);
-    }
-    else
-    {
-        xTimerStart(rtcAlarmEventTimer, portMAX_DELAY);
-    }
-}
-
-void BBNSM_IRQHandler(void)
-{
-    BaseType_t reschedule = pdFALSE;
-    uint32_t status       = BBNSM_GetStatusFlags(BBNSM);
-
-    /*
-     * Process RTC alarm if present.
-     * BBNSM IRQ enable is done in RTC service initialization. So rtcAdapter must be ready.
-     */
-    if (status & kBBNSM_RTC_AlarmInterruptFlag)
-    {
-        if (AD_CurrentMode == AD_PD ||
-            (support_dsl_for_apd == true &&
-             AD_CurrentMode == AD_DSL)) /* Application Domain is in Power Down Mode or Deep Sleep Mode */
-        {
-            /* disable rtc alarm interrupt(when will clear rtc alarm interrupt flag? it will be cleared in
-             * rtcAlarmEventTimer) */
-            SRTM_RtcAdapter_DisableAlarmInt(rtcAdapter);
-            /* Wakeup A Core (A35) */
-            APP_WakeupACore();
-            /* Send rtc alarm event in timer */
-            xTimerStartFromISR(rtcAlarmEventTimer, &reschedule);
-        }
-        else if (AD_CurrentMode == AD_ACT)
-        {
-            /* Send rpmsg to A Core when Application Domain in active mode(Make sure that DDR is working) */
-            SRTM_RtcAdapter_NotifyAlarm(
-                rtcAdapter); /* The function SRTM_RtcAdapter_NotifyAlarm will clear alarm interrupt flag */
-        }
-        else
-        {
-            /* Clear rtc alarm interrupt in other case */
-            BBNSM_ClearStatusFlags(BBNSM, kBBNSM_RTC_AlarmInterruptFlag);
-        }
-    }
-
-    if (status & kBBNSM_EMG_OFF_InterruptFlag)
-    {
-        /* Clear emergency power off interrupt flag */
-        BBNSM_ClearStatusFlags(BBNSM, kBBNSM_EMG_OFF_InterruptFlag);
-    }
-
-    if (status & kBBNSM_PWR_OFF_InterruptFlag)
-    {
-        if (AD_CurrentMode == AD_DPD) /* Application Domain is in Deep Power Down Mode/Power Down Mode */
-        {
-            /* Wakeup A Core (A35) */
-            APP_SRTM_WakeupCA35();
-        }
-        else if (AD_CurrentMode == AD_PD || (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL))
-        {
-            /* Wakeup A Core (A35) */
-            APP_WakeupACore();
-        }
-        /* Clear BBNSM button off interrupt */
-        BBNSM_ClearStatusFlags(BBNSM, kBBNSM_PWR_OFF_InterruptFlag);
-    }
-    else if (status & kBBNSM_PWR_ON_InterruptFlag)
-    {
-        /* Clear BBNSM button on interrupt */
-        BBNSM_ClearStatusFlags(BBNSM, kBBNSM_PWR_ON_InterruptFlag);
-    }
-
-    if (reschedule)
-    {
-        portYIELD_FROM_ISR(reschedule);
-    }
 }
 
 #define PIN_FUNC_ID_SIZE (6)
@@ -964,11 +869,6 @@ static void APP_SRTM_Linkup(void)
     chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
     SRTM_PeerCore_AddChannel(core, chan);
 
-    /* Create and add SRTM RTC channel to peer core */
-    rpmsgConfig.epName = APP_SRTM_RTC_CHANNEL_NAME;
-    chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
-    SRTM_PeerCore_AddChannel(core, chan);
-
     /* Create and add SRTM Life Cycle channel to peer core */
     rpmsgConfig.epName = APP_SRTM_LFCL_CHANNEL_NAME;
     chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
@@ -1015,7 +915,6 @@ static void APP_SRTM_InitPeerCore(void)
 static void APP_SRTM_ResetServices(void)
 {
     /* When CA35 resets, we need to avoid async event to send to CA35. IO services have async events. */
-    SRTM_RtcService_Reset(rtcService, core);
     SRTM_IoService_Reset(ioService, core);
     APP_I2C_ResetService();
 }
@@ -1247,24 +1146,6 @@ void CMC1_IRQHandler(void)
     }
 }
 
-static void APP_SRTM_InitRtcDevice(void)
-{
-    HAL_RtcInit(rtcHandle, 0);
-    NVIC_ClearPendingIRQ(BBNSM_IRQn);
-    NVIC_SetPriority(BBNSM_IRQn, APP_BBNSM_IRQ_PRIO);
-    EnableIRQ(BBNSM_IRQn);
-}
-
-static void APP_SRTM_InitRtcService(void)
-{
-    APP_SRTM_InitRtcDevice();
-    rtcAdapter = SRTM_RtcAdapter_Create(rtcHandle);
-    assert(rtcAdapter);
-
-    rtcService = SRTM_RtcService_Create(rtcAdapter);
-    SRTM_Dispatcher_RegisterService(disp, rtcService);
-}
-
 static srtm_status_t APP_SRTM_LfclEventHandler(srtm_service_t service, srtm_peercore_t core, srtm_lfcl_event_t event,
                                                void *eventParam, void *userParam)
 {
@@ -1345,7 +1226,6 @@ static void APP_SRTM_InitServices(void)
     APP_SRTM_InitIoKeyService();
     APP_PWM_InitService();
     APP_ADC_InitService();
-    APP_SRTM_InitRtcService();
     APP_SRTM_InitLfclService();
     APP_SRTM_InitWdogService();
     APP_TTY_InitService();
@@ -1554,12 +1434,6 @@ void APP_SRTM_Init(void)
     monSig = xSemaphoreCreateBinary();
     assert(monSig);
 
-    /* Create a rtc alarm event timer to send rtc alarm event to A Core after A Core is waken by rtc alarm(avoid
-     * losting rtc alarm event) */
-    rtcAlarmEventTimer = xTimerCreate("rtcAlarmEventTimer", APP_MS2TICK(APP_RTC_ALM_EVT_TIMER_PERIOD_MS), pdFALSE, NULL,
-                                      rtcAlarmEventTimer_Callback);
-    assert(rtcAlarmEventTimer);
-
     /* Note: Create a task to refresh S400(sentinel) watchdog timer to keep S400 alive, the task will be removed
      * after the bug is fixed in soc A1 */
     SENTINEL_Init();
@@ -1626,7 +1500,6 @@ void APP_SRTM_Resume(void)
     APP_ADC_Resume();
     APP_TTY_Resume();
     APP_CAN_Resume();
-    HAL_RtcInit(rtcHandle, 0);
 }
 
 void APP_SRTM_SetRpmsgMonitor(app_rpmsg_monitor_t monitor, void *param)

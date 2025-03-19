@@ -64,9 +64,6 @@ typedef enum
  * (1 hour, dies after 24h) */
 #define APP_REFRESH_S400_WDG_TIMER_PERIOD_MS (60 * 60 * 1000U)
 
-/* Define the timeout ms to send rtc alarm event */
-#define APP_RTC_ALM_EVT_TIMER_PERIOD_MS (50U)
-
 #define RPMSG_LITE_SRTM_SHMEM_BASE (VDEV0_VRING_BASE)
 #define RPMSG_LITE_SRTM_LINK_ID (RL_PLATFORM_IMX8ULP_M33_A35_SRTM_LINK_ID)
 
@@ -74,7 +71,6 @@ typedef enum
 #define APP_SRTM_IO_CHANNEL_NAME "rpmsg-io-channel"
 #define APP_SRTM_PWM_CHANNEL_NAME "rpmsg-pwm-channel"
 #define APP_SRTM_ADC_CHANNEL_NAME "rpmsg-adc-channel"
-#define APP_SRTM_RTC_CHANNEL_NAME "rpmsg-rtc-channel"
 #define APP_SRTM_LFCL_CHANNEL_NAME "rpmsg-life-cycle-channel"
 #define APP_SRTM_WDOG_CHANNEL_NAME "rpmsg-wdog-channel"
 #define APP_SRTM_TTY_CHANNEL_NAME "rpmsg-tty-channel"
