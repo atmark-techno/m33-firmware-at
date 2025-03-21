@@ -337,7 +337,7 @@ static void APP_HandleGPIOHander(uint8_t gpioIdx)
 {
     RGPIO_Type *gpio = gpios[gpioIdx];
     uint32_t flags   = RGPIO_GetPinsInterruptFlags(gpio, APP_GPIO_INT_SEL);
-    uint16_t ioId, ioIdx;
+    uint16_t ioId;
     uint8_t i;
     uint32_t idx;
 
@@ -346,15 +346,7 @@ static void APP_HandleGPIOHander(uint8_t gpioIdx)
         idx = 1U << i;
         if (!(flags & idx))
             continue;
-        ioId  = APP_IO_ID(gpioIdx, i);
-        ioIdx = APP_IO_IDX(gpioIdx, i);
-        if ((AD_CurrentMode == AD_PD || (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL)) &&
-            suspendContext.io.data[ioIdx].wakeup)
-        {
-            /* Wakeup A Core(CA35) when A Core is in Power Down Mode */
-            PRINTF("Wake up from gpio %d/%d\r\n", gpioIdx, i);
-            APP_WakeupACore();
-        }
+        ioId = APP_IO_ID(gpioIdx, i);
         SRTM_IoService_NotifyInputEvent(ioService, ioId);
         // disable further irq for pin, linux will re-enable after processing
         // (this is necessary e.g. for level interrupts to not spam)
