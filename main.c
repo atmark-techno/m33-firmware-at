@@ -191,10 +191,6 @@ void HardFault_Handler(void)
     MMFAR = *(uint32_t *)(0xE000ED34);
     BFAR  = *(uint32_t *)(0xE000ED38);
 
-    /* If jtag is attached, give them a chance to look at it first */
-    if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
-        __asm("bkpt 1");
-
     DebugConsole_Emergency("\r\n\r\n====================\r\n\r\nHARDFAULT!\r\n");
     if (HFSR & HFSR_FORCED)
     {
@@ -223,6 +219,10 @@ void HardFault_Handler(void)
             DebugConsole_Emergency("Undefined instruction\r\n");
     }
     DebugConsole_Emergency("====================\r\n\r\n");
+
+    /* If jtag is attached, give them a chance to look at it first */
+    if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
+        __asm("bkpt 1");
 
     /* we don't know if it's safe to print something in console here, just reset in doubt..
      * Ideally try to store a flag in something that survives reset (rtc?) and use that? */
