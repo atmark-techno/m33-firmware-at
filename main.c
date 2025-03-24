@@ -878,7 +878,7 @@ static void PowerModeSwitchInit()
 
     EnableIRQ(LPTMR1_IRQn);
 
-    SIM_SEC->DGO_GP10  = 2;
+    SIM_SEC->DGO_GP10  = 1; /* 1.8V operation */
     SIM_SEC->DGO_CTRL1 = SIM_SEC_DGO_CTRL1_UPDATE_DGO_GP10_MASK;
     /* Wait DGO GP0 updated */
     while ((SIM_SEC->DGO_CTRL1 & SIM_SEC_DGO_CTRL1_WR_ACK_DGO_GP10_MASK) == 0)
