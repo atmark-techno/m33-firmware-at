@@ -54,6 +54,7 @@ typedef enum
 #define APP_LPI2C_IRQ_PRIO (5U)
 #define APP_GPIO_IRQ_PRIO (5U)
 #define APP_WUU_IRQ_PRIO (5U)
+#define APP_WDT_IRQ_PRIO (5U)
 #define APP_CMC1_IRQ_PRIO (5U)
 #define APP_BBNSM_IRQ_PRIO (5U)
 

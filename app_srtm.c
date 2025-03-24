@@ -714,6 +714,7 @@ static srtm_status_t wdog_enable(bool enabled, uint16_t timeout)
         config.enableInterrupt = true;
 
         EWM_Init(EWM0, &config);
+        NVIC_SetPriority(EWM_IRQn, APP_WDT_IRQ_PRIO);
         NVIC_EnableIRQ(EWM_IRQn);
         EWM_EnableInterrupts(EWM0, kEWM_InterruptEnable);
 
