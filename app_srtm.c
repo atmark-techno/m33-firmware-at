@@ -738,6 +738,7 @@ static void APP_SRTM_WdogSuspend(void)
     if (suspendContext.wdog.timeout == 0)
         return;
 
+    PRINTF("wdog disable\r\n");
     /* disable PMIC WDOG_B reset */
     UPOWER_SetPmicReg(8 /* RESET_CTRL */, 0x20 /* WDOG_B_CFG = 00b | PMIC_RST_CFG = 10b*/);
     EWM_DisableInterrupts(EWM0, kEWM_InterruptEnable);
@@ -748,8 +749,11 @@ static void APP_SRTM_WdogResume(void)
     if (suspendContext.wdog.timeout == 0)
         return;
 
+    PRINTF("wdog resume\r\n");
     EWM_Refresh(EWM0);
-    wdog_enable(true, suspendContext.wdog.timeout);
+    EWM_EnableInterrupts(EWM0, kEWM_InterruptEnable);
+    /* enable PMIC WDOG_B reset */
+    UPOWER_SetPmicReg(8 /* RESET_CTRL */, 0xa0 /* WDOG_B_CFG = 10b | PMIC_RST_CFG = 10b*/);
 }
 
 static void APP_SRTM_InitWdogService(void)
