@@ -83,18 +83,6 @@ bool flexio_used;
 /* For CMC1_IRQHandler */
 static int64_t apd_boot_cnt = 0; /* it's cold boot when apd_boot_cnt(Application Domain, A Core) == 1 */
 
-/*
- * For Deep Sleep Mode of Application Processor Domain(APD)
- *                         +--> APD enter Power Down Mode
- *                        /
- * Linux suspend to memory
- *                        \
- *                         +--> APD enter Deep Sleep Mode(When the option IMX8ULP_DSL_SUPPORT is enabled in TF-A)
- * NOTE: cannot support them at the same time for Linux.
- */
-
-bool support_dsl_for_apd = false; /* true: support deep sleep mode; false: not support deep sleep mode */
-
 const uint8_t wuuPins[] = {
     0,   /* WUU_P0 PTA0 */
     255, /* PTA1 */
@@ -161,9 +149,6 @@ static TimerHandle_t refreshS400WdgTimer;
 static TimerHandle_t restoreRegValOfMuTimer; /* use the timer to restore register's value of mu(To make sure that
                                                 register's value of mu is restored if cmc1 interrupt is not comming) */
 
-static TimerHandle_t
-    chngModeFromActToDslForApdTimer; /* use the timer to change mode of APD from active mode to Deep Sleep Mode */
-
 static app_irq_handler_t irqHandler;
 static void *irqHandlerParam;
 
@@ -179,17 +164,6 @@ static MU_Type mu0_mua;
 /*******************************************************************************
  * Code
  ******************************************************************************/
-/* For Deep Sleep Mode of APD */
-bool APP_SRTM_GetSupportDSLForApd(void)
-{
-    return support_dsl_for_apd;
-}
-
-void APP_SRTM_SetSupportDSLForApd(bool support)
-{
-    support_dsl_for_apd = support;
-}
-
 void MU0_MUA_Save(void)
 {
     /* Make sure the clock is on */
@@ -239,14 +213,7 @@ void APP_WakeupACore(void)
         PRINTF("failed to set PMIC_LSW4 voltage to 1.1 [V]\r\n");
     }
 
-    if (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL)
-    {
-        MU_SendMsg(MU0_MUA, 1, 0xFFFFFFFF); /* MCore wakeup ACore with mu interrupt, 1: RPMSG_MU_CHANNEL */
-    }
-    else
-    {
-        UPOWER_PowerOnADInPDMode();
-    }
+    UPOWER_PowerOnADInPDMode();
 }
 
 static void APP_ResetSRTM(app_srtm_state_t state)
@@ -806,17 +773,6 @@ static void APP_RestoreRegValOfMuTimerCallback(TimerHandle_t xTimer)
     xTimerStart(restoreRegValOfMuTimer, portMAX_DELAY);
 }
 
-static void APP_ChngModeFromActToDslForApdTimerCallback(TimerHandle_t xTimer)
-{
-    if (core != NULL && support_dsl_for_apd == true && AD_WillEnterMode == AD_DSL)
-    {
-        AD_CurrentMode   = AD_DSL;
-        AD_WillEnterMode = AD_ACT;
-        SRTM_PeerCore_SetState(core, SRTM_PeerCore_State_Deactivated);
-        PRINTF("AD entered Deep Sleep Mode\r\n");
-    }
-}
-
 static void APP_LinkupTimerCallback(TimerHandle_t xTimer)
 {
     srtm_procedure_t proc = SRTM_Procedure_Create(APP_SRTM_PollLinkup, NULL, NULL);
@@ -1173,19 +1129,8 @@ static srtm_status_t APP_SRTM_LfclEventHandler(srtm_service_t service, srtm_peer
             /* Save context(such as: MU0_MUA[RCR]) */
             rtdCtxSave();
 
-            if (support_dsl_for_apd != true)
-            {
-                AD_WillEnterMode = AD_PD;
-                PRINTF("\r\nAD will enter Power Down Mode\r\n");
-            }
-            else
-            {
-                AD_WillEnterMode = AD_DSL;
-                xTimerStart(chngModeFromActToDslForApdTimer,
-                            portMAX_DELAY); /* No way to check whether apd entered deep sleep mode, so start a timer to
-                                               change mode from active mode to deep sleep mode for AD */
-                PRINTF("\r\nAD Will enter Deep Sleep Mode\r\n");
-            }
+            AD_WillEnterMode = AD_PD;
+            PRINTF("\r\nAD will enter Power Down Mode\r\n");
 
             /* Relase A Core */
             MU_BootOtherCore(MU0_MUA, (mu_core_boot_mode_t)0);
@@ -1451,10 +1396,6 @@ void APP_SRTM_Init(void)
         xTimerCreate("restoreRegValOfMuTimer", APP_MS2TICK(100), pdFALSE, NULL, APP_RestoreRegValOfMuTimerCallback);
     assert(restoreRegValOfMuTimer);
     xTimerStart(restoreRegValOfMuTimer, portMAX_DELAY);
-
-    chngModeFromActToDslForApdTimer = xTimerCreate("chngModeFromActToDslForApdTimer", APP_MS2TICK(300), pdFALSE, NULL,
-                                                   APP_ChngModeFromActToDslForApdTimerCallback);
-    assert(chngModeFromActToDslForApdTimer);
 
     linkupTimer =
         xTimerCreate("Linkup", APP_MS2TICK(APP_LINKUP_TIMER_PERIOD_MS), pdFALSE, NULL, APP_LinkupTimerCallback);

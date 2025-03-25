@@ -86,7 +86,6 @@ static lpm_rtd_power_mode_e suspendPowerMode;
 static app_wakeup_source_t suspendWakeupSource;
 static const char *s_modeNames[] = { "ACTIVE", "WAIT", "STOP", "Sleep", "Deep Sleep", "Power Down", "Deep Power Down" };
 extern lpm_ad_power_mode_e AD_CurrentMode;
-extern bool support_dsl_for_apd;
 extern bool option_v_boot_flag;
 extern lpm_rtd_power_mode_e s_curMode;
 extern lpm_rtd_power_mode_e s_lastMode;
@@ -832,8 +831,7 @@ static void HandleSuspendTask(void *pvParameters)
                 }
             }
 
-            if ((AD_CurrentMode == AD_PD || (support_dsl_for_apd == true && AD_CurrentMode == AD_DSL)) &&
-                wakeWithLinux && wakeup)
+            if (AD_CurrentMode == AD_PD && wakeWithLinux && wakeup)
             {
                 /* Wakeup A Core(CA35) when A Core is in Power Down Mode */
                 PRINTF("Wake up from WUU_Pn 0x%x\r\n", s_wakeupPinFlag);
