@@ -145,6 +145,7 @@ static struct rpmsg_lite_instance *rpmsgHandle;
 static app_rpmsg_monitor_t rpmsgMonitor;
 static void *rpmsgMonitorParam;
 static TimerHandle_t linkupTimer;
+static TimerHandle_t abortSuspendTimer;
 static TimerHandle_t refreshS400WdgTimer;
 static TimerHandle_t restoreRegValOfMuTimer; /* use the timer to restore register's value of mu(To make sure that
                                                 register's value of mu is restored if cmc1 interrupt is not comming) */
@@ -773,6 +774,13 @@ static void APP_RestoreRegValOfMuTimerCallback(TimerHandle_t xTimer)
     xTimerStart(restoreRegValOfMuTimer, portMAX_DELAY);
 }
 
+static void APP_AbortSuspendCallback(TimerHandle_t xTimer)
+{
+    /* no actual suspend in 3s -- abort sleep */
+    APP_SRTM_WakeupCA35();
+    PRINTF("A core suspend aborted as it did not poweroff\r\n");
+}
+
 static void APP_LinkupTimerCallback(TimerHandle_t xTimer)
 {
     srtm_procedure_t proc = SRTM_Procedure_Create(APP_SRTM_PollLinkup, NULL, NULL);
@@ -966,6 +974,9 @@ int32_t MU0_A_IRQHandler(void)
 
     if (status & kMU_OtherSideEnterPowerDownInterruptFlag) /* PD/DPD mode */
     {
+        // cancel wakeup-if-missed task
+        xTimerStop(abortSuspendTimer, 0);
+
         SRTM_PeerCore_SetState(core, SRTM_PeerCore_State_Deactivated);
 
         PRINTF("AD entered PD(linux suspend to ram)/DPD(linux shutdown) mode\r\n");
@@ -1134,6 +1145,9 @@ static srtm_status_t APP_SRTM_LfclEventHandler(srtm_service_t service, srtm_peer
 
             /* Relase A Core */
             MU_BootOtherCore(MU0_MUA, (mu_core_boot_mode_t)0);
+
+            /* mark a core for wakeup if we never receive MU powerdown irq event */
+            xTimerStart(abortSuspendTimer, portMAX_DELAY);
             break;
         case SRTM_Lfcl_Event_WakeupReq:
             /* If already deactivated, power on CA35, else CA35 will not power off,
@@ -1396,6 +1410,9 @@ void APP_SRTM_Init(void)
         xTimerCreate("restoreRegValOfMuTimer", APP_MS2TICK(100), pdFALSE, NULL, APP_RestoreRegValOfMuTimerCallback);
     assert(restoreRegValOfMuTimer);
     xTimerStart(restoreRegValOfMuTimer, portMAX_DELAY);
+
+    abortSuspendTimer = xTimerCreate("abortSuspendTimer", APP_MS2TICK(3000), pdFALSE, NULL, APP_AbortSuspendCallback);
+    assert(abortSuspendTimer);
 
     linkupTimer =
         xTimerCreate("Linkup", APP_MS2TICK(APP_LINKUP_TIMER_PERIOD_MS), pdFALSE, NULL, APP_LinkupTimerCallback);
