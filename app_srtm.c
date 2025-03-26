@@ -383,8 +383,8 @@ static uint32_t pinFuncId[][PIN_FUNC_ID_SIZE] = {
     { IOMUXC_PTB7_PTB7, -1 },
     { IOMUXC_PTB8_PTB8, -1 },
     { IOMUXC_PTB9_PTB9, -1 },
-    { IOMUXC_PTB10_PTB10, -1 },
-    { IOMUXC_PTB11_PTB11, -1 },
+    { 0 }, /* PTB10 and 11 are used for upower and should never be used here */
+    { 0 },
     { IOMUXC_PTB12_PTB12, -1 },
     { IOMUXC_PTB13_PTB13, -1 },
     { IOMUXC_PTB14_PTB14, -1 },
