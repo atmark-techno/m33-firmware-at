@@ -45,6 +45,7 @@ EventGroupHandle_t s_flexcanRxEvent;
 
 struct app_srtm_can_state
 {
+    unsigned int init : 1;
     unsigned int open : 1;
     unsigned int fd : 1;
 } s_canState;
@@ -140,6 +141,9 @@ static uint8_t len2dlc(uint8_t len)
 
 static int APP_CAN_tx(uint16_t len, uint8_t *buf)
 {
+    if (!s_canState.init)
+        return kStatus_Fail;
+
     struct canfd_frame *cfd = (struct canfd_frame *)buf;
     flexcan_mb_transfer_t txXfer;
     const TickType_t txTickTimeout = 1000 / portTICK_PERIOD_MS;
@@ -430,6 +434,9 @@ static int can_start(srtm_can_open_params_t *params)
 
 static int APP_CAN_open(srtm_can_open_params_t *params)
 {
+    if (!s_canState.init)
+        return kStatus_Fail;
+
     if (s_canState.open)
     {
         PRINTF("CAN is already opened\r\n");
@@ -460,6 +467,9 @@ static int APP_CAN_open(srtm_can_open_params_t *params)
 
 static int APP_CAN_close(void)
 {
+    if (!s_canState.init)
+        return kStatus_Fail;
+
     if (!s_canState.open)
     {
         PRINTF("CAN is not opened\r\n");
@@ -481,6 +491,9 @@ static int APP_CAN_close(void)
 
 static int APP_CAN_restart(void)
 {
+    if (!s_canState.init)
+        return kStatus_Fail;
+
     if (s_canState.open)
         return can_start(&s_canOpenParams);
 
@@ -490,6 +503,9 @@ static int APP_CAN_restart(void)
 static int APP_CAN_get_status(uint32_t *status)
 {
     uint8_t txErrBuf, rxErrBuf;
+
+    if (!s_canState.init)
+        return kStatus_Fail;
 
     if (!s_canState.open)
         CLOCK_EnableClock(APP_CAN_CLOCK_NAME);
@@ -531,12 +547,16 @@ static int APP_CAN_init(srtm_can_init_params_t *params)
         }
     }
     s_canInitParams = *params;
+    s_canState.init = true;
 
     return 0;
 }
 
 static int APP_CAN_set_wake(bool enable)
 {
+    if (!s_canState.init)
+        return kStatus_Fail;
+
     if (s_canInitParams.suspend_wakeup_gpio == -1)
         return enable; /* failure if enabled */
 
@@ -558,6 +578,9 @@ void APP_CAN_InitService(void)
 
 void APP_CAN_Suspend(void)
 {
+    if (!s_canState.init)
+        return;
+
     if (s_canState.open)
         vTaskSuspend(s_canRxTask);
 
@@ -574,6 +597,9 @@ void APP_CAN_Suspend(void)
 extern lpm_rtd_power_mode_e sleepWithLinux;
 void APP_CAN_Resume(void)
 {
+    if (!s_canState.init)
+        return;
+
     if (sleepWithLinux == LPM_PowerModeDeepSleep)
     {
         /* In Deep Sleep Mode, the FlexCAN memory partition is powered
