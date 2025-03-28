@@ -757,7 +757,10 @@ static void HandleSuspendTask(void *pvParameters)
         else /* Idle task will handle the low power state. */
         {
             /* clear any previous wakeup we might have had */
-            xSemaphoreTake(s_wakeupSig, 0);
+            while (xSemaphoreTake(s_wakeupSig, 0))
+                ;
+            s_wakeupTimerFlag = false;
+            s_wakeupPinFlag   = 0;
 
             APP_GetWakeupConfig(targetPowerMode);
             APP_Suspend(targetPowerMode);
