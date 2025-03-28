@@ -414,6 +414,12 @@ static void IoResume(void)
 {
     uint32_t i;
     uint32_t backupIndex;
+    uint32_t PE1 = WUU0->PE1, PE2 = WUU0->PE2;
+
+    /* Temporarily disable WUU triggers to avoid glitching when
+     * we restore IOMUX that were set to WUU */
+    WUU0->PE1 = 0;
+    WUU0->PE2 = 0;
 
     backupIndex = 0;
 
@@ -446,6 +452,9 @@ static void IoResume(void)
         GPIOC->ICR[i]                 = gpioICRBackup[backupIndex];
         backupIndex++;
     }
+
+    WUU0->PE1 = PE1;
+    WUU0->PE2 = PE2;
 }
 
 void APP_PowerPreSwitchHook(lpm_rtd_power_mode_e targetMode)
