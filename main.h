@@ -48,13 +48,6 @@ typedef enum _app_power_mode
     kAPP_PowerModeDeepPowerDown, /* Deep Power Down mode */
 } app_power_mode_e;
 
-/* wakeup source for m core */
-typedef enum _app_wakeup_source
-{
-    kAPP_WakeupSourceLptmr, /*!< Wakeup by LPTMR.        */
-    kAPP_WakeupSourcePin    /*!< Wakeup by external pin. */
-} app_wakeup_source_t;
-
 typedef enum
 {
     MODE_COMBI_NO  = 0,
@@ -78,9 +71,6 @@ typedef struct
 #define WUU_MODULE_NSRTC (6U)
 #define WUU_MODULE_SRTC (7U)
 
-/* WUU wakeup event for internal module lptimer1  */
-#define LPTMR1_WUU_WAKEUP_EVENT (kWUU_InternalModuleInterrupt)
-
 /*******************************************************************************
  * API
  ******************************************************************************/
@@ -89,9 +79,10 @@ extern "C" {
 #endif
 
 void PMIC_Reset(void);
-void APP_PowerModeSwitch(lpm_rtd_power_mode_e targetPowerMode, app_wakeup_source_t source);
+void APP_PowerModeSwitch(lpm_rtd_power_mode_e targetPowerMode);
 
 extern lpm_rtd_power_mode_e sleepWithLinux;
+extern uint32_t s_wakeupTimeoutMs;
 void APP_SleepWithLinux(void);
 
 #if defined(__cplusplus)

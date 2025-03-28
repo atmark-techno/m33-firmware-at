@@ -75,15 +75,14 @@ extern void UPOWER_InitBuck2Buck3Table(void);
  * Variables
  ******************************************************************************/
 static TaskHandle_t cliTask;
-static uint32_t s_wakeupTimeout;           /* Wakeup timeout. (Unit: Second) */
-static app_wakeup_source_t s_wakeupSource; /* Wakeup source.                 */
-static uint32_t s_wakeupPinFlag;           /* Wakeup pin flag.               */
+uint32_t s_wakeupTimeoutMs;      /* Wakeup timeout in millisecond */
+static uint32_t s_wakeupPinFlag; /* Wakeup pin flag. */
+static bool s_wakeupTimerFlag;   /* Wakeup from timer */
 static bool wakeWithLinux           = true;
 lpm_rtd_power_mode_e sleepWithLinux = LPM_PowerModeDeepSleep;
 static SemaphoreHandle_t s_wakeupSig;
 static SemaphoreHandle_t handleSuspendSig;
 static lpm_rtd_power_mode_e suspendPowerMode;
-static app_wakeup_source_t suspendWakeupSource;
 static const char *s_modeNames[] = { "ACTIVE", "WAIT", "STOP", "Sleep", "Deep Sleep", "Power Down", "Deep Power Down" };
 extern lpm_ad_power_mode_e AD_CurrentMode;
 extern bool option_v_boot_flag;
@@ -586,17 +585,15 @@ void WUU0_IRQHandler(void)
     bool wakeup = false;
     uint32_t pinsFlag;
 
+    // MF 2 = LPTMR1, PF = pins (as per wuu index)
+    PRINTF("WUU IRQ (MF %x / PF %x)\r\n", WUU0->MF, WUU0->PF);
+
     if (WUU_GetInternalWakeupModuleFlag(WUU0, WUU_MODULE_LPTMR1))
     {
         /* Woken up by LPTMR, then clear LPTMR flag. */
         LPTMR_ClearStatusFlags(LPTMR1, kLPTMR_TimerCompareFlag);
-        wakeup = true;
-    }
-    if (LPTMR_GetEnabledInterrupts(LPTMR1))
-    {
-        /* disable anyway if enabled, or would fire late.*/
-        LPTMR_DisableInterrupts(LPTMR1, kLPTMR_TimerInterruptEnable);
-        LPTMR_StopTimer(LPTMR1);
+        s_wakeupTimerFlag = true;
+        wakeup            = true;
     }
 
     if (WUU_GetInternalWakeupModuleFlag(WUU0, WUU_MODULE_SYSTICK))
@@ -626,13 +623,19 @@ void LPTMR1_IRQHandler(void)
 {
     bool wakeup = false;
 
-    if (kLPTMR_TimerInterruptEnable & LPTMR_GetEnabledInterrupts(LPTMR1))
+    if (LPTMR_GetStatusFlags(LPTMR1) & kLPTMR_TimerCompareFlag)
     {
+        PRINTF("LPTMR1 IRQ (wakeup)\r\n");
         LPTMR_ClearStatusFlags(LPTMR1, kLPTMR_TimerCompareFlag);
-        LPTMR_DisableInterrupts(LPTMR1, kLPTMR_TimerInterruptEnable);
-        LPTMR_StopTimer(LPTMR1);
-        wakeup = true;
+        s_wakeupTimerFlag = true;
+        wakeup            = true;
     }
+    else
+    {
+        PRINTF("LPTMR1 IRQ (handled in WUU)\r\n");
+    }
+    LPTMR_DisableInterrupts(LPTMR1, kLPTMR_TimerInterruptEnable);
+    LPTMR_StopTimer(LPTMR1);
 
     if (wakeup)
     {
@@ -641,81 +644,40 @@ void LPTMR1_IRQHandler(void)
     }
 }
 
-/* Get input from user about wakeup timeout. */
-static uint32_t APP_GetWakeupTimeout(void)
+static void APP_GetWakeupConfig()
 {
-    uint32_t timeout = 0U;
-    uint8_t c;
-
-    while (1)
-    {
-        PRINTF("Select the wake up timeout in seconds.\r\n");
-        PRINTF("The allowed range is 1s ~ 999s.\r\n");
-        PRINTF("Eg. enter 5 to wake up in 5 seconds.\r\n");
-        PRINTF("\r\nWaiting for input timeout value...\r\n\r\n");
-
-        do
-        {
-            c = getchar();
-            if ((c >= '0') && (c <= '9'))
-            {
-                PRINTF("%c", c);
-                timeout = timeout * 10U + c - '0';
-            }
-            else if ((c == '\r') || (c == '\n'))
-            {
-                break;
-            }
-            else
-            {
-                PRINTF("%c\r\nWrong value!\r\n", c);
-                timeout = 0U;
-            }
-        } while (timeout != 0U && timeout < 100U);
-
-        if (timeout > 0U)
-        {
-            PRINTF("\r\n");
-            break;
-        }
-    }
-
-    return timeout;
-}
-
-/* Get wakeup timeout and wakeup source. */
-static void APP_GetWakeupConfig(app_wakeup_source_t source)
-{
-    /* Get wakeup source by user input. */
-    s_wakeupSource = source;
-
-    if (kAPP_WakeupSourceLptmr == s_wakeupSource)
-    {
-        /* Wakeup source is LPTMR, user should input wakeup timeout value. */
-        s_wakeupTimeout = APP_GetWakeupTimeout();
-        PRINTF("Will wakeup in %d seconds.\r\n", s_wakeupTimeout);
-    }
+    /* must print before APP_Suspend() */
+    if (s_wakeupTimeoutMs)
+        PRINTF("Will start %d ms timer\r\n", s_wakeupTimeoutMs);
 }
 
 static void APP_SetWakeupConfig(lpm_rtd_power_mode_e targetMode)
 {
-    if (kAPP_WakeupSourceLptmr == s_wakeupSource)
+    if (s_wakeupTimeoutMs)
     {
-        LPTMR_SetTimerPeriod(LPTMR1, (1000UL * s_wakeupTimeout / 16U));
+        /* Setup LPTMR. */
+        lptmr_config_t lptmrConfig;
+        LPTMR_GetDefaultConfig(&lptmrConfig);
+        lptmrConfig.prescalerClockSource = kLPTMR_PrescalerClock_1; /* Use RTC 1KHz as clock source. */
+        lptmrConfig.bypassPrescaler      = false;
+        lptmrConfig.value                = kLPTMR_Prescale_Glitch_3; /* Divide clock source by 16. */
+        LPTMR_Init(LPTMR1, &lptmrConfig);
+        NVIC_SetPriority(LPTMR1_IRQn, APP_LPTMR1_IRQ_PRIO);
+        EnableIRQ(LPTMR1_IRQn);
+        /* owned by RTD */
+        PCC1->PCC_LPTMR1 &= ~PCC1_PCC_LPTMR1_SSADO_MASK;
+        PCC1->PCC_LPTMR1 |= PCC1_PCC_LPTMR1_SSADO(1);
+        LPTMR_SetTimerPeriod(LPTMR1, (s_wakeupTimeoutMs / 16U));
+        LPTMR_ClearStatusFlags(LPTMR1, kLPTMR_TimerCompareFlag);
         LPTMR_StartTimer(LPTMR1);
         LPTMR_EnableInterrupts(LPTMR1, kLPTMR_TimerInterruptEnable);
-    }
 
-    /* To avoid conflicting access of WUU with SRTM dispatcher, we put the WUU setting into SRTM dispatcher context.*/
-    /* If targetMode is PD/DPD, setup WUU. */
-    if ((LPM_PowerModePowerDown == targetMode) || (LPM_PowerModeDeepPowerDown == targetMode))
-    {
-        if (kAPP_WakeupSourceLptmr == s_wakeupSource)
+        PRINTF("LPTMR1: %x %x %x %x\r\n", LPTMR1->CSR, LPTMR1->PSR, LPTMR1->CMR, LPTMR1->CNR);
+        /* If targetMode is PD/DPD, setup WUU. */
+        if ((LPM_PowerModePowerDown == targetMode) || (LPM_PowerModeDeepPowerDown == targetMode))
         {
             /* Set WUU LPTMR1 module wakeup source. */
-            WUU_SetInternalWakeUpModulesConfig(WUU0, WUU_MODULE_LPTMR1, LPTMR1_WUU_WAKEUP_EVENT);
-            PCC1->PCC_LPTMR1 &= ~PCC1_PCC_LPTMR1_SSADO_MASK;
-            PCC1->PCC_LPTMR1 |= PCC1_PCC_LPTMR1_SSADO(1);
+            WUU_SetInternalWakeUpModulesConfig(WUU0, WUU_MODULE_LPTMR1, kWUU_InternalModuleInterrupt);
         }
     }
 
@@ -724,11 +686,16 @@ static void APP_SetWakeupConfig(lpm_rtd_power_mode_e targetMode)
 
 static void APP_ClearWakeupConfig(lpm_rtd_power_mode_e targetMode)
 {
+    DisableIRQ(WUU0_IRQn);
     if ((LPM_PowerModePowerDown == targetMode) || (LPM_PowerModeDeepPowerDown == targetMode))
     {
-        WUU_ClearInternalWakeUpModulesConfig(WUU0, WUU_MODULE_LPTMR1, LPTMR1_WUU_WAKEUP_EVENT);
+        WUU_ClearInternalWakeUpModulesConfig(WUU0, WUU_MODULE_LPTMR1, kWUU_InternalModuleInterrupt);
     }
-    DisableIRQ(WUU0_IRQn);
+    if (s_wakeupTimeoutMs)
+    {
+        DisableIRQ(LPTMR1_IRQn);
+        LPTMR_Deinit(LPTMR1);
+    }
 }
 
 static void APP_CreateTask(void) {}
@@ -764,20 +731,12 @@ static void APP_RpmsgMonitor(struct rpmsg_lite_instance *rpmsgHandle, bool ready
 
 static void HandleSuspendTask(void *pvParameters)
 {
-    lpm_rtd_power_mode_e targetPowerMode;
-    app_wakeup_source_t source;
 
     while (true)
     {
         xSemaphoreTake(handleSuspendSig, portMAX_DELAY);
-        targetPowerMode = suspendPowerMode;
-        source          = suspendWakeupSource;
-        PRINTF("HandleSuspendTask: target %d / %d\r\n", targetPowerMode, source);
-        if (targetPowerMode == s_curMode)
-        {
-            /* Same mode, skip it */
-            continue;
-        }
+        lpm_rtd_power_mode_e targetPowerMode = suspendPowerMode;
+        PRINTF("HandleSuspendTask: target %d / %d\r\n", targetPowerMode);
         if (APP_GetModeAllowCombi(AD_CurrentMode, targetPowerMode) == MODE_COMBI_NO)
         {
             PRINTF("Not support the mode combination: %s + %s\r\n", APP_GetAdPwrModeName(AD_CurrentMode),
@@ -793,8 +752,8 @@ static void HandleSuspendTask(void *pvParameters)
             /* clear any previous wakeup we might have had */
             xSemaphoreTake(s_wakeupSig, 0);
 
+            APP_GetWakeupConfig(targetPowerMode);
             APP_Suspend();
-            APP_GetWakeupConfig(source);
             APP_SetWakeupConfig(targetPowerMode);
 
             PRINTF("Suspended tasks...\r\n");
@@ -818,10 +777,11 @@ static void HandleSuspendTask(void *pvParameters)
         s_lastMode = s_curMode;
         s_curMode  = LPM_PowerModeActive;
 
+        bool wakeup = false;
+
         if (s_wakeupPinFlag)
         {
             uint8_t pins = (WUU0->PARAM & WUU_PARAM_PINS_MASK) >> WUU_PARAM_PINS_SHIFT;
-            bool wakeup  = false;
             int i;
 
             for (i = 0; i < pins; i++)
@@ -835,27 +795,29 @@ static void HandleSuspendTask(void *pvParameters)
                     {
                         APP_SRTM_EmulateGPIOHandler(i);
                     }
-
-                    wakeup = true;
                 }
             }
-
-            if (AD_CurrentMode == AD_PD && wakeWithLinux && wakeup)
+            if (s_wakeupPinFlag && AD_CurrentMode == AD_PD && wakeWithLinux)
             {
-                /* Wakeup A Core(CA35) when A Core is in Power Down Mode */
                 PRINTF("Wake up from WUU_Pn 0x%x\r\n", s_wakeupPinFlag);
-                APP_SRTM_WakeupCA35();
+                wakeup = true;
             }
-
             s_wakeupPinFlag = 0;
         }
+        if (s_wakeupTimerFlag && AD_CurrentMode == AD_PD && wakeWithLinux)
+        {
+            PRINTF("Wake up from timer\r\n");
+            wakeup            = true;
+            s_wakeupTimerFlag = false;
+        }
+        if (wakeup)
+            APP_SRTM_WakeupCA35();
     }
 }
 
-void APP_PowerModeSwitch(lpm_rtd_power_mode_e targetPowerMode, app_wakeup_source_t source)
+void APP_PowerModeSwitch(lpm_rtd_power_mode_e targetPowerMode)
 {
-    suspendPowerMode    = targetPowerMode;
-    suspendWakeupSource = source;
+    suspendPowerMode = targetPowerMode;
     xSemaphoreGive(handleSuspendSig);
 }
 
@@ -863,27 +825,15 @@ void APP_SleepWithLinux(void)
 {
     if (sleepWithLinux == LPM_PowerModeIgnore)
         return;
-    APP_PowerModeSwitch(sleepWithLinux, kAPP_WakeupSourcePin);
+    APP_PowerModeSwitch(sleepWithLinux);
 }
 
 /* Power Mode Switch task */
 static void PowerModeSwitchInit()
 {
-    lptmr_config_t lptmrConfig;
-
     /* Add Systick as Power Down wakeup source, depending on SYSTICK_WUU_WAKEUP_EVENT value. */
     WUU_SetInternalWakeUpModulesConfig(WUU0, WUU_MODULE_SYSTICK, SYSTICK_WUU_WAKEUP_EVENT);
     NVIC_SetPriority(WUU0_IRQn, APP_WUU_IRQ_PRIO);
-
-    /* Setup LPTMR. */
-    LPTMR_GetDefaultConfig(&lptmrConfig);
-    lptmrConfig.prescalerClockSource = kLPTMR_PrescalerClock_1; /* Use RTC 1KHz as clock source. */
-    lptmrConfig.bypassPrescaler      = false;
-    lptmrConfig.value                = kLPTMR_Prescale_Glitch_3; /* Divide clock source by 16. */
-    LPTMR_Init(LPTMR1, &lptmrConfig);
-    NVIC_SetPriority(LPTMR1_IRQn, APP_LPTMR1_IRQ_PRIO);
-
-    EnableIRQ(LPTMR1_IRQn);
 
     SIM_SEC->DGO_GP10  = 1; /* 1.8V operation */
     SIM_SEC->DGO_CTRL1 = SIM_SEC_DGO_CTRL1_UPDATE_DGO_GP10_MASK;

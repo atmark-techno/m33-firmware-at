@@ -58,13 +58,45 @@ static int CLI_clear(int argc, char **argv)
 
 static int CLI_sleepMode(int argc, char **argv)
 {
+    if (argc == 1)
+    {
+        switch (sleepWithLinux)
+        {
+            case LPM_PowerModeDeepSleep:
+                printf("deepsleep\r\n");
+                break;
+            case LPM_PowerModeSleep:
+                printf("sleep\r\n");
+                break;
+            case LPM_PowerModePowerDown:
+                printf("powerdown\r\n");
+                break;
+            case LPM_PowerModeActive:
+                printf("active\r\n");
+                break;
+            case LPM_PowerModeIgnore:
+                printf("ignore\r\n");
+                break;
+            default:
+                printf("unknown %d\r\n", sleepWithLinux);
+        }
+        return 0;
+    }
     if (argc != 2)
         goto usage;
 
+    /* deepsleep = default */
     if (!strcmp(argv[1], "deepsleep"))
         sleepWithLinux = LPM_PowerModeDeepSleep;
+    /* sleep/powerdown are different "m33 suspend" states that can behave differently */
+    else if (!strcmp(argv[1], "sleep"))
+        sleepWithLinux = LPM_PowerModeSleep;
+    else if (!strcmp(argv[1], "powerdown"))
+        sleepWithLinux = LPM_PowerModePowerDown;
+    /* active suspends linux drivers and CLI, but m33 stays alive */
     else if (!strcmp(argv[1], "active"))
         sleepWithLinux = LPM_PowerModeActive;
+    /* ignore does not suspend anything (even watchdog!) */
     else if (!strcmp(argv[1], "ignore"))
         sleepWithLinux = LPM_PowerModeIgnore;
     else
@@ -81,6 +113,32 @@ usage:
 static int CLI_wakeup(int argc, char **argv)
 {
     APP_SRTM_WakeupCA35();
+    return 0;
+}
+
+static int CLI_wakeupTimer(int argc, char **argv)
+{
+    unsigned long time;
+    char *end;
+
+    if (argc == 1)
+    {
+        printf("%" PRIu32 "\r\n", s_wakeupTimeoutMs);
+        return 0;
+    }
+
+    if (argc != 2)
+        return CLI_help_usage("wakeup_timer", 1);
+
+    time = strtoul(argv[1], &end, 10);
+    /* must use RTC for anything > 1h */
+    if (!end || end[0] != 0 || time > 3600 * 1000)
+    {
+        PRINTF("Invalid duration %s\r\n", argv[1]);
+        return CLI_help_usage("wakeup_timer", 1);
+    }
+
+    s_wakeupTimeoutMs = time;
     return 0;
 }
 
@@ -272,8 +330,11 @@ static const struct CLI_command CLI_commands[] = {
     { "quiet", CLI_quiet, "disable background messages" },
     { "verbose", CLI_verbose, "enable background messages" },
     { "version", CLI_version, "print firmware version" },
-    { "sleep_mode", CLI_sleepMode, NULL /* debug function, not listed */, "sleep_mode <deepsleep|active|ignore>" },
+    { "sleep_mode", CLI_sleepMode, NULL /* debug function, not listed */,
+      "sleep_mode [deepsleep|sleep|powerdown|active|ignore]" },
     { "wakeup", CLI_wakeup }, /* wake up linux if sleeping (only used for testing) */
+    { "wakeup_timer", CLI_wakeupTimer, NULL /* debug function, not listed */,
+      "wakeup_timer [time_in_ms] (0 disables)" },
 #ifdef CLI_RAW_MEM
     { "md", CLI_memdump, "memory dump", "md -[bwlq] addr [count]" },
     { "mw", CLI_memwrite, "memory write", "mw -[bwlq] addr value" },
