@@ -700,19 +700,26 @@ static void APP_ClearWakeupConfig(lpm_rtd_power_mode_e targetMode)
 
 static void APP_CreateTask(void) {}
 
-static void APP_Suspend(void)
+static void APP_Suspend(lpm_rtd_power_mode_e targetMode)
 {
     APP_SRTM_Suspend();
-    vTaskSuspend(cliTask);
-    IoSuspend();
+
+    if (targetMode != LPM_PowerModeActive)
+    {
+        vTaskSuspend(cliTask);
+        IoSuspend();
+    }
 }
 
-static void APP_Resume(void)
+static void APP_Resume(lpm_rtd_power_mode_e targetMode)
 {
-    IoResume();
+    if (targetMode != LPM_PowerModeActive)
+    {
+        IoResume();
+        vTaskResume(cliTask);
+    }
 
     APP_SRTM_Resume();
-    vTaskResume(cliTask);
 }
 
 static void APP_DestroyTask(void) {}
@@ -753,7 +760,7 @@ static void HandleSuspendTask(void *pvParameters)
             xSemaphoreTake(s_wakeupSig, 0);
 
             APP_GetWakeupConfig(targetPowerMode);
-            APP_Suspend();
+            APP_Suspend(targetPowerMode);
             APP_SetWakeupConfig(targetPowerMode);
 
             PRINTF("Suspended tasks...\r\n");
@@ -770,7 +777,7 @@ static void HandleSuspendTask(void *pvParameters)
             PRINTF("Waking up...\r\n");
             /* The call might be blocked by SRTM dispatcher task. Must be called after power mode reset. */
             APP_ClearWakeupConfig(targetPowerMode);
-            APP_Resume();
+            APP_Resume(targetPowerMode);
         }
 
         /*update Mode state*/
