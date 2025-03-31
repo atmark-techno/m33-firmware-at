@@ -13,6 +13,8 @@ endif()
 if(M33_FW_VERSION STREQUAL "")
 	set(M33_FW_VERSION 0.0.0-no-git)
 	message(WARNING "Failed to determine version from Git tags. Using default version \"${M33_FW_VERSION}\".")
+else()
+	message("Using m33 fw version \"${M33_FW_VERSION}\".")
 endif()
 
 configure_file(${SRC} ${DST} @ONLY)
