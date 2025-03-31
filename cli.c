@@ -46,7 +46,7 @@ static int CLI_verbose(int argc, char **argv)
 
 static int CLI_version(int argc, char **argv)
 {
-    PRINTF("%s version %s\r\n", M33_FW_NAME, M33_FW_VERSION);
+    PRINTF(M33_FW_NAME " version " M33_FW_VERSION "\r\n");
     return 0;
 }
 
