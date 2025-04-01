@@ -131,11 +131,17 @@ static int CLI_wakeupTimer(int argc, char **argv)
         return CLI_help_usage("wakeup_timer", 1);
 
     time = strtoul(argv[1], &end, 10);
-    /* must use RTC for anything > 1h */
-    if (!end || end[0] != 0 || time > 3600 * 1000)
+    if (!end || end[0] != 0)
     {
         PRINTF("Invalid duration %s\r\n", argv[1]);
         return CLI_help_usage("wakeup_timer", 1);
+    }
+    /* LPTMR CMR register fits 1-0xFFFF multiples of 16ms.
+     * 16*0xFFFF/1000 = 1048.56 */
+    if ((time > 1048 * 1000 || time < 16) && time != 0)
+    {
+        PRINTF("timer must be between 16ms and 1048s, or 0\r\n");
+        return 1;
     }
 
     s_wakeupTimeoutMs = time;
