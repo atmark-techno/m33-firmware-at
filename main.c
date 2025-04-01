@@ -672,7 +672,6 @@ static void APP_SetWakeupConfig(lpm_rtd_power_mode_e targetMode)
         LPTMR_StartTimer(LPTMR1);
         LPTMR_EnableInterrupts(LPTMR1, kLPTMR_TimerInterruptEnable);
 
-        PRINTF("LPTMR1: %x %x %x %x\r\n", LPTMR1->CSR, LPTMR1->PSR, LPTMR1->CMR, LPTMR1->CNR);
         /* If targetMode is PD/DPD, setup WUU. */
         if ((LPM_PowerModePowerDown == targetMode) || (LPM_PowerModeDeepPowerDown == targetMode))
         {
