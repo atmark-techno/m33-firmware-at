@@ -3,7 +3,7 @@
 
 # for `make | tee`
 set -o pipefail
-set -xe
+set -e
 
 workdir="$(dirname "$(readlink -f "$0")")"
 
