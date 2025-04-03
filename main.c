@@ -955,6 +955,8 @@ int main(void)
         /* XXX try to remember somewhere we failed for uboot to log wdt... */
         PMIC_Reset();
     }
+    /* Lower RESETKEY_TIMER (PMIC_RST_B assertion timeout) from 8s default to 1s */
+    UPOWER_SetPmicReg(0xB /* SYS_CFG1 */, 0x44 /* LOW_VSYS=0b01(default)|RESET_KEYTIMER=0b001 */);
 
     UPOWER_PowerOnMemPart(0U, (uint32_t)kUPOWER_MP1_DMA0);
 
