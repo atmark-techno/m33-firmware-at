@@ -6,6 +6,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "printf.h"
 #include "FreeRTOS.h"
 #include "rpmsg_lite.h"
 #include "rpmsg_queue.h"
@@ -194,12 +195,12 @@ void HardFault_Handler(void)
     {
         if (CFSR & CFSR_MMFSR_MMARVALID)
         {
-            sprintf(hardfault_buf, "MMFAR %x\r\n", MMFAR);
+            sprintf(hardfault_buf, "MMFAR %lx\r\n", MMFAR);
             DebugConsole_Emergency(hardfault_buf);
         }
         if (CFSR & CFSR_BFSR_BFARVALID)
         {
-            sprintf(hardfault_buf, "BFAR %x\r\n", BFAR);
+            sprintf(hardfault_buf, "BFAR %lx\r\n", BFAR);
             DebugConsole_Emergency(hardfault_buf);
         }
         /* XXX try to print which task caused that? */
@@ -586,7 +587,7 @@ void WUU0_IRQHandler(void)
     uint32_t pinsFlag;
 
     // MF 2 = LPTMR1, PF = pins (as per wuu index)
-    PRINTF("WUU IRQ (MF %x / PF %x)\r\n", WUU0->MF, WUU0->PF);
+    PRINTF("WUU IRQ (MF %lx / PF %lx)\r\n", WUU0->MF, WUU0->PF);
 
     if (WUU_GetInternalWakeupModuleFlag(WUU0, WUU_MODULE_LPTMR1))
     {
@@ -648,7 +649,7 @@ static void APP_GetWakeupConfig()
 {
     /* must print before APP_Suspend() */
     if (s_wakeupTimeoutMs)
-        PRINTF("Will start %d ms timer\r\n", s_wakeupTimeoutMs);
+        PRINTF("Will start %ld ms timer\r\n", s_wakeupTimeoutMs);
 }
 
 static void APP_SetWakeupConfig(lpm_rtd_power_mode_e targetMode)
@@ -742,7 +743,7 @@ static void HandleSuspendTask(void *pvParameters)
     {
         xSemaphoreTake(handleSuspendSig, portMAX_DELAY);
         lpm_rtd_power_mode_e targetPowerMode = suspendPowerMode;
-        PRINTF("HandleSuspendTask: target %d / %d\r\n", targetPowerMode);
+        PRINTF("HandleSuspendTask: target %d\r\n", targetPowerMode);
         if (APP_GetModeAllowCombi(AD_CurrentMode, targetPowerMode) == MODE_COMBI_NO)
         {
             PRINTF("Not support the mode combination: %s + %s\r\n", APP_GetAdPwrModeName(AD_CurrentMode),
@@ -808,7 +809,7 @@ static void HandleSuspendTask(void *pvParameters)
             }
             if (s_wakeupPinFlag && AD_CurrentMode == AD_PD && wakeWithLinux)
             {
-                PRINTF("Wake up from WUU_Pn 0x%x\r\n", s_wakeupPinFlag);
+                PRINTF("Wake up from WUU_Pn 0x%lx\r\n", s_wakeupPinFlag);
                 wakeup = true;
             }
             s_wakeupPinFlag = 0;
@@ -951,7 +952,7 @@ int main(void)
     /* if we didn't reset from power on also reset pmic */
     if (!(CMC_RTD->SRS & CMC_SRS_POR_MASK))
     {
-        PRINTF("Reset cause not POR (%x), resetting PMIC\r\n", CMC_RTD->SRS);
+        PRINTF("Reset cause not POR (%lx), resetting PMIC\r\n", CMC_RTD->SRS);
         /* XXX try to remember somewhere we failed for uboot to log wdt... */
         PMIC_Reset();
     }
