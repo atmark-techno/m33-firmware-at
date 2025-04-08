@@ -156,7 +156,7 @@ static void *irqHandlerParam;
 lpm_ad_power_mode_e AD_CurrentMode   = AD_UNKOWN;
 lpm_ad_power_mode_e AD_WillEnterMode = AD_UNKOWN;
 
-static RGPIO_Type *const gpios[] = RGPIO_BASE_PTRS;
+RGPIO_Type *const gpios[] = RGPIO_BASE_PTRS;
 #define IO_PINCTRL_UNSET 0xffffffffU
 
 static app_suspend_ctx_t suspendContext;
@@ -855,6 +855,10 @@ static void APP_SRTM_Linkup(void)
     chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
     SRTM_PeerCore_AddChannel(core, chan);
 
+    rpmsgConfig.epName = APP_SRTM_SPI_CHANNEL_NAME;
+    chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
+    SRTM_PeerCore_AddChannel(core, chan);
+
     SRTM_Dispatcher_AddPeerCore(disp, core);
 }
 
@@ -1194,6 +1198,7 @@ static void APP_SRTM_InitServices(void)
     APP_SRTM_InitWdogService();
     APP_TTY_InitService();
     APP_CAN_InitService();
+    APP_SPI_InitService();
 }
 
 void APP_PowerOffCA35(void)

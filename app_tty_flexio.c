@@ -29,8 +29,6 @@ struct flexio_tty_settings
     uint32_t clock_ip_name;
     uint32_t clock_ip_src;
     uint32_t reset;
-    uint8_t rx_pin;
-    uint8_t tx_pin;
     uint32_t suspend_wakeup_gpio;
     uint32_t cflag;
     bool wakeup_source;
