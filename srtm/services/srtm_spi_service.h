@@ -106,8 +106,8 @@ static inline const char *srtm_spi_type_to_str(srtm_spi_type_t type)
 
 struct _srtm_spi_service;
 typedef uint8_t (*srtm_spi_init_t)(uint8_t bus_id, struct srtm_spi_init_payload *init);
-typedef uint8_t (*srtm_spi_transfer_t)(srtm_service_t service, srtm_response_t response, uint8_t bus_id,
-                                       uint16_t bits_per_word, uint16_t len, uint8_t *tx_buf, uint8_t *rx_buf);
+typedef uint8_t (*srtm_spi_transfer_t)(srtm_response_t response, uint8_t bus_id, uint16_t bits_per_word, uint16_t len,
+                                       uint8_t *tx_buf, uint8_t *rx_buf);
 
 /*******************************************************************************
  * API

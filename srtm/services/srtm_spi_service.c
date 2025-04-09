@@ -198,7 +198,7 @@ retry_alloc:
     {
         case SRTM_SPI_CMD_TRANSFER:
             /* transfer is responsible for sending response as it can be async to avoid holding task */
-            return handle->transfer(service, response, spiReq->busID, spiReq->bits_per_word, spiReq->len, spiReq->data,
+            return handle->transfer(response, spiReq->busID, spiReq->bits_per_word, spiReq->len, spiReq->data,
                                     spiResp->data);
             break;
         case SRTM_SPI_CMD_INIT:
