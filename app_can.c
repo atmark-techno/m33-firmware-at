@@ -548,6 +548,7 @@ static int APP_CAN_init(srtm_can_init_params_t *params)
     }
     s_canInitParams = *params;
     s_canState.init = true;
+    PRINTF("CAN: init ok\r\n");
 
     return 0;
 }
