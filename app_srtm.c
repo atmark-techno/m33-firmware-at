@@ -62,6 +62,7 @@ typedef struct
     struct
     {
         uint16_t timeout;
+        bool first_ping_logged;
     } wdog;
 } app_suspend_ctx_t;
 
@@ -696,7 +697,11 @@ static srtm_status_t wdog_enable(bool enabled, uint16_t timeout)
 
 static srtm_status_t wdog_ping(void)
 {
-    PRINTF("watchdog ping\r\n");
+    if (!suspendContext.wdog.first_ping_logged)
+    {
+        PRINTF("first watchdog ping\r\n");
+        suspendContext.wdog.first_ping_logged = true;
+    }
     EWM_Refresh(EWM0);
     return SRTM_Status_Success;
 }
@@ -710,6 +715,7 @@ static void APP_SRTM_WdogSuspend(void)
     /* disable PMIC WDOG_B reset */
     UPOWER_SetPmicReg(8 /* RESET_CTRL */, 0x20 /* WDOG_B_CFG = 00b | PMIC_RST_CFG = 10b*/);
     EWM_DisableInterrupts(EWM0, kEWM_InterruptEnable);
+    suspendContext.wdog.first_ping_logged = false;
 }
 
 static void APP_SRTM_WdogResume(void)
