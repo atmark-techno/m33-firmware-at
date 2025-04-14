@@ -142,3 +142,8 @@ static inline void uboot_send_many(void *buf, int len)
  * m33 -> uboot: ack
  */
 #define UBOOT_WDOG_PING 1
+
+/* ping command
+ * Used to ensure m33 is responsive before handshake
+ */
+#define UBOOT_PING 7

@@ -1157,6 +1157,10 @@ static void process_uboot_messages(void)
         uint32_t command = uboot_recv();
         switch (command & 0xff)
         {
+            // for commands in spl we need a noop with a longer timeout first as initial handshake.
+            case UBOOT_PING:
+                uboot_send(0);
+                break;
             case UBOOT_HANDSHAKE:
                 PRINTF("uboot: handshake\r\n");
 
