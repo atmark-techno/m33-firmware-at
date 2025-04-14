@@ -950,11 +950,19 @@ int main(void)
     }
 
     /* if we didn't reset from power on also reset pmic */
-    if (!(CMC_RTD->SRS & CMC_SRS_POR_MASK))
+    uint32_t srs = CMC_RTD->SRS;
+    if (!(srs & CMC_SRS_POR_MASK))
     {
-        PRINTF("Reset cause not POR (%lx), resetting PMIC\r\n", CMC_RTD->SRS);
-        /* XXX try to remember somewhere we failed for uboot to log wdt... */
-        PMIC_Reset();
+        if (srs & CMC_SRS_SRR_MASK)
+        {
+            PRINTF("Reset cause (%lx) was not POR, but SRR bit is set so ignoring (workaround bootloop)\r\n", srs);
+        }
+        else
+        {
+            PRINTF("Reset cause not POR (%lx), resetting PMIC\r\n", srs);
+            /* XXX try to remember somewhere we failed for uboot to log wdt... */
+            PMIC_Reset();
+        }
     }
     /* Lower RESETKEY_TIMER (PMIC_RST_B assertion timeout) from 8s default to 1s */
     UPOWER_SetPmicReg(0xB /* SYS_CFG1 */, 0x44 /* LOW_VSYS=0b01(default)|RESET_KEYTIMER=0b001 */);
