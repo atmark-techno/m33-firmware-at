@@ -18,6 +18,7 @@
 #define TTY_RX_TASK_PRIORITY (3U)
 #define APP_FLEXIO_IRQ_PRIO (5U)
 #define RX_POLL_TIMEOUT_MS (1)
+#define RX_STOP 0x1U
 
 /* flexio settings type
  * We need to remember everything from init to reinit after suspend/resume */
@@ -37,6 +38,101 @@ struct flexio_tty_settings
     EventGroupHandle_t tx_event;
     uint8_t *rx_next_buf;
     uint16_t rx_next_maxlen;
+};
+
+/*
+ * baudrate = src_clock * ((FRAC+1) / (PCD+1)) / ((CMP + 1) * 2)
+ *
+ * sec_clock:
+ *  kCLOCK_Pcc0BusIpSrcSysOscDiv2:  24000000 Hz
+ *  kCLOCK_Pcc0BusIpSrcCm33Bus   :  80000000 Hz
+ *  kCLOCK_Pcc0BusIpSrcFroDiv2   : 192000000 Hz
+ * FRAC:
+ *  0 ... 1
+ * PCD:
+ *  0 ... 7
+ * CMP:
+ *  0 ... 0xff
+ */
+struct flexio_baud_param
+{
+    speed_t baud;
+    clock_ip_src_t src;
+    uint8_t frac;
+    uint8_t pcd;
+};
+
+struct flexio_baud_param flexio_baud_params[] = {
+    {
+        0,
+        kCLOCK_IpSrcNone,
+    },
+    {
+        50,
+        kCLOCK_IpSrcNone,
+    },
+    {
+        75,
+        kCLOCK_IpSrcNone,
+    },
+    {
+        110,
+        kCLOCK_IpSrcNone,
+    },
+    {
+        134,
+        kCLOCK_IpSrcNone,
+    },
+    {
+        150,
+        kCLOCK_IpSrcNone,
+    },
+    {
+        200,
+        kCLOCK_IpSrcNone,
+    },
+    {
+        300,
+        kCLOCK_IpSrcNone,
+    },
+    {
+        600,
+        kCLOCK_IpSrcNone,
+    },
+    {
+        1200,
+        kCLOCK_IpSrcNone,
+    },
+    {
+        1800,
+        kCLOCK_IpSrcNone,
+    },
+    {
+        2400,
+        kCLOCK_IpSrcNone,
+    },
+    {
+        4800,
+        kCLOCK_IpSrcNone,
+    },
+    { 9600, kCLOCK_Pcc0BusIpSrcSysOscDiv2, 0, 4 },  /* 9600.0 bps */
+    { 19200, kCLOCK_Pcc0BusIpSrcSysOscDiv2, 0, 4 }, /* 19200.0 bps */
+    { 38400, kCLOCK_Pcc0BusIpSrcSysOscDiv2, 1, 4 }, /* 38400.0 bps */
+    { 57600, kCLOCK_Pcc0BusIpSrcFroDiv2, 0, 6 },    /* 57623.0 bps */
+    { 115200, kCLOCK_Pcc0BusIpSrcFroDiv2, 0, 6 },   /* 115246.1 bps */
+    { 230400, kCLOCK_Pcc0BusIpSrcFroDiv2, 1, 6 },   /* 230492.2 bps */
+    { 460800, kCLOCK_Pcc0BusIpSrcFroDiv2, 0, 0 },   /* 461538.5 bps */
+    { 500000, kCLOCK_Pcc0BusIpSrcCm33Bus, 0, 0 },   /* 500000.0 bps */
+    { 576000, kCLOCK_Pcc0BusIpSrcFroDiv2, 1, 2 },   /* 576576.6 bps */
+    { 921600, kCLOCK_Pcc0BusIpSrcFroDiv2, 0, 0 },   /* 923077.0 bps */
+    { 1000000, kCLOCK_Pcc0BusIpSrcCm33Bus, 0, 0 },  /* 1000000.0 bps */
+    { 1152000, kCLOCK_Pcc0BusIpSrcFroDiv2, 0, 0 },  /* 1156626.5 bps */
+    { 1500000, kCLOCK_Pcc0BusIpSrcFroDiv2, 0, 0 },  /* 1500000.0 bps */
+    { 2000000, kCLOCK_Pcc0BusIpSrcCm33Bus, 0, 0 },  /* 2000000.0 bps */
+    { 2500000, kCLOCK_Pcc0BusIpSrcCm33Bus, 0, 0 },  /* 2500000.0 bps */
+    { 3000000, kCLOCK_Pcc0BusIpSrcFroDiv2, 0, 0 },  /* 3000000.0 bps */
+    { 3500000, kCLOCK_Pcc0BusIpSrcFroDiv2, 0, 0 },  /* 3555555.6 bps */
+    { 4000000, kCLOCK_Pcc0BusIpSrcCm33Bus, 0, 0 },  /* 4000000.0 bps */
 };
 
 struct flexio_tty_settings *get_flexio(struct tty_settings *settings)
@@ -96,6 +192,8 @@ static void flexio_tty_rx_task(void *pvParameters)
 
     while (true)
     {
+        EventBits_t ev;
+
         /* suspend if not active or suspended */
         if ((settings->state & (TTY_ACTIVE | TTY_SUSPENDED)) != TTY_ACTIVE)
             vTaskSuspend(NULL);
@@ -115,7 +213,9 @@ static void flexio_tty_rx_task(void *pvParameters)
         if (flexio->rx_next_buf && flexio->uart_handle.rxDataSize == flexio->uart_handle.rxDataSizeAll)
         {
             /* wait a short time -- XXX ideally use idle irq if possible instead */
-            (void)xEventGroupWaitBits(flexio->rx_event, 1, pdTRUE, pdFALSE, RX_POLL_TIMEOUT_MS);
+            ev = xEventGroupWaitBits(flexio->rx_event, RX_STOP, pdTRUE, pdFALSE, RX_POLL_TIMEOUT_MS);
+            if (ev & RX_STOP)
+                break;
             continue;
         }
 
@@ -177,6 +277,77 @@ static void flexio_tty_rx_task(void *pvParameters)
             maxlen = tmp_maxlen;
         }
     }
+
+    vTaskDelete(NULL);
+}
+
+static int flexio_setclock(struct tty_settings *settings)
+{
+    struct flexio_tty_settings *flexio = get_flexio(settings);
+    speed_t baud                       = tty_baudrate(flexio->cflag);
+    ;
+    int i;
+
+    for (i = 0; i < ARRAY_SIZE(flexio_baud_params); i++)
+    {
+        if (flexio_baud_params[i].baud == baud)
+            break;
+    }
+    if (i == ARRAY_SIZE(flexio_baud_params) || flexio_baud_params[i].src == kCLOCK_IpSrcNone)
+        return kStatus_FLEXIO_UART_BaudrateNotSupport;
+
+    CLOCK_SetIpSrcDiv(flexio->clock_ip_name, flexio_baud_params[i].src, flexio_baud_params[i].pcd,
+                      flexio_baud_params[i].frac);
+
+    return kStatus_Success;
+}
+
+static int flexio_init_device(struct tty_settings *settings)
+{
+    struct flexio_tty_settings *flexio = get_flexio(settings);
+    int rc;
+
+    NVIC_SetPriority(flexio->flexio_irqn, APP_FLEXIO_IRQ_PRIO);
+    rc = flexio_setclock(settings);
+    if (rc)
+    {
+        PRINTF("port %d unsupported baudrate: %d (baud rate %d)\r\n", settings->port_idx, rc,
+               tty_baudrate(flexio->cflag));
+
+        return rc;
+    }
+    RESET_PeripheralReset(flexio->reset);
+
+    flexio_uart_config_t config;
+    FLEXIO_UART_GetDefaultConfig(&config);
+    config.baudRate_Bps = tty_baudrate(flexio->cflag);
+    config.enableUart   = true;
+
+    rc = FLEXIO_UART_Init(&flexio->uart_dev, &config, CLOCK_GetIpFreq(flexio->clock_ip_name));
+    if (rc)
+    {
+        PRINTF("port %d flexio init fail: %d (baud rate %d / clock %d)\r\n", settings->port_idx, rc,
+               config.baudRate_Bps, CLOCK_GetIpFreq(flexio->clock_ip_name));
+
+        return rc;
+    }
+
+    rc = FLEXIO_UART_TransferCreateHandle(&flexio->uart_dev, &flexio->uart_handle, flexio_tty_usercallback, flexio);
+    if (rc)
+    {
+        PRINTF("port %d flexio handle init fail: %d\r\n", settings->port_idx, rc);
+        return rc;
+    }
+
+    return 0;
+}
+
+static void flexio_deinit_device(struct tty_settings *settings)
+{
+    struct flexio_tty_settings *flexio = get_flexio(settings);
+
+    FLEXIO_UnregisterHandleIRQ(&flexio->uart_dev.flexioBase);
+    FLEXIO_UART_Deinit(&flexio->uart_dev);
 }
 
 static int flexio_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
@@ -200,9 +371,11 @@ static int flexio_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
     return kStatus_Success;
 }
 
+static int flexio_activate(struct tty_settings *settings);
 static int flexio_setcflag(struct tty_settings *settings, tcflag_t cflag)
 {
     struct flexio_tty_settings *flexio = get_flexio(settings);
+    int rc;
 
     if (settings->state & TTY_SUSPENDED)
     {
@@ -210,14 +383,31 @@ static int flexio_setcflag(struct tty_settings *settings, tcflag_t cflag)
         return kStatus_Fail;
     }
 
-    PRINTF("TODO: flexio cflags ignored\r\n");
-    /* XXX re-do device init?
-     * fsl_flexio_uart does not allow setting things but we have some in flexio_uart_config_t */
+    /* only support (8,n,1) */
+    if ((cflag & (PARENB | CSTOPB)) || ((cflag & CSIZE) != CS8))
+    {
+        PRINTF("Invalid cflag: 0x%x\r\n", cflag);
+        return kStatus_Fail;
+    }
 
-    /* remember for resume */
+    if (tty_baudrate(flexio->cflag) == tty_baudrate(cflag))
+        return kStatus_Success;
+
+    /* The flexio parent clock may change, so you must restart the rx_task. */
+    xEventGroupSetBits(flexio->rx_event, RX_STOP);
+    vTaskPrioritySet(flexio->rx_task, configMAX_PRIORITIES - 1);
+    while (eTaskGetState(flexio->rx_task) != eDeleted)
+        ;
+    flexio->rx_task = NULL;
+
+    flexio_deinit_device(settings);
+
     flexio->cflag = cflag;
+    rc            = flexio_init_device(settings);
+    if (rc)
+        return rc;
 
-    return 0;
+    return flexio_activate(settings);
 }
 
 static int flexio_setwake(struct tty_settings *settings, bool enable)
@@ -250,39 +440,6 @@ static int flexio_activate(struct tty_settings *settings)
         {
             vTaskResume(flexio->rx_task);
         }
-    }
-
-    return 0;
-}
-
-static int flexio_init_device(struct tty_settings *settings)
-{
-    struct flexio_tty_settings *flexio = get_flexio(settings);
-    int rc;
-
-    NVIC_SetPriority(flexio->flexio_irqn, APP_FLEXIO_IRQ_PRIO);
-    CLOCK_SetIpSrcDiv(flexio->clock_ip_name, flexio->clock_ip_src, 0, 0);
-    RESET_PeripheralReset(flexio->reset);
-
-    flexio_uart_config_t config;
-    FLEXIO_UART_GetDefaultConfig(&config);
-    config.baudRate_Bps = tty_baudrate(flexio->cflag);
-    config.enableUart   = true;
-
-    rc = FLEXIO_UART_Init(&flexio->uart_dev, &config, CLOCK_GetIpFreq(flexio->clock_ip_name));
-    if (rc)
-    {
-        PRINTF("port %d flexio init fail: %d (baud rate %d / clock %d)\r\n", settings->port_idx, rc,
-               config.baudRate_Bps, CLOCK_GetIpFreq(flexio->clock_ip_name));
-
-        return rc;
-    }
-
-    rc = FLEXIO_UART_TransferCreateHandle(&flexio->uart_dev, &flexio->uart_handle, flexio_tty_usercallback, flexio);
-    if (rc)
-    {
-        PRINTF("port %d flexio handle init fail: %d\r\n", settings->port_idx, rc);
-        return rc;
     }
 
     return 0;
@@ -373,7 +530,7 @@ void flexio_suspend(struct tty_settings *settings)
 {
     struct flexio_tty_settings *flexio = get_flexio(settings);
 
-    FLEXIO_UART_Deinit(&flexio->uart_dev);
+    flexio_deinit_device(settings);
 
     if (flexio->suspend_wakeup_gpio == -1)
         return;
