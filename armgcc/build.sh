@@ -9,8 +9,12 @@ workdir="$(dirname "$(readlink -f "$0")")"
 
 cd "$workdir" || exit 1
 
-if [ -z "$SdkRootDirPath" ]; then
-	echo "\$SdkRootDirPath must be set!" >&2
+# default values
+ARMGCC_DIR=${ARMGCC_DIR:-/usr}
+armgcc_cmake="${SdkRootDirPath:-$PWD/../../mcux-sdk}/core/tools/cmake_toolchain_files/armgcc.cmake"
+
+if ! armgcc_cmake=$(realpath -e "$armgcc_cmake"); then
+	echo "Please place m33 firmware next to mcux-sdk directory, or set SdkRootDirPath variable appropriately" >&2
 	exit 1
 fi
 
@@ -43,7 +47,7 @@ esac
 # clear cache unless already configure in same mode with same toolchain
 if ! [ -e Makefile ] \
     || ! grep -q "CMAKE_BUILD_TYPE:STRING=$target" CMakeCache.txt \
-    || ! grep -q "CMAKE_TOOLCHAIN_FILE:FILEPATH=$SdkRootDirPath/core/tools/cmake_toolchain_files/armgcc.cmake" CMakeCache.txt; then
+    || ! grep -q "CMAKE_TOOLCHAIN_FILE:FILEPATH=$armgcc_cmake" CMakeCache.txt; then
 	rm -rf CMakeFiles Makefile cmake_install.cmake CMakeCache.txt "$target/m33-firmware-at.bin"
 	cmake -DCMAKE_TOOLCHAIN_FILE="$SdkRootDirPath/core/tools/cmake_toolchain_files/armgcc.cmake" \
 		-G "Unix Makefiles" -DCMAKE_BUILD_TYPE="$target"
