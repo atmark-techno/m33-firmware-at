@@ -865,6 +865,11 @@ static void APP_SRTM_Linkup(void)
     chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
     SRTM_PeerCore_AddChannel(core, chan);
 
+    /* Create and add SRTM AUDIO channel to peer core*/
+    rpmsgConfig.epName = APP_SRTM_AUDIO_CHANNEL_NAME;
+    chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
+    SRTM_PeerCore_AddChannel(core, chan);
+
     SRTM_Dispatcher_AddPeerCore(disp, core);
 }
 
@@ -1205,6 +1210,7 @@ static void APP_SRTM_InitServices(void)
     APP_TTY_InitService();
     APP_CAN_InitService();
     APP_SPI_InitService();
+    APP_AUDIO_InitService();
 }
 
 void APP_PowerOffCA35(void)

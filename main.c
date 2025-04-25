@@ -969,10 +969,6 @@ int main(void)
 
     UPOWER_PowerOnMemPart(0U, (uint32_t)kUPOWER_MP1_DMA0);
 
-    /* Use Pll1Pfd2Div clock source 12.288MHz. */
-
-    CLOCK_EnableClock(kCLOCK_Dma0Ch16);
-    CLOCK_EnableClock(kCLOCK_Dma0Ch17);
     CLOCK_EnableClock(kCLOCK_RgpioA);
     CLOCK_EnableClock(kCLOCK_RgpioB);
     CLOCK_EnableClock(kCLOCK_RgpioC);
