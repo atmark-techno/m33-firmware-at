@@ -10,7 +10,7 @@ workdir="$(dirname "$(readlink -f "$0")")"
 cd "$workdir" || exit 1
 
 # default values
-ARMGCC_DIR=${ARMGCC_DIR:-/usr}
+export ARMGCC_DIR=${ARMGCC_DIR:-/usr}
 armgcc_cmake="${SdkRootDirPath:-$PWD/../../mcux-sdk}/core/tools/cmake_toolchain_files/armgcc.cmake"
 
 if ! armgcc_cmake=$(realpath -e "$armgcc_cmake"); then
