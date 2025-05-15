@@ -36,3 +36,6 @@ void APP_SPI_InitService(void);
 
 /* app_audio.c */
 void APP_AUDIO_InitService(void);
+
+/* app_dac.c */
+void APP_DAC_InitService(void);
