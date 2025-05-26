@@ -784,6 +784,7 @@ static void APP_AbortSuspendCallback(TimerHandle_t xTimer)
 {
     /* no actual suspend in 3s -- abort sleep */
     APP_SRTM_WakeupCA35();
+    APP_SRTM_LateResume();
     PRINTF("A core suspend aborted as it did not poweroff\r\n");
 }
 
@@ -1163,6 +1164,9 @@ static srtm_status_t APP_SRTM_LfclEventHandler(srtm_service_t service, srtm_peer
             AD_WillEnterMode = AD_PD;
             PRINTF("\r\nAD will enter Power Down Mode\r\n");
 
+            /* Avoid further messages to A35 */
+            APP_SRTM_EarlySuspend();
+
             /* Relase A Core */
             MU_BootOtherCore(MU0_MUA, (mu_core_boot_mode_t)0);
 
@@ -1463,14 +1467,30 @@ void APP_SRTM_StartCommunication(void)
     xSemaphoreGive(monSig);
 }
 
-void APP_SRTM_Suspend(void)
+void APP_SRTM_EarlySuspend(void)
 {
 #ifdef DEBUG_SUSPEND
     PRINTF("%s\r\n", __func__);
 #endif
     APP_TTY_Suspend();
-    APP_SRTM_WdogSuspend();
     APP_CAN_Suspend();
+}
+
+void APP_SRTM_Suspend(void)
+{
+#ifdef DEBUG_SUSPEND
+    PRINTF("%s\r\n", __func__);
+#endif
+    APP_SRTM_WdogSuspend();
+}
+
+void APP_SRTM_LateResume(void)
+{
+#ifdef DEBUG_SUSPEND
+    PRINTF("%s\r\n", __func__);
+#endif
+    APP_TTY_Resume();
+    APP_CAN_Resume();
 }
 
 void APP_SRTM_Resume(void)
@@ -1484,8 +1504,7 @@ void APP_SRTM_Resume(void)
      * IO has restored in APP_Resume(), so don't need init io again in here.
      */
     APP_ADC_Resume();
-    APP_TTY_Resume();
-    APP_CAN_Resume();
+    APP_SRTM_LateResume();
 }
 
 void APP_SRTM_SetRpmsgMonitor(app_rpmsg_monitor_t monitor, void *param)

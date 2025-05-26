@@ -189,8 +189,25 @@ void APP_SRTM_SetIRQHandler(app_irq_handler_t handler, void *param);
  */
 void APP_SRTM_SetWakeupPin(uint16_t ioId, uint16_t event);
 
+/*
+ * suspend/resume functions timing:
+ * - linux sends "will suspend" lfcl message: APP_SRTM_EarlySuspend()
+ * - MU0_A_IRQHandler gets A core powerdown event: A core power change,
+ *   trigger m33 suspend (APP_SleepWithLinux)
+ * - main's HandleSuspendTask enters low power mode: APP_SRTM_Suspend()
+ * - no task is scheduled for a while: idle task:
+ *   vPortSuppressTicksAndSleep -> APP_PowerPreSwitchHook
+ * - wakeup event: APP_PowerPostSwitchHook() + give semaphore for HandleSuspendTask
+ * - HandleSuspendTask wakeup: APP_SRTM_Resume()
+ * - APP_SRTM_Resume() calls APP_SRTM_LateResume() as there is no difference for now.
+ *
+ * If MU0_A_IRQHandler did not get A core powerdown in 3s APP_AbortSuspendCallback()
+ * is called and that calls APP_SRTM_LateResume()
+ */
+void APP_SRTM_EarlySuspend(void);
 void APP_SRTM_Suspend(void);
 void APP_SRTM_Resume(void);
+void APP_SRTM_LateResume(void);
 
 bool APP_SRTM_GetSupportDSLForApd(void);
 void APP_SRTM_SetSupportDSLForApd(bool support);
