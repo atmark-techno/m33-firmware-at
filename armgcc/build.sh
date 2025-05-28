@@ -49,8 +49,7 @@ if ! [ -e Makefile ] \
     || ! grep -q "CMAKE_BUILD_TYPE:STRING=$target" CMakeCache.txt \
     || ! grep -q "CMAKE_TOOLCHAIN_FILE:FILEPATH=$armgcc_cmake" CMakeCache.txt; then
 	rm -rf CMakeFiles Makefile cmake_install.cmake CMakeCache.txt "$target/m33-firmware-at.bin"
-	cmake -DCMAKE_TOOLCHAIN_FILE="$SdkRootDirPath/core/tools/cmake_toolchain_files/armgcc.cmake" \
-		-G "Unix Makefiles" -DCMAKE_BUILD_TYPE="$target"
+	cmake -DCMAKE_TOOLCHAIN_FILE="$armgcc_cmake" -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="$target"
 fi
 
 make -j 2>&1 | tee build_log.txt
