@@ -39,3 +39,8 @@ void APP_AUDIO_InitService(void);
 
 /* app_dac.c */
 void APP_DAC_InitService(void);
+
+/* app_wdog.c */
+void APP_WDOG_InitService(void);
+void APP_WDOG_Resume(void);
+void APP_WDOG_Suspend(void);

@@ -85,6 +85,7 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../custom/app_tty_custom.c"
 "${ProjDirPath}/../app_tty_console.c"
 "${ProjDirPath}/../app_tty_console.h"
+"${ProjDirPath}/../app_wdog.c"
 "${ProjDirPath}/../app_can.c"
 "${ProjDirPath}/../app_can.h"
 "${ProjDirPath}/../can.h"
