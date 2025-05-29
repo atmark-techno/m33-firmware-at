@@ -7,6 +7,7 @@
 #pragma once
 
 #include "fsl_mu.h"
+#include "task.h"
 
 /* helpers for m33 implementation */
 static inline uint32_t uboot_recv(void)
@@ -126,3 +127,18 @@ static inline void uboot_send_many(void *buf, int len)
  * m33 -> uboot: ack
  */
 #define UBOOT_DEBUG_CONSOLE 5
+
+/* Watchdog operations.
+ * uboot -> m33: this | (subcommand << 8)
+ */
+#define UBOOT_WDOG 6
+/* wdog init subcommand:
+ * uboot -> m33: timeout value,
+ * m33 -> uboot: status
+ */
+#define UBOOT_WDOG_INIT 0
+/* wdog ping subcommand:
+ * uboot -> m33: (nothing else)
+ * m33 -> uboot: ack
+ */
+#define UBOOT_WDOG_PING 1

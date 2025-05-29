@@ -44,3 +44,5 @@ void APP_DAC_InitService(void);
 void APP_WDOG_InitService(void);
 void APP_WDOG_Resume(void);
 void APP_WDOG_Suspend(void);
+void APP_WDOG_uboot(uint32_t subcommand);
+void APP_WDOG_ResetLog(void);

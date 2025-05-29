@@ -813,6 +813,7 @@ static void APP_SRTM_ResetServices(void)
     /* When CA35 resets, we need to avoid async event to send to CA35. IO services have async events. */
     SRTM_IoService_Reset(ioService, core);
     APP_I2C_ResetService();
+    APP_WDOG_ResetLog();
 }
 
 static void APP_SRTM_DeinitPeerCore(void)
@@ -1197,6 +1198,10 @@ static void process_uboot_messages(void)
                 break;
             case UBOOT_DEBUG_CONSOLE:
                 uboot_send(DebugConsole_uboot(command));
+                break;
+            case UBOOT_WDOG:
+                /* handles replies */
+                APP_WDOG_uboot(command);
                 break;
         }
     }
