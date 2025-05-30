@@ -297,6 +297,8 @@ const char *BOARD_GetBootTypeName(void);
 bool BOARD_GetReleaseFlagOfTrdc(void);
 void BOARD_SetReleaseFlagOfTrdc(bool flag);
 void BOARD_ReleaseTRDC(void);
+void BOARD_InitFusion(void);
+void BOARD_DeinitFusion(void);
 void BOARD_SetTrdcGlobalConfig(void);
 /* Setup TRDC configuration before executing rom code of A35(A35 rom will access FSB, S400 MUAP A-Side, SIM0-S with
  * secure state, so m33 help a35 to configure TRDC) */

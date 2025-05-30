@@ -895,6 +895,9 @@ void APP_SRTM_Init(void)
     /* hold A core for next reboot */
     MU_HoldOtherCoreReset(MU0_MUA);
 
+    /* Initializing DSP core */
+    BOARD_InitFusion();
+
     xTaskCreate(SRTM_MonitorTask, "SRTM monitor", 256U, NULL, APP_SRTM_MONITOR_TASK_PRIO, NULL);
     xTaskCreate(SRTM_DispatcherTask, "SRTM dispatcher", 512U, NULL, APP_SRTM_DISPATCHER_TASK_PRIO, NULL);
 }
@@ -922,6 +925,7 @@ void APP_SRTM_Suspend(void)
 #endif
     custom_suspend();
     APP_WDOG_Suspend();
+    BOARD_DeinitFusion();
 }
 
 void APP_SRTM_LateResume(void)
@@ -939,6 +943,10 @@ void APP_SRTM_Resume(void)
 #ifdef DEBUG_SUSPEND
     PRINTF("%s\r\n", __func__);
 #endif
+    BOARD_InitFusion();
+    /* Fusion has been initialized so TRDC must be reconfigured */
+    BOARD_SetTrdcGlobalConfig();
+
     custom_resume();
     APP_WDOG_Resume();
     APP_I2C_Resume();

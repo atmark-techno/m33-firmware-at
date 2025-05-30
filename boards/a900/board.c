@@ -30,6 +30,7 @@
 #endif /* BOARD_USE_PCA6416A */
 #include "fsl_trdc.h"
 #include "fsl_mu.h"
+#include "fsl_fusion.h"
 
 /*******************************************************************************
  * Definitions
@@ -437,6 +438,33 @@ void BOARD_ReleaseTRDC(void)
             releasedTrdc = true;
         }
     }
+}
+
+void BOARD_InitFusion(void)
+{
+    /*
+     * Select FRO as system clock source, before configuring other clock sources.
+     * Clock source   : FRO
+     * Core clock     : 192MHz
+     * Bus clock      : 96MHz
+     * Slow clock     : 24MHz
+     */
+    const cgc_rtd_sys_clk_config_t g_sysClkConfigFroSource = {
+        .divCore = 0,                    /* Core clock divider. */
+        .divBus  = 1,                    /* Bus clock divider. */
+        .divSlow = 3,                    /* Slow clock divider. */
+        .src     = kCGC_RtdSysClkSrcFro, /* System clock source. */
+        .locked  = 0,                    /* Register not locked. */
+    };
+
+    CLOCK_SetFusionSysClkConfig(&g_sysClkConfigFroSource);
+
+    Fusion_Init();
+}
+
+void BOARD_DeinitFusion(void)
+{
+    Fusion_Deinit();
 }
 
 void BOARD_SetTrdcGlobalConfig(void)
