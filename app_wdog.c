@@ -28,11 +28,11 @@ void EWM_IRQHandler(void)
     EWM_DisableInterrupts(EWM0, kEWM_InterruptEnable);
 }
 
-static srtm_status_t wdog_enable(bool enabled, uint16_t timeout)
+static srtm_status_t wdog_enable(bool enabled, uint16_t timeout_ms)
 {
 
     bool is_running = EWM_GetStatusFlags(EWM0) & kEWM_RunningFlag;
-    PRINTF("Watchdog %s (timeout %d)\r\n", enabled ? "start" : "stop", timeout);
+    PRINTF("Watchdog %s (timeout %d)\r\n", enabled ? "start" : "stop", timeout_ms);
 
     /* timeout cannot be changed for EWM, just ignore any re-enable... */
     if (is_running)
@@ -49,7 +49,7 @@ static srtm_status_t wdog_enable(bool enabled, uint16_t timeout)
         ewm_config_t config;
         EWM_GetDefaultConfig(&config);
 
-        config.compareHighValue = MIN(timeout / 250, 0xff);
+        config.compareHighValue = MIN(timeout_ms / 250, 0xff);
         config.prescaler        = 250;
         /* get a warning before reset (log message) */
         config.enableInterrupt = true;
@@ -62,7 +62,7 @@ static srtm_status_t wdog_enable(bool enabled, uint16_t timeout)
         /* enable PMIC WDOG_B reset */
         UPOWER_SetPmicReg(8 /* RESET_CTRL */, 0xa0 /* WDOG_B_CFG = 10b | PMIC_RST_CFG = 10b*/);
     }
-    wdogTimeout = enabled ? timeout : 0;
+    wdogTimeout = enabled ? timeout_ms : 0;
 
     return SRTM_Status_Success;
 }
