@@ -18,8 +18,10 @@ struct spi_settings
 struct spi_hooks
 {
     int (*init)(struct spi_settings *settings, struct srtm_spi_init_payload *init);
-    int (*transfer)(struct spi_settings *settings, srtm_response_t response, uint16_t bits_per_word, uint16_t len,
-                    uint8_t *tx_buf, uint8_t *rx_buf);
+    int (*transfer)(struct spi_settings *settings, srtm_response_t response, uint16_t bits_per_word, uint32_t speed_hz,
+                    uint16_t len, uint8_t *tx_buf, uint8_t *rx_buf);
+    void (*suspend)(struct spi_settings *settings);
+    void (*resume)(struct spi_settings *settings);
     size_t settings_size;
 };
 
@@ -28,3 +30,7 @@ extern srtm_service_t spiService;
 
 /* Init hook for app_srtm.c */
 void APP_SPI_InitService(void);
+
+/* PM hooks from app_srtm.c */
+void APP_SPI_Suspend(void);
+void APP_SPI_Resume(void);

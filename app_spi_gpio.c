@@ -154,7 +154,7 @@ static void spi_xfer_loop(void *pvPatameters)
 }
 
 static int spi_gpio_transfer(struct spi_settings *settings, srtm_response_t response, uint16_t bits_per_word,
-                             uint16_t len, uint8_t *tx_buf, uint8_t *rx_buf)
+                             uint32_t speed_hz, uint16_t len, uint8_t *tx_buf, uint8_t *rx_buf)
 {
     struct spi_gpio_settings *spi = get_spi_gpio(settings);
 

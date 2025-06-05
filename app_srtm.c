@@ -23,6 +23,7 @@
 #include "app_gpio.h"
 #include "app_srtm.h"
 #include "app_srtm_internal.h"
+#include "app_spi.h"
 #include "app_tty.h"
 #include "app_uboot.h"
 #include "board.h"
@@ -935,6 +936,7 @@ void APP_SRTM_LateResume(void)
 #endif
     APP_TTY_Resume();
     APP_CAN_Resume();
+    APP_SPI_Resume();
     custom_late_resume();
 }
 

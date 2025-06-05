@@ -29,8 +29,10 @@ srtm_service_t spiService;
  * We'd ideally use a linker-generated array like linux/u-boot for this,
  * but this is overkill so just list all valid types manually. */
 extern const struct spi_hooks spi_gpio_hooks;
+extern const struct spi_hooks spi_lpspi_hooks;
 static struct spi_hooks const *spi_hooks[SRTM_SPI_TYPES_COUNT] = {
-    [SRTM_SPI_TYPE_GPIO] = &spi_gpio_hooks,
+    [SRTM_SPI_TYPE_GPIO]  = &spi_gpio_hooks,
+    [SRTM_SPI_TYPE_LPSPI] = &spi_lpspi_hooks,
 };
 
 /* get settings or NULL, log error if caller name given */
@@ -52,8 +54,8 @@ static struct spi_settings *get_settings(uint8_t port_idx, const char *caller)
     return spi_settings[port_idx];
 }
 
-static srtm_status_t APP_SPI_transfer(srtm_response_t response, uint8_t port_idx, uint16_t bits_per_word, uint16_t len,
-                                      uint8_t *tx_buf, uint8_t *rx_buf)
+static srtm_status_t APP_SPI_transfer(srtm_response_t response, uint8_t port_idx, uint16_t bits_per_word,
+                                      uint32_t speed_hz, uint16_t len, uint8_t *tx_buf, uint8_t *rx_buf)
 {
     struct spi_settings *settings = get_settings(port_idx, "transfer");
     uint8_t ret                   = 0;
@@ -70,7 +72,7 @@ static srtm_status_t APP_SPI_transfer(srtm_response_t response, uint8_t port_idx
         goto out_fail;
     }
 
-    ret = spi_hooks[settings->type]->transfer(settings, response, bits_per_word, len, tx_buf, rx_buf);
+    ret = spi_hooks[settings->type]->transfer(settings, response, bits_per_word, speed_hz, len, tx_buf, rx_buf);
     if (ret)
         goto out_fail;
 
@@ -133,4 +135,36 @@ void APP_SPI_InitService(void)
 {
     spiService = SRTM_SPIService_Create(APP_SPI_init, APP_SPI_transfer);
     SRTM_Dispatcher_RegisterService(disp, spiService);
+}
+
+void APP_SPI_Suspend(void)
+{
+    uint8_t i;
+
+    for (i = 0; i < SPI_MAX_PORTS; i++)
+    {
+        struct spi_settings *settings = get_settings(i, NULL);
+
+        if (!settings)
+            continue;
+
+        if (spi_hooks[settings->type]->suspend)
+            spi_hooks[settings->type]->suspend(settings);
+    }
+}
+
+void APP_SPI_Resume(void)
+{
+    uint8_t i;
+
+    for (i = 0; i < SPI_MAX_PORTS; i++)
+    {
+        struct spi_settings *settings = get_settings(i, NULL);
+
+        if (!settings)
+            continue;
+
+        if (spi_hooks[settings->type]->resume)
+            spi_hooks[settings->type]->resume(settings);
+    }
 }

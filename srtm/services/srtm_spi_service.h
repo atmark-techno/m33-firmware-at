@@ -51,8 +51,9 @@ typedef enum
 
 typedef enum
 {
-    SRTM_SPI_TYPE_GPIO = 0U,
-    // LPSPI, FLEXIO..
+    SRTM_SPI_TYPE_GPIO  = 0U,
+    SRTM_SPI_TYPE_LPSPI = 1U,
+    // FLEXIO..
     SRTM_SPI_TYPES_COUNT,
 } srtm_spi_type_t;
 
@@ -70,6 +71,13 @@ struct srtm_spi_init_payload
             // XXX modes (CPHA/CPOL, 3WIRE, LSB...) must be 0 for now
             uint32_t mode;
         } gpio;
+        struct srtm_spi_init_lpspi_payload
+        {
+            uint32_t spi_index;
+            // XXX chip select to be done out of band if required
+            // XXX modes (CPHA/CPOL, 3WIRE, LSB...) must be 0 for now
+            uint32_t mode;
+        } lpspi;
     };
 };
 
@@ -86,6 +94,7 @@ SRTM_PACKED_BEGIN struct _srtm_spi_payload
         uint8_t retCode;  /* used in response packet */
     };
     uint16_t bits_per_word;
+    uint32_t speed_hz;
     uint16_t len;    /* in bytes (e.g. 2 bytes if bits_per_word=12, 4 if 20) */
     uint8_t data[0]; /* data size is decided by uint16_t len */
 } SRTM_PACKED_END;
@@ -99,6 +108,8 @@ static inline const char *srtm_spi_type_to_str(srtm_spi_type_t type)
     {
         case SRTM_SPI_TYPE_GPIO:
             return "gpio";
+        case SRTM_SPI_TYPE_LPSPI:
+            return "lpspi";
         default:
             return "???";
     }
@@ -106,8 +117,8 @@ static inline const char *srtm_spi_type_to_str(srtm_spi_type_t type)
 
 struct _srtm_spi_service;
 typedef uint8_t (*srtm_spi_init_t)(uint8_t bus_id, struct srtm_spi_init_payload *init);
-typedef uint8_t (*srtm_spi_transfer_t)(srtm_response_t response, uint8_t bus_id, uint16_t bits_per_word, uint16_t len,
-                                       uint8_t *tx_buf, uint8_t *rx_buf);
+typedef uint8_t (*srtm_spi_transfer_t)(srtm_response_t response, uint8_t bus_id, uint16_t bits_per_word,
+                                       uint32_t speed_hz, uint16_t len, uint8_t *tx_buf, uint8_t *rx_buf);
 
 /*******************************************************************************
  * API
