@@ -8,6 +8,9 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "fsl_upower.h"
+#include "clock_config.h"
+
 #include "cli.h"
 #include "3rdparty/EmbeddedCLI/embedded_cli.h"
 #include "debug_console.h"
@@ -114,6 +117,51 @@ static int CLI_wakeup(int argc, char **argv)
 {
     APP_SRTM_WakeupCA35();
     return 0;
+}
+
+static int CLI_m33DriveMode(int argc, char **argv)
+{
+    drive_mode_e new_mode;
+    const char *mode_str;
+
+    if (argc != 2)
+        goto usage;
+
+    if (!strcasecmp(argv[1], "UD"))
+        new_mode = DRIVE_MODE_UD;
+    else if (!strcasecmp(argv[1], "ND"))
+        new_mode = DRIVE_MODE_ND;
+    else if (!strcasecmp(argv[1], "OD"))
+        new_mode = DRIVE_MODE_OD;
+    else
+        goto usage;
+
+    /* This changes the clock for the m33 core only:
+     * OD = 216MHz, ND (default) = 160MHz, UD = 38.4MHz */
+    new_mode = BOARD_SwitchDriveMode(new_mode);
+    switch (new_mode)
+    {
+        case DRIVE_MODE_UD:
+            mode_str = "UD";
+            break;
+        case DRIVE_MODE_ND:
+            mode_str = "ND";
+            break;
+        case DRIVE_MODE_OD:
+            mode_str = "OD";
+            break;
+        default:
+            mode_str = "UNKNOWN";
+            break;
+    }
+    printf("switched to %s mode\r\n", mode_str);
+
+    return 0;
+
+usage:
+    if (argc == 2)
+        PRINTF("Invalid mode %s\r\n", argv[1]);
+    return CLI_help_usage("m33_drive_mode", 1);
 }
 
 static int CLI_wakeupTimer(int argc, char **argv)
@@ -339,6 +387,7 @@ static const struct CLI_command CLI_commands[] = {
     { "sleep_mode", CLI_sleepMode, NULL /* debug function, not listed */,
       "sleep_mode [deepsleep|sleep|powerdown|active|ignore]" },
     { "wakeup", CLI_wakeup }, /* wake up linux if sleeping (only used for testing) */
+    { "m33_drive_mode", CLI_m33DriveMode, NULL /* debug function, not listed */, "m33_drive_mode [UD|ND|OD]" },
     { "wakeup_timer", CLI_wakeupTimer, NULL /* debug function, not listed */,
       "wakeup_timer [time_in_ms] (0 disables)" },
 #ifdef CLI_RAW_MEM
