@@ -777,7 +777,7 @@ int32_t BOARD_UpdateM33CoreFreq(cgc_rtd_sys_clk_config_t *config)
     return status;
 }
 
-drive_mode_e BOARD_SwitchDriveMode(void)
+drive_mode_e BOARD_SwitchDriveMode(drive_mode_e requested_drive_mode)
 {
     drive_mode_e current_rtd_drive_mode = DRIVE_MODE_OD, next_drive_mode = DRIVE_MODE_ND,
                  new_drive_mode = DRIVE_MODE_ND;
@@ -789,9 +789,6 @@ drive_mode_e BOARD_SwitchDriveMode(void)
     cgc_rtd_sys_clk_config_t tmp_sys_clk_cfg;
     uint32_t buck_idx                  = PMIC_BUCK2;
     cgc_rtd_sys_clk_src_t next_clk_src = kCGC_RtdSysClkSrcFro;
-    static int switch_flag =
-        SWITCH_DRIVE_MODE_INIT_STATE; /* 0: initial state; 1: switch from ND to OD; 2: switch from ND to UD; 3: switch
-                                         from UD to ND; 4: switch from OD to ND */
 
     // clang-format off
     /*
@@ -830,59 +827,44 @@ drive_mode_e BOARD_SwitchDriveMode(void)
     switch (current_rtd_drive_mode)
     {
         case DRIVE_MODE_UD:
+            if (requested_drive_mode != DRIVE_MODE_ND)
+                return current_rtd_drive_mode;
             /* UD -> ND */
             next_drive_mode = DRIVE_MODE_ND;
             next_clk_src    = clk_src[next_drive_mode];
             new_drive_mode  = BOARD_CalculateCoreClkDivider(next_clk_src, &core_clk_divider, &bus_clk_divider,
                                                             &slow_clk_divider, next_drive_mode);
-            switch_flag     = SWITCH_DRIVE_MODE_FROM_UD_TO_ND;
             break;
         case DRIVE_MODE_ND:
-            if (switch_flag == SWITCH_DRIVE_MODE_INIT_STATE)
+            if (requested_drive_mode == DRIVE_MODE_UD)
             {
-                /* from ND -> OD */
-                next_drive_mode = DRIVE_MODE_OD;
-                next_clk_src    = clk_src[next_drive_mode];
-                new_drive_mode  = BOARD_CalculateCoreClkDivider(next_clk_src, &core_clk_divider, &bus_clk_divider,
-                                                                &slow_clk_divider, next_drive_mode);
-                if (new_drive_mode == current_rtd_drive_mode)
-                {
-                    /* from ND -> UD */
-                    next_drive_mode = DRIVE_MODE_UD;
-                    next_clk_src    = clk_src[next_drive_mode];
-                    new_drive_mode  = BOARD_CalculateCoreClkDivider(next_clk_src, &core_clk_divider, &bus_clk_divider,
-                                                                    &slow_clk_divider, next_drive_mode);
-                    switch_flag     = SWITCH_DRIVE_MODE_FROM_ND_TO_UD;
-                }
-                else
-                {
-                    switch_flag = SWITCH_DRIVE_MODE_FROM_ND_TO_OD;
-                }
-            }
-            else if (switch_flag == SWITCH_DRIVE_MODE_FROM_OD_TO_ND)
-            {
+                /* ND -> UD */
                 next_drive_mode = DRIVE_MODE_UD;
                 next_clk_src    = clk_src[next_drive_mode];
                 new_drive_mode  = BOARD_CalculateCoreClkDivider(next_clk_src, &core_clk_divider, &bus_clk_divider,
                                                                 &slow_clk_divider, next_drive_mode);
-                switch_flag     = SWITCH_DRIVE_MODE_FROM_ND_TO_UD;
             }
-            else if (switch_flag == SWITCH_DRIVE_MODE_FROM_UD_TO_ND)
+            else if (requested_drive_mode == DRIVE_MODE_OD)
             {
+                /* ND -> OD */
                 next_drive_mode = DRIVE_MODE_OD;
                 next_clk_src    = clk_src[next_drive_mode];
                 new_drive_mode  = BOARD_CalculateCoreClkDivider(next_clk_src, &core_clk_divider, &bus_clk_divider,
                                                                 &slow_clk_divider, next_drive_mode);
-                switch_flag     = SWITCH_DRIVE_MODE_FROM_ND_TO_OD;
+            }
+            else
+            {
+                return current_rtd_drive_mode;
             }
             break;
         case DRIVE_MODE_OD:
+            if (requested_drive_mode != DRIVE_MODE_ND)
+                return current_rtd_drive_mode;
             /* OD -> ND */
             next_drive_mode = DRIVE_MODE_ND;
             next_clk_src    = clk_src[next_drive_mode];
             new_drive_mode  = BOARD_CalculateCoreClkDivider(next_clk_src, &core_clk_divider, &bus_clk_divider,
                                                             &slow_clk_divider, next_drive_mode);
-            switch_flag     = SWITCH_DRIVE_MODE_FROM_OD_TO_ND;
             break;
         default:
             assert(false);

@@ -93,7 +93,7 @@ void BOARD_DisablePlls(void);
 drive_mode_e BOARD_GetRtdDriveMode(void);
 drive_mode_e BOARD_GetDriveModeByCoreFreq(uint32_t freq);
 int32_t BOARD_UpdateM33CoreFreq(cgc_rtd_sys_clk_config_t *config);
-drive_mode_e BOARD_SwitchDriveMode(void);
+drive_mode_e BOARD_SwitchDriveMode(drive_mode_e mode);
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus*/
