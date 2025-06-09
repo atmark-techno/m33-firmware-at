@@ -777,7 +777,7 @@ int32_t BOARD_UpdateM33CoreFreq(cgc_rtd_sys_clk_config_t *config)
     return status;
 }
 
-void BOARD_SwitchDriveMode(void)
+drive_mode_e BOARD_SwitchDriveMode(void)
 {
     drive_mode_e current_rtd_drive_mode = DRIVE_MODE_OD, next_drive_mode = DRIVE_MODE_ND,
                  new_drive_mode = DRIVE_MODE_ND;
@@ -931,4 +931,5 @@ void BOARD_SwitchDriveMode(void)
 
     /* Note: All of IP modules that use CM33_CORECLK, CM33_BUSCLK, CM33_SLOWCLK need be reinitialized again */
     assert(BOARD_GetRtdDriveMode() == next_drive_mode);
+    return next_drive_mode;
 }
