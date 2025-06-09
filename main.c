@@ -647,8 +647,16 @@ void WUU0_IRQHandler(void)
     {
         /* Woken up by LPTMR, then clear LPTMR flag. */
         LPTMR_ClearStatusFlags(LPTMR1, kLPTMR_TimerCompareFlag);
-        s_wakeupTimerFlag = true;
-        wakeup            = true;
+        if (s_wakeupTimeoutMs)
+        {
+            s_wakeupTimerFlag = true;
+            wakeup            = true;
+        }
+        else
+        {
+            // don't bother pinging if wakeup was set, we just pinged before sleep
+            SENTINEL_Ping();
+        }
     }
 
     if (WUU_GetInternalWakeupModuleFlag(WUU0, WUU_MODULE_SYSTICK))
@@ -681,8 +689,18 @@ void LPTMR1_IRQHandler(void)
     {
         PRINTF("LPTMR1 IRQ (wakeup)\r\n");
         LPTMR_ClearStatusFlags(LPTMR1, kLPTMR_TimerCompareFlag);
-        s_wakeupTimerFlag = true;
-        wakeup            = true;
+        if (s_wakeupTimeoutMs)
+        {
+            s_wakeupTimerFlag = true;
+            wakeup            = true;
+        }
+        else
+        {
+            // same as above
+            SENTINEL_Ping();
+            // do not disable timer!
+            return;
+        }
     }
     else
     {
@@ -706,31 +724,39 @@ static void APP_GetWakeupConfig()
 
 static void APP_SetWakeupConfig(lpm_rtd_power_mode_e targetMode)
 {
+    /* LPTMR1 is always setup:
+     * - either s_wakeupTimeoutMs has been set and we'll get out of low power mode when it fires
+     * - or it's not set and we setup LPTMR1 to 12h, to ping the sentinel watchdog regularly without
+     *   exiting low power mode
+     */
+    lptmr_config_t lptmrConfig;
+    LPTMR_GetDefaultConfig(&lptmrConfig);
+    lptmrConfig.prescalerClockSource = kLPTMR_PrescalerClock_1; /* Use RTC 1KHz as clock source. */
+    lptmrConfig.bypassPrescaler      = false;
     if (s_wakeupTimeoutMs)
-    {
-        /* Setup LPTMR. */
-        lptmr_config_t lptmrConfig;
-        LPTMR_GetDefaultConfig(&lptmrConfig);
-        lptmrConfig.prescalerClockSource = kLPTMR_PrescalerClock_1; /* Use RTC 1KHz as clock source. */
-        lptmrConfig.bypassPrescaler      = false;
-        lptmrConfig.value                = kLPTMR_Prescale_Glitch_3; /* Divide clock source by 16. */
-        LPTMR_Init(LPTMR1, &lptmrConfig);
-        NVIC_SetPriority(LPTMR1_IRQn, APP_LPTMR1_IRQ_PRIO);
-        EnableIRQ(LPTMR1_IRQn);
-        /* owned by RTD */
-        PCC1->PCC_LPTMR1 &= ~PCC1_PCC_LPTMR1_SSADO_MASK;
-        PCC1->PCC_LPTMR1 |= PCC1_PCC_LPTMR1_SSADO(1);
+        lptmrConfig.value = kLPTMR_Prescale_Glitch_3; /* Divide clock source by 16. */
+    else
+        lptmrConfig.value = kLPTMR_Prescale_Glitch_9; /* Divide clock source by 1024. */
+    LPTMR_Init(LPTMR1, &lptmrConfig);
+    NVIC_SetPriority(LPTMR1_IRQn, APP_LPTMR1_IRQ_PRIO);
+    EnableIRQ(LPTMR1_IRQn);
+    /* owned by RTD */
+    PCC1->PCC_LPTMR1 &= ~PCC1_PCC_LPTMR1_SSADO_MASK;
+    PCC1->PCC_LPTMR1 |= PCC1_PCC_LPTMR1_SSADO(1);
+    if (s_wakeupTimeoutMs)
         LPTMR_SetTimerPeriod(LPTMR1, (s_wakeupTimeoutMs / 16U));
-        LPTMR_ClearStatusFlags(LPTMR1, kLPTMR_TimerCompareFlag);
-        LPTMR_StartTimer(LPTMR1);
-        LPTMR_EnableInterrupts(LPTMR1, kLPTMR_TimerInterruptEnable);
+    else
+        LPTMR_SetTimerPeriod(LPTMR1, 12 * 3600 * 1000 / 1024 /* = 0xa4cb, < 0xffff */);
 
-        /* If targetMode is PD/DPD, setup WUU. */
-        if ((LPM_PowerModePowerDown == targetMode) || (LPM_PowerModeDeepPowerDown == targetMode))
-        {
-            /* Set WUU LPTMR1 module wakeup source. */
-            WUU_SetInternalWakeUpModulesConfig(WUU0, WUU_MODULE_LPTMR1, kWUU_InternalModuleInterrupt);
-        }
+    LPTMR_ClearStatusFlags(LPTMR1, kLPTMR_TimerCompareFlag);
+    LPTMR_StartTimer(LPTMR1);
+    LPTMR_EnableInterrupts(LPTMR1, kLPTMR_TimerInterruptEnable);
+
+    /* If targetMode is PD/DPD, setup WUU. */
+    if ((LPM_PowerModePowerDown == targetMode) || (LPM_PowerModeDeepPowerDown == targetMode))
+    {
+        /* Set WUU LPTMR1 module wakeup source. */
+        WUU_SetInternalWakeUpModulesConfig(WUU0, WUU_MODULE_LPTMR1, kWUU_InternalModuleInterrupt);
     }
 
     EnableIRQ(WUU0_IRQn);
@@ -743,11 +769,8 @@ static void APP_ClearWakeupConfig(lpm_rtd_power_mode_e targetMode)
     {
         WUU_ClearInternalWakeUpModulesConfig(WUU0, WUU_MODULE_LPTMR1, kWUU_InternalModuleInterrupt);
     }
-    if (s_wakeupTimeoutMs)
-    {
-        DisableIRQ(LPTMR1_IRQn);
-        LPTMR_Deinit(LPTMR1);
-    }
+    DisableIRQ(LPTMR1_IRQn);
+    LPTMR_Deinit(LPTMR1);
 }
 
 static void APP_CreateTask(void) {}
@@ -758,6 +781,10 @@ static void APP_Suspend(lpm_rtd_power_mode_e targetMode)
 
     if (targetMode != LPM_PowerModeActive)
     {
+        // Always ping before suspend: when in deep sleep ticks are not incremented, so a flow
+        // that e.g. sleeps 20 mins, wake 3s, sleep again in a loop might not fire the freertos
+        // APP_RefreshS400WdgTimerCallback timer in time. There is no harm in pinging too much.
+        SENTINEL_Ping();
         vTaskSuspend(cliTask);
         IoSuspend(true);
     }
