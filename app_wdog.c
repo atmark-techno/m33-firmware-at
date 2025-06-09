@@ -7,9 +7,13 @@
 
 #include <errno.h>
 
+#include "FreeRTOS.h"
+#include "timers.h"
+
 #include "fsl_ewm.h"
 #include "fsl_upower.h"
 
+#include "main.h"
 #include "app_srtm.h"
 #include "app_srtm_internal.h"
 #include "app_uboot.h"
@@ -20,12 +24,31 @@
 static srtm_service_t wdogService;
 static uint16_t wdogTimeout;
 static bool wdogFirstPingLogged;
+static TimerHandle_t wdogSuspendPingTimer;
 
 void EWM_IRQHandler(void)
 {
     PRINTF("WATCHDOG IRQ!\r\n");
     SRTM_WdogService_NotifyPreTimeout(wdogService);
     EWM_DisableInterrupts(EWM0, kEWM_InterruptEnable);
+}
+
+static srtm_status_t wdog_ping(void)
+{
+    if (!wdogFirstPingLogged)
+    {
+        PRINTF("first watchdog ping\r\n");
+        wdogFirstPingLogged = true;
+    }
+    EWM_Refresh(EWM0);
+    return SRTM_Status_Success;
+}
+
+/* during light sleep we need to ping EWM regularily as it cannot be stopped */
+static void wdog_suspend_ping_timer(TimerHandle_t xTimer)
+{
+    wdog_ping();
+    xTimerStart(wdogSuspendPingTimer, portMAX_DELAY);
 }
 
 static srtm_status_t wdog_enable(bool enabled, uint16_t timeout_ms)
@@ -61,20 +84,13 @@ static srtm_status_t wdog_enable(bool enabled, uint16_t timeout_ms)
 
         /* enable PMIC WDOG_B reset */
         UPOWER_SetPmicReg(8 /* RESET_CTRL */, 0xa0 /* WDOG_B_CFG = 10b | PMIC_RST_CFG = 10b*/);
+
+        /* pre-create timer for light sleep */
+        wdogSuspendPingTimer =
+            xTimerCreate("wdogSuspendPingTimer", APP_MS2TICK(timeout_ms / 2), pdFALSE, NULL, wdog_suspend_ping_timer);
     }
     wdogTimeout = enabled ? timeout_ms : 0;
 
-    return SRTM_Status_Success;
-}
-
-static srtm_status_t wdog_ping(void)
-{
-    if (!wdogFirstPingLogged)
-    {
-        PRINTF("first watchdog ping\r\n");
-        wdogFirstPingLogged = true;
-    }
-    EWM_Refresh(EWM0);
     return SRTM_Status_Success;
 }
 
@@ -89,11 +105,20 @@ void APP_WDOG_Suspend(void)
     if (wdogTimeout == 0)
         return;
 
-    PRINTF("wdog disable\r\n");
-    /* disable PMIC WDOG_B reset */
-    UPOWER_SetPmicReg(8 /* RESET_CTRL */, 0x20 /* WDOG_B_CFG = 00b | PMIC_RST_CFG = 10b*/);
-    EWM_DisableInterrupts(EWM0, kEWM_InterruptEnable);
-    wdogFirstPingLogged = false;
+    if (sleepWithLinux == LPM_PowerModeActive)
+    {
+        /* take over in m33 */
+        PRINTF("Starting m33 wdt timer\r\n");
+        wdogFirstPingLogged = false;
+        xTimerStart(wdogSuspendPingTimer, portMAX_DELAY);
+    }
+    else
+    {
+        PRINTF("disabling wdog side-effects\r\n");
+        /* disable PMIC WDOG_B reset */
+        UPOWER_SetPmicReg(8 /* RESET_CTRL */, 0x20 /* WDOG_B_CFG = 00b | PMIC_RST_CFG = 10b*/);
+        EWM_DisableInterrupts(EWM0, kEWM_InterruptEnable);
+    }
 }
 
 void APP_WDOG_Resume(void)
@@ -102,10 +127,13 @@ void APP_WDOG_Resume(void)
         return;
 
     PRINTF("wdog resume\r\n");
+    wdogFirstPingLogged = false;
     EWM_Refresh(EWM0);
     EWM_EnableInterrupts(EWM0, kEWM_InterruptEnable);
     /* enable PMIC WDOG_B reset */
     UPOWER_SetPmicReg(8 /* RESET_CTRL */, 0xa0 /* WDOG_B_CFG = 10b | PMIC_RST_CFG = 10b*/);
+    /* disable autoping if it was active */
+    xTimerStop(wdogSuspendPingTimer, portMAX_DELAY);
 }
 
 void APP_WDOG_InitService(void)

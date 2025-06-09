@@ -10,6 +10,7 @@
 #include "fsl_flexcan.h"
 #include "fsl_upower.h"
 
+#include "main.h"
 #include "task.h"
 #include "event_groups.h"
 #include "srtm_message.h"
@@ -595,7 +596,6 @@ void APP_CAN_Suspend(void)
                     s_canIsWakeupSource ? kWUU_ExternalPinFallingEdge : kWUU_ExternalPinDisable);
 }
 
-extern lpm_rtd_power_mode_e sleepWithLinux;
 void APP_CAN_Resume(void)
 {
     if (!s_canState.init)
