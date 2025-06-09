@@ -88,6 +88,7 @@ typedef enum _lpm_rtd_power_mode
     LPM_PowerModePowerDown,     /* Power Down mode. */
     LPM_PowerModeDeepPowerDown, /* Deep Power Down mode */
     LPM_PowerModeIgnore,        /* Do not enter transition at all */
+    LPM_PowerModeActiveUD,      /* keep m33 active but transition clock speed to UD when linux sleeps */
 } lpm_rtd_power_mode_e;
 
 typedef bool (*lpm_power_mode_callback_t)(lpm_rtd_power_mode_e curMode, lpm_rtd_power_mode_e newMode, void *data);

@@ -105,7 +105,7 @@ void APP_WDOG_Suspend(void)
     if (wdogTimeout == 0)
         return;
 
-    if (sleepWithLinux == LPM_PowerModeActive)
+    if (sleepWithLinux == LPM_PowerModeActive || sleepWithLinux == LPM_PowerModeActiveUD)
     {
         /* take over in m33 */
         PRINTF("Starting m33 wdt timer\r\n");

@@ -769,8 +769,15 @@ static void HandleSuspendTask(void *pvParameters)
             PRINTF("Suspended tasks...\r\n");
 
             TickType_t delay = 5000;
-            if (sleepWithLinux == LPM_PowerModeActive)
+            /* Timer runs normally in active mode, so do not print debug 'not sleeping' message */
+            if (targetPowerMode == LPM_PowerModeActive)
                 delay = portMAX_DELAY;
+            /* lower frequency if requested */
+            if (sleepWithLinux == LPM_PowerModeActiveUD)
+            {
+                if (BOARD_SwitchDriveMode(DRIVE_MODE_UD) == DRIVE_MODE_UD)
+                    printf("m33 clock underclocked\r\n");
+            }
 
             while (!xSemaphoreTake(s_wakeupSig, delay))
             {
@@ -778,6 +785,14 @@ static void HandleSuspendTask(void *pvParameters)
             }
 
             PRINTF("Waking up...\r\n");
+
+            /* restore freq to ND */
+            if (sleepWithLinux == LPM_PowerModeActiveUD)
+            {
+                if (BOARD_SwitchDriveMode(DRIVE_MODE_ND) == DRIVE_MODE_ND)
+                    printf("m33 clock restored\r\n");
+            }
+
             /* The call might be blocked by SRTM dispatcher task. Must be called after power mode reset. */
             APP_ClearWakeupConfig(targetPowerMode);
             APP_Resume(targetPowerMode);
@@ -833,9 +848,13 @@ void APP_PowerModeSwitch(lpm_rtd_power_mode_e targetPowerMode)
 
 void APP_SleepWithLinux(void)
 {
-    if (sleepWithLinux == LPM_PowerModeIgnore)
+    lpm_rtd_power_mode_e target = sleepWithLinux;
+    if (target == LPM_PowerModeIgnore)
         return;
-    APP_PowerModeSwitch(sleepWithLinux);
+    /* lpm code does not handle this state, the frequency change is done in HandleSuspendTask */
+    if (target == LPM_PowerModeActiveUD)
+        target = LPM_PowerModeActive;
+    APP_PowerModeSwitch(target);
 }
 
 /* Power Mode Switch task */

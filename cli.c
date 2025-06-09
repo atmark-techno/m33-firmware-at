@@ -77,6 +77,9 @@ static int CLI_sleepMode(int argc, char **argv)
             case LPM_PowerModeActive:
                 printf("active\r\n");
                 break;
+            case LPM_PowerModeActiveUD:
+                printf("active_ud\r\n");
+                break;
             case LPM_PowerModeIgnore:
                 printf("ignore\r\n");
                 break;
@@ -99,6 +102,9 @@ static int CLI_sleepMode(int argc, char **argv)
     /* active suspends linux drivers and CLI, but m33 stays alive */
     else if (!strcmp(argv[1], "active"))
         sleepWithLinux = LPM_PowerModeActive;
+    /* active suspends linux drivers and CLI, but m33 stays alive at lower speed */
+    else if (!strcmp(argv[1], "active_ud"))
+        sleepWithLinux = LPM_PowerModeActiveUD;
     /* ignore does not suspend anything (even watchdog!) */
     else if (!strcmp(argv[1], "ignore"))
         sleepWithLinux = LPM_PowerModeIgnore;
@@ -385,7 +391,7 @@ static const struct CLI_command CLI_commands[] = {
     { "verbose", CLI_verbose, "enable background messages" },
     { "version", CLI_version, "print firmware version" },
     { "sleep_mode", CLI_sleepMode, NULL /* debug function, not listed */,
-      "sleep_mode [deepsleep|sleep|powerdown|active|ignore]" },
+      "sleep_mode [deepsleep|sleep|powerdown|active|active_ud|ignore]" },
     { "wakeup", CLI_wakeup }, /* wake up linux if sleeping (only used for testing) */
     { "m33_drive_mode", CLI_m33DriveMode, NULL /* debug function, not listed */, "m33_drive_mode [UD|ND|OD]" },
     { "wakeup_timer", CLI_wakeupTimer, NULL /* debug function, not listed */,
