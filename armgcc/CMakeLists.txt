@@ -138,7 +138,6 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 target_include_directories(${MCUX_SDK_PROJECT_NAME} PRIVATE
     ${ProjDirPath}/..
     ${ProjDirPath}/../3rdparty/printf
-    ${SdkRootDirPath}/examples/evkmimx8ulp
     ${ProjDirPath}/../boards/a900
     ${ProjDirPath}/../srtm/channels
     ${ProjDirPath}/../srtm/services
