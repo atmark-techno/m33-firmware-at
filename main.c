@@ -615,8 +615,7 @@ void WUU0_IRQHandler(void)
     if (!wakeup)
         return;
 
-    xSemaphoreGiveFromISR(s_wakeupSig, NULL);
-    portYIELD_FROM_ISR(pdTRUE);
+    APP_Wakeup(true);
 }
 
 /* LPTMR1 interrupt handler. */
@@ -640,8 +639,7 @@ void LPTMR1_IRQHandler(void)
 
     if (wakeup)
     {
-        xSemaphoreGiveFromISR(s_wakeupSig, NULL);
-        portYIELD_FROM_ISR(pdTRUE);
+        APP_Wakeup(true);
     }
 }
 
@@ -802,8 +800,6 @@ static void HandleSuspendTask(void *pvParameters)
         s_lastMode = s_curMode;
         s_curMode  = LPM_PowerModeActive;
 
-        bool wakeup = false;
-
         if (s_wakeupPinFlag)
         {
             uint8_t pins = (WUU0->PARAM & WUU_PARAM_PINS_MASK) >> WUU_PARAM_PINS_SHIFT;
@@ -822,20 +818,18 @@ static void HandleSuspendTask(void *pvParameters)
                     }
                 }
             }
-            if (s_wakeupPinFlag && AD_CurrentMode == AD_PD && wakeWithLinux)
+            if (s_wakeupPinFlag)
             {
                 PRINTF("Wake up from WUU_Pn 0x%lx\r\n", s_wakeupPinFlag);
-                wakeup = true;
             }
             s_wakeupPinFlag = 0;
         }
-        if (s_wakeupTimerFlag && AD_CurrentMode == AD_PD && wakeWithLinux)
+        if (s_wakeupTimerFlag)
         {
             PRINTF("Wake up from timer\r\n");
-            wakeup            = true;
             s_wakeupTimerFlag = false;
         }
-        if (wakeup)
+        if (AD_CurrentMode == AD_PD && wakeWithLinux)
             APP_SRTM_WakeupCA35();
     }
 }
@@ -844,6 +838,19 @@ void APP_PowerModeSwitch(lpm_rtd_power_mode_e targetPowerMode)
 {
     suspendPowerMode = targetPowerMode;
     xSemaphoreGive(handleSuspendSig);
+}
+
+void APP_Wakeup(bool fromISR)
+{
+    if (fromISR)
+    {
+        xSemaphoreGiveFromISR(s_wakeupSig, NULL);
+        portYIELD_FROM_ISR(pdTRUE);
+    }
+    else
+    {
+        xSemaphoreGive(s_wakeupSig);
+    }
 }
 
 void APP_SleepWithLinux(void)

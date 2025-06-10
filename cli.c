@@ -121,7 +121,7 @@ usage:
 
 static int CLI_wakeup(int argc, char **argv)
 {
-    APP_SRTM_WakeupCA35();
+    APP_Wakeup(false);
     return 0;
 }
 

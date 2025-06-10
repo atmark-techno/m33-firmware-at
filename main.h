@@ -87,6 +87,7 @@ void APP_PowerModeSwitch(lpm_rtd_power_mode_e targetPowerMode);
 extern lpm_rtd_power_mode_e sleepWithLinux;
 extern uint32_t s_wakeupTimeoutMs;
 void APP_SleepWithLinux(void);
+void APP_Wakeup(bool fromISR);
 
 #if defined(__cplusplus)
 }
