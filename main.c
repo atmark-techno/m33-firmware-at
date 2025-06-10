@@ -299,7 +299,7 @@ static bool IsWuuPinGPIOIrqcInterruptEdge(uint8_t wuuPin)
     return false;
 }
 
-void IoSuspendOne(uint8_t gpioIdx, uint8_t pinIdx, uint32_t backupIndex)
+void IoSuspendOne(bool disableUnused, uint8_t gpioIdx, uint8_t pinIdx, uint32_t backupIndex)
 {
     uint8_t wuuIndex = APP_IO_GetWUUPin(gpioIdx, pinIdx);
     __IO uint32_t *IOMUXC;
@@ -343,7 +343,8 @@ void IoSuspendOne(uint8_t gpioIdx, uint8_t pinIdx, uint32_t backupIndex)
 
     if (wuuIndex == 255)
     {
-        *IOMUXC = 0;
+        if (disableUnused)
+            *IOMUXC = 0;
         return;
     }
 
@@ -353,7 +354,8 @@ void IoSuspendOne(uint8_t gpioIdx, uint8_t pinIdx, uint32_t backupIndex)
     uint32_t setting  = *PE & mask;
     if (!setting)
     {
-        *IOMUXC = 0;
+        if (disableUnused)
+            *IOMUXC = 0;
         return;
     }
 
@@ -369,7 +371,7 @@ void IoSuspendOne(uint8_t gpioIdx, uint8_t pinIdx, uint32_t backupIndex)
     *PE |= setting;
 }
 
-static void IoSuspend(void)
+static void IoSuspend(bool disableUnused)
 {
     uint32_t i;
     uint32_t backupIndex;
@@ -379,7 +381,7 @@ static void IoSuspend(void)
     /* Backup PTA IOMUXC and GPIOA ICR registers then disable */
     for (i = 0; i <= 24; i++)
     {
-        IoSuspendOne(0, i, backupIndex);
+        IoSuspendOne(disableUnused, 0, i, backupIndex);
 
         backupIndex++;
     }
@@ -389,7 +391,7 @@ static void IoSuspend(void)
     /* Backup PTB IOMUXC and GPIOB ICR registers then disable */
     for (i = 0; i <= 15; i++)
     {
-        IoSuspendOne(1, i, backupIndex);
+        IoSuspendOne(disableUnused, 1, i, backupIndex);
 
         backupIndex++;
     }
@@ -399,7 +401,7 @@ static void IoSuspend(void)
     /* Backup PTC IOMUXC and GPIOC ICR registers then disable */
     for (i = 0; i <= 23; i++)
     {
-        IoSuspendOne(2, i, backupIndex);
+        IoSuspendOne(disableUnused, 2, i, backupIndex);
 
         backupIndex++;
     }
@@ -410,7 +412,7 @@ static void IoSuspend(void)
     WUU0->PF = WUU0->PF;
 }
 
-static void IoResume(void)
+static void IoResume(bool disableUnused)
 {
     uint32_t i;
     uint32_t backupIndex;
@@ -428,6 +430,9 @@ static void IoResume(void)
     GPIOA->PDDR = gpioOutputBackup[0].pddr;
     for (i = 0; i <= 24; i++)
     {
+        /* skip non-WUU pins for light sleep */
+        if (!disableUnused && IOMUXC0->PCR0_IOMUXCARRAY0[i] != IOMUXC_PCR_MUX_MODE(0xD))
+            continue;
         IOMUXC0->PCR0_IOMUXCARRAY0[i] = iomuxBackup[backupIndex];
         GPIOA->ICR[i]                 = gpioICRBackup[backupIndex];
         backupIndex++;
@@ -438,6 +443,8 @@ static void IoResume(void)
     GPIOB->PDDR = gpioOutputBackup[1].pddr;
     for (i = 0; i <= 15; i++)
     {
+        if (!disableUnused && IOMUXC0->PCR0_IOMUXCARRAY1[i] != IOMUXC_PCR_MUX_MODE(0xD))
+            continue;
         IOMUXC0->PCR0_IOMUXCARRAY1[i] = iomuxBackup[backupIndex];
         GPIOB->ICR[i]                 = gpioICRBackup[backupIndex];
         backupIndex++;
@@ -448,6 +455,8 @@ static void IoResume(void)
     GPIOC->PDDR = gpioOutputBackup[2].pddr;
     for (i = 0; i <= 23; i++)
     {
+        if (!disableUnused) /* PTC has no WUU */
+            continue;
         IOMUXC0->PCR0_IOMUXCARRAY2[i] = iomuxBackup[backupIndex];
         GPIOC->ICR[i]                 = gpioICRBackup[backupIndex];
         backupIndex++;
@@ -705,7 +714,13 @@ static void APP_Suspend(lpm_rtd_power_mode_e targetMode)
     if (targetMode != LPM_PowerModeActive)
     {
         vTaskSuspend(cliTask);
-        IoSuspend();
+        IoSuspend(true);
+    }
+    else
+    {
+        /* Even if we do not enter suspend mode we need to setup IOMUX for pins which have WUU enabled.
+         * This should only be true for pins in linux domain, so not a problem even if sleep mode=active */
+        IoSuspend(false);
     }
 }
 
@@ -713,8 +728,12 @@ static void APP_Resume(lpm_rtd_power_mode_e targetMode)
 {
     if (targetMode != LPM_PowerModeActive)
     {
-        IoResume();
+        IoResume(true);
         vTaskResume(cliTask);
+    }
+    else
+    {
+        IoResume(false);
     }
 
     APP_SRTM_Resume();
