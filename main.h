@@ -19,6 +19,9 @@
 /* do not reset jtag pinmux on suspend */
 // #define DEBUG_SUSPEND_SKIP_JTAG_PINS 1
 
+/* disable watchdog timer to avoid accidental reset during debug */
+// #define DEBUG_DISABLE_WDOG 1
+
 /* add md/mw commands to cli */
 // #define CLI_RAW_MEM
 

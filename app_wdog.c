@@ -53,7 +53,10 @@ static void wdog_suspend_ping_timer(TimerHandle_t xTimer)
 
 static srtm_status_t wdog_enable(bool enabled, uint16_t timeout_ms)
 {
-
+#if DEBUG_DISABLE_WDOG
+    PRINTF("Watchdog disabled in m33-firmware-at\r\n");
+    return SRTM_Status_Success;
+#endif
     bool is_running = EWM_GetStatusFlags(EWM0) & kEWM_RunningFlag;
     PRINTF("Watchdog %s (timeout %d)\r\n", enabled ? "start" : "stop", timeout_ms);
 
