@@ -47,19 +47,6 @@ typedef struct
     bool wakeup;
 } app_io_t;
 
-/* NOTE: CM33 DRIVERS DON'T SUPPORT SAVE CONTEXT FOR RESUME, BUT CA35 LINUX DRIVERS DO.
- * WHEN CM33 CORE RUNS INTO VLLS MODE, MOST PERIPHERALS STATE WILL BE LOST. HERE PROVIDES
- * AN EXAMPLE TO SAVE DEVICE STATE BY APPLICATION IN A SUSPEND CONTEXT LOCATING IN TCM
- * WHICH CAN KEEP DATA IN VLLS MODE.
- */
-typedef struct
-{
-    struct
-    {
-        app_io_t data[APP_IO_NUM];
-    } io;
-} app_suspend_ctx_t;
-
 typedef enum
 {
     CORE_ACT  = CMC_AD_AD_A35CORE0_LPMODE_A35CORE0_LPMODE(0x0U),
@@ -152,8 +139,6 @@ lpm_ad_power_mode_e AD_WillEnterMode = AD_UNKOWN;
 
 RGPIO_Type *const gpios[] = RGPIO_BASE_PTRS;
 #define IO_PINCTRL_UNSET 0xffffffffU
-
-static app_suspend_ctx_t suspendContext;
 
 static MU_Type mu0_mua;
 /*******************************************************************************
@@ -589,7 +574,6 @@ static srtm_status_t APP_IO_ConfInput(uint16_t ioId, srtm_io_event_t event, bool
     }
     if (wakeup)
         PRINTF("Wakeup requested on %d/%d (WUU %d), mode %d\r\n", gpioIdx, pinIdx, wuuIdx, event);
-    suspendContext.io.data[inputIdx].wakeup = wakeup;
 
     APP_IO_SetPinConfig(ioId, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
     /* set direction as input */
