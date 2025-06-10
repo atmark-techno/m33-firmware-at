@@ -150,17 +150,14 @@ static srtm_status_t SRTM_SPIService_Request(srtm_service_t service, srtm_reques
         case SRTM_SPI_CMD_INIT:
             break;
     }
-    if (payloadLen < sizeof(struct _srtm_spi_payload) + requestLen ||
-        requestLen + sizeof(struct _srtm_spi_payload) + sizeof(struct _srtm_packet_head) > SRTM_DISPATCHER_MSG_MAX_LEN)
-    {
-        retCode     = SRTM_SPI_RETCODE_EINVAL;
-        responseLen = 0;
-    }
 
     status = SRTM_Service_CheckVersion(service, request, SRTM_SPI_VERSION);
-    if (status != SRTM_Status_Success)
+
+    if (status != SRTM_Status_Success || payloadLen < sizeof(struct _srtm_spi_payload) + requestLen ||
+        requestLen + sizeof(struct _srtm_spi_payload) + sizeof(struct _srtm_packet_head) > SRTM_DISPATCHER_MSG_MAX_LEN)
     {
-        retCode     = SRTM_SPI_RETCODE_UNSUPPORTED;
+        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s format error!\r\n", __func__);
+        retCode     = SRTM_SPI_RETCODE_EINVAL;
         responseLen = 0;
     }
 
