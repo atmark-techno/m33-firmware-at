@@ -331,8 +331,7 @@ void lpuart_suspend(struct tty_settings *settings)
     uint8_t gpioIdx = APP_GPIO_IDX(lpuart->suspend_wakeup_gpio);
     uint8_t pinIdx  = APP_PIN_IDX(lpuart->suspend_wakeup_gpio);
 
-    APP_IO_SetupWUU(APP_IO_GetWUUPin(gpioIdx, pinIdx),
-                    lpuart->wakeup_source ? kWUU_ExternalPinRisingEdge : kWUU_ExternalPinDisable);
+    APP_GPIO_SetupWUU(gpioIdx, pinIdx, lpuart->wakeup_source ? kWUU_ExternalPinRisingEdge : kWUU_ExternalPinDisable);
 }
 
 void lpuart_resume(struct tty_settings *settings)

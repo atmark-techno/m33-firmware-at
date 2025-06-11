@@ -11,7 +11,6 @@
 
 #include "clock_config.h"
 #include "fsl_clock.h"
-#include "fsl_rgpio.h"
 #if defined(BOARD_USE_PCA6416A) && BOARD_USE_PCA6416A
 #include "fsl_pca6416a.h"
 #endif

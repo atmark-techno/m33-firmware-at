@@ -47,21 +47,21 @@ static inline void setsck(const struct spi_device *spi, int is_on)
     uint8_t gpioIdx = APP_GPIO_IDX(spi->sck_pin);
     uint8_t pinIdx  = APP_PIN_IDX(spi->sck_pin);
 
-    RGPIO_PinWrite(gpios[gpioIdx], pinIdx, is_on);
+    APP_GPIO_Write(gpioIdx, pinIdx, is_on);
 }
 static inline void setmosi(const struct spi_device *spi, int is_on)
 {
     uint8_t gpioIdx = APP_GPIO_IDX(spi->mosi_pin);
     uint8_t pinIdx  = APP_PIN_IDX(spi->mosi_pin);
 
-    RGPIO_PinWrite(gpios[gpioIdx], pinIdx, is_on ? 1 : 0);
+    APP_GPIO_Write(gpioIdx, pinIdx, is_on ? 1 : 0);
 }
 static inline int getmiso(const struct spi_device *spi)
 {
     uint8_t gpioIdx = APP_GPIO_IDX(spi->miso_pin);
     uint8_t pinIdx  = APP_PIN_IDX(spi->miso_pin);
 
-    return RGPIO_PinRead(gpios[gpioIdx], pinIdx);
+    return APP_GPIO_Read(gpioIdx, pinIdx);
 }
 
 /* There seem to be no problem with no delay.

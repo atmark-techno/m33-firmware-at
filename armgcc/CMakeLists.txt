@@ -60,6 +60,8 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../main.h"
 "${ProjDirPath}/../lpm.c"
 "${ProjDirPath}/../lpm.h"
+"${ProjDirPath}/../custom/custom.c"
+"${ProjDirPath}/../custom/custom.h"
 "${ProjDirPath}/../FreeRTOSConfig.h"
 "${ProjDirPath}/../pin_mux.c"
 "${ProjDirPath}/../pin_mux.h"

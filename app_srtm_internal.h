@@ -7,7 +7,6 @@
 #pragma once
 
 #include "srtm_dispatcher.h"
-#include "fsl_rgpio.h"
 
 /* Required to register srtm dispatchers from app_*.c */
 extern srtm_dispatcher_t disp;
@@ -22,6 +21,7 @@ void APP_ADC_Resume(void);
 /* app_gpio.c */
 void APP_GPIO_InitService(void);
 void APP_GPIO_ResetService(srtm_peercore_t core);
+// note: only used for uboot (non-remembered pinmux), use APP_GPIO_PinctrlSet for normal use
 void pinctrl_set(uint32_t pinctrl0, uint32_t pinctrl1, uint32_t pinctrl2, uint32_t pinctrl3, uint32_t pinctrl4,
                  uint32_t pinctrl5);
 

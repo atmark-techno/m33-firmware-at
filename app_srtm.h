@@ -111,9 +111,6 @@ void APP_SRTM_SetRpmsgMonitor(app_rpmsg_monitor_t monitor, void *param);
 uint8_t APP_Read_I2C_Register(uint8_t busID, uint16_t slaveAddr, uint8_t regIndex);
 uint8_t APP_Write_I2C_Register(uint8_t busID, uint16_t slaveAddr, uint8_t regIndex, uint8_t value);
 
-/* used for tty wakeup by gpio */
-void APP_IO_SetupWUU(uint8_t wuuIdx, wuu_external_pin_edge_detection_t wuuEdge);
-
 /* Set IRQ handler for application */
 void APP_SRTM_SetIRQHandler(app_irq_handler_t handler, void *param);
 

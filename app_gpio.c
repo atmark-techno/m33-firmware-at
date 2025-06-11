@@ -14,7 +14,6 @@
 #include "fsl_wuu.h"
 #include "pin_mux.h"
 #include "fsl_iomuxc.h"
-#include "fsl_rgpio.h"
 
 #include "main.h"
 #include "app_srtm.h"
@@ -26,7 +25,7 @@
 #define APP_GPIO_INT_SEL (kRGPIO_InterruptOutput2)
 
 static srtm_service_t ioService;
-const uint8_t wuuPins[] = {
+const uint8_t wuuPins[APP_WUU_PINS_NUM] = {
     0,   /* WUU_P0 PTA0 */
     255, /* PTA1 */
     255, /* PTA2 */
@@ -81,9 +80,11 @@ const uint8_t wuuPins[] = {
 
 RGPIO_Type *const gpios[] = RGPIO_BASE_PTRS;
 
+static uint8_t gpio_irq_cb[APP_IO_NUM];
+
 #define IO_PINCTRL_UNSET 0xffffffffU
 #define PIN_FUNC_ID_SIZE (6)
-static uint32_t pinFuncId[][PIN_FUNC_ID_SIZE] = {
+static uint32_t pinFuncId[APP_IO_NUM][PIN_FUNC_ID_SIZE] = {
     { IOMUXC_PTA0_PTA0, -1 },
     { IOMUXC_PTA1_PTA1, -1 },
     { IOMUXC_PTA2_PTA2, -1 },
@@ -119,8 +120,8 @@ static uint32_t pinFuncId[][PIN_FUNC_ID_SIZE] = {
     { IOMUXC_PTB7_PTB7, -1 },
     { IOMUXC_PTB8_PTB8, -1 },
     { IOMUXC_PTB9_PTB9, -1 },
-    { 0 }, /* PTB10 and 11 are used for upower and should never be used here */
-    { 0 },
+    { IOMUXC_PTB10_PTB10, -1 },
+    { IOMUXC_PTB11_PTB11, -1 },
     { IOMUXC_PTB12_PTB12, -1 },
     { IOMUXC_PTB13_PTB13, -1 },
     { IOMUXC_PTB14_PTB14, -1 },
@@ -172,9 +173,9 @@ void pinctrl_set(uint32_t pinctrl0, uint32_t pinctrl1, uint32_t pinctrl2, uint32
  * @brief Set pad control register
  * @param asInput    use gpio as input, unless use as output
  */
-static void APP_IO_SetPinConfig(uint16_t ioId, uint32_t defaultPinctrl)
+static void APP_IO_SetPinConfig(uint8_t gpio, uint8_t pin, uint32_t defaultPinctrl)
 {
-    int index = APP_IO_GetIndex(ioId);
+    int index = APP_IO_Index(gpio, pin);
 
     /* check table is sound... */
     BUILD_BUG_ON(ARRAY_SIZE(pinFuncId) != APP_IO_NUM);
@@ -196,27 +197,143 @@ static bool APP_IO_PinIsGPIO(uint16_t ioId)
 }
 
 /**********************************************
+ * API for other services/internal functions
+ **********************************************/
+int APP_GPIO_PinctrlSet(uint32_t pinctrl0, uint32_t pinctrl1, uint32_t pinctrl2, uint32_t pinctrl3, uint32_t pinctrl4,
+                        uint32_t pinctrl5)
+{
+    /* pinctrl0 is the address of IOMUXC0->PCR0_IOMUXCARRAY[0-2], so we can get the pin back
+     * from there, and thus compute the index without having gpioIdx and pinIdx as explicit
+     * arguments */
+    uint8_t gpioIdx = 255, pinIdx = 255;
+    if (pinctrl0 < (uintptr_t)IOMUXC0->PCR0_IOMUXCARRAY0)
+    {
+        goto inval;
+    }
+    else if (pinctrl0 < (uintptr_t)IOMUXC0->PCR0_IOMUXCARRAY1)
+    {
+        gpioIdx = 0;
+        // guaranteed to be < 256 so no need for extra check
+        pinIdx = (pinctrl0 - (uintptr_t)IOMUXC0->PCR0_IOMUXCARRAY0) / sizeof(IOMUXC0->PCR0_IOMUXCARRAY0[0]);
+    }
+    else if (pinctrl0 < (uintptr_t)IOMUXC0->PCR0_IOMUXCARRAY2)
+    {
+        gpioIdx = 1;
+        pinIdx  = (pinctrl0 - (uintptr_t)IOMUXC0->PCR0_IOMUXCARRAY1) / sizeof(IOMUXC0->PCR0_IOMUXCARRAY1[0]);
+    }
+    else if (pinctrl0 < (uintptr_t)(IOMUXC0->PCR0_IOMUXCARRAY2 + 32))
+    {
+        gpioIdx = 2;
+        pinIdx  = (pinctrl0 - (uintptr_t)IOMUXC0->PCR0_IOMUXCARRAY2) / sizeof(IOMUXC0->PCR0_IOMUXCARRAY2[0]);
+    }
+    else
+    {
+        goto inval;
+    }
+
+    int index = APP_IO_Index(gpioIdx, pinIdx);
+    if (index >= APP_IO_NUM)
+        goto inval;
+
+    if (pinFuncId[index][5] != -1)
+    {
+        PRINTF("pinctrl %d/%d was already set\r\n", gpioIdx, pinIdx);
+        return -EBUSY;
+    }
+
+    /* remember pinctrl and apply it */
+    pinFuncId[index][1] = pinctrl1;
+    pinFuncId[index][2] = pinctrl2;
+    pinFuncId[index][3] = pinctrl3;
+    pinFuncId[index][4] = pinctrl4;
+    pinFuncId[index][5] = pinctrl5;
+    APP_IO_SetPinConfig(gpioIdx, pinIdx, 0);
+
+    return 0;
+
+inval:
+    PRINTF("PinctrlSet first value (%x) does not look valid (%d/%d)\r\n", pinctrl0, gpioIdx, pinIdx);
+    return -EINVAL;
+}
+
+void APP_GPIO_SetupGPIO_Input(uint8_t gpioIdx, uint8_t pinIdx)
+{
+    if (gpioIdx >= APP_IO_CHIPS || pinIdx >= APP_IO_PINS_PER_CHIP)
+    {
+        PRINTF("SetupGPIO_Input invalid pins %d/%d\r\n", gpioIdx, pinIdx);
+        return;
+    }
+    assert(gpioIdx < 3U);
+    assert(pinIdx < 32U);
+    rgpio_pin_config_t config = {
+        .pinDirection = kRGPIO_DigitalInput,
+    };
+
+    RGPIO_PinInit(gpios[gpioIdx], pinIdx, &config);
+}
+
+void APP_GPIO_SetupGPIO_Output(uint8_t gpioIdx, uint8_t pinIdx, uint8_t value)
+{
+    if (gpioIdx >= APP_IO_CHIPS || pinIdx >= APP_IO_PINS_PER_CHIP)
+    {
+        PRINTF("SetupGPIO_Output invalid pins %d/%d\r\n", gpioIdx, pinIdx);
+        return;
+    }
+    rgpio_pin_config_t config = {
+        .outputLogic  = value,
+        .pinDirection = kRGPIO_DigitalOutput,
+    };
+
+    RGPIO_PinInit(gpios[gpioIdx], pinIdx, &config);
+}
+
+void APP_GPIO_SetupIRQ(uint8_t gpioIdx, uint8_t pinIdx, rgpio_interrupt_config_t edge, enum APP_GPIO_IRQCallback cb)
+{
+    uint16_t index = APP_IO_Index(gpioIdx, pinIdx);
+
+    assert(index < APP_IO_NUM);
+    gpio_irq_cb[index] = cb;
+
+    RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, edge);
+}
+
+void APP_GPIO_SetupWUU(uint8_t gpioIdx, uint8_t pinIdx, wuu_external_pin_edge_detection_t wuuEdge)
+{
+    uint8_t wuuIdx = APP_IO_GetWUUPin(gpioIdx, pinIdx);
+    if (wuuIdx == 255)
+        return;
+
+    wuu_external_wakeup_pin_config_t config = {
+        .event = kWUU_ExternalPinInterrupt,
+        .mode  = kWUU_ExternalPinActiveAlways,
+        .edge  = wuuEdge,
+    };
+    WUU_SetExternalWakeUpPinsConfig(WUU0, wuuIdx, &config);
+}
+
+/**********************************************
  * SRTM service callbacks
  **********************************************/
 static srtm_status_t APP_IO_PinctrlSet(srtm_service_t service, srtm_peercore_t core, uint16_t ioId, uint32_t pinctrl[6])
 {
-    int index = APP_IO_GetIndex(ioId);
-    assert(index < APP_IO_NUM);
+    uint8_t gpioIdx = APP_GPIO_IDX(ioId);
+    uint8_t pinIdx  = APP_PIN_IDX(ioId);
+    int index       = APP_IO_Index(gpioIdx, pinIdx);
 
-    if (pinFuncId[index][5] != -1)
+    if (index >= APP_IO_NUM)
     {
-        PRINTF("pinctrl %x was already set\r\n", ioId);
-        return SRTM_Status_Error;
+        PRINTF("pinctrl %d/%d invalid pin\r\n", gpioIdx, pinIdx);
     }
+
     if (pinFuncId[index][0] != pinctrl[0])
     {
-        PRINTF("pinctrl %x first value %x did not match expected %x\r\n", ioId, pinctrl[0], pinFuncId[index][0]);
-        return SRTM_Status_Error;
+        PRINTF("pinctrl %d/%d first value %x did not match expected %x\r\n", gpioIdx, pinIdx, pinctrl[0],
+               pinFuncId[index][0]);
+        return -EINVAL;
     }
 
-    /* remember pinctrl and apply it */
-    memcpy(pinFuncId[index], pinctrl, sizeof(pinFuncId[0]));
-    APP_IO_SetPinConfig(ioId, 0);
+    if (APP_GPIO_PinctrlSet(pinctrl[0], pinctrl[1], pinctrl[2], pinctrl[3], pinctrl[4], pinctrl[5]))
+        return SRTM_Status_Error;
 
     return SRTM_Status_Success;
 }
@@ -229,7 +346,6 @@ static srtm_status_t APP_IO_OutputInit(srtm_service_t service, srtm_peercore_t c
 
     assert(gpioIdx < 3U);
     assert(pinIdx < 32U);
-    assert(index < APP_IO_NUM);
 
     if (!APP_IO_PinIsGPIO(ioId))
     {
@@ -238,17 +354,11 @@ static srtm_status_t APP_IO_OutputInit(srtm_service_t service, srtm_peercore_t c
     }
 
     /* clear any WUU config if any... */
-    uint8_t wuuIdx = APP_IO_GetWUUPin(gpioIdx, pinIdx);
-    APP_IO_SetupWUU(wuuIdx, kWUU_ExternalPinDisable);
+    APP_GPIO_SetupWUU(gpioIdx, pinIdx, kWUU_ExternalPinDisable);
 
-    APP_IO_SetPinConfig(ioId, IOMUXC_PCR_OBE_MASK);
+    APP_IO_SetPinConfig(gpioIdx, pinIdx, IOMUXC_PCR_OBE_MASK);
 
-    rgpio_pin_config_t config = {
-        .outputLogic  = ioValue,
-        .pinDirection = kRGPIO_DigitalOutput,
-    };
-
-    RGPIO_PinInit(gpios[gpioIdx], pinIdx, &config);
+    APP_GPIO_SetupGPIO_Output(gpioIdx, pinIdx, ioValue);
 
     return SRTM_Status_Success;
 }
@@ -280,7 +390,6 @@ static srtm_status_t APP_IO_OutputSet(srtm_service_t service, srtm_peercore_t co
     uint8_t gpioIdx = APP_GPIO_IDX(ioId);
     uint8_t pinIdx  = APP_PIN_IDX(ioId);
 
-    assert(index < APP_IO_NUM);
     assert(gpioIdx < 3U); /* We only support GPIOA, GPIOB and GPIOC */
     assert(pinIdx < 32U);
 
@@ -295,19 +404,6 @@ static srtm_status_t APP_IO_OutputSet(srtm_service_t service, srtm_peercore_t co
     return SRTM_Status_Success;
 }
 
-void APP_IO_SetupWUU(uint8_t wuuIdx, wuu_external_pin_edge_detection_t wuuEdge)
-{
-    if (wuuIdx == 255)
-        return;
-
-    wuu_external_wakeup_pin_config_t config = {
-        .event = kWUU_ExternalPinInterrupt,
-        .mode  = kWUU_ExternalPinActiveAlways,
-        .edge  = wuuEdge,
-    };
-    WUU_SetExternalWakeUpPinsConfig(WUU0, wuuIdx, &config);
-}
-
 static srtm_status_t APP_IO_ConfInput(uint16_t ioId, srtm_io_event_t event, bool wakeup)
 {
     uint8_t gpioIdx                           = APP_GPIO_IDX(ioId);
@@ -315,6 +411,7 @@ static srtm_status_t APP_IO_ConfInput(uint16_t ioId, srtm_io_event_t event, bool
     uint8_t wuuIdx                            = APP_IO_GetWUUPin(gpioIdx, pinIdx);
     uint8_t inputIdx                          = APP_IO_GetIndex(ioId);
     wuu_external_pin_edge_detection_t wuuEdge = kWUU_ExternalPinDisable;
+    rgpio_interrupt_config_t irqEdge          = kRGPIO_InterruptOrDMADisabled;
 
     if (gpioIdx >= APP_IO_CHIPS || pinIdx >= APP_IO_PINS_PER_CHIP || inputIdx >= APP_IO_NUM)
     {
@@ -334,47 +431,45 @@ static srtm_status_t APP_IO_ConfInput(uint16_t ioId, srtm_io_event_t event, bool
     if (wakeup)
         PRINTF("Wakeup requested on %d/%d (WUU %d), mode %d\r\n", gpioIdx, pinIdx, wuuIdx, event);
 
-    APP_IO_SetPinConfig(ioId, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
-    /* set direction as input */
-    rgpio_pin_config_t gpio_config = {
-        .pinDirection = kRGPIO_DigitalInput,
-    };
-    RGPIO_PinInit(gpios[gpioIdx], pinIdx, &gpio_config);
+    APP_IO_SetPinConfig(gpioIdx, pinIdx, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+    APP_GPIO_SetupGPIO_Input(gpioIdx, pinIdx);
 
     switch (event)
     {
         case SRTM_IoEventRisingEdge:
-            RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptRisingEdge);
+            irqEdge = kRGPIO_InterruptRisingEdge;
             wuuEdge = kWUU_ExternalPinRisingEdge;
             break;
         case SRTM_IoEventFallingEdge:
-            RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptFallingEdge);
+            irqEdge = kRGPIO_InterruptFallingEdge;
             wuuEdge = kWUU_ExternalPinFallingEdge;
             break;
         case SRTM_IoEventEitherEdge:
-            RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptEitherEdge);
+            irqEdge = kRGPIO_InterruptEitherEdge;
             wuuEdge = kWUU_ExternalPinAnyEdge;
             break;
         case SRTM_IoEventLowLevel:
-            RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptLogicZero);
+            irqEdge = kRGPIO_InterruptLogicZero;
             /* WUU cannot do level, wake on falling edge */
             wuuEdge = kWUU_ExternalPinFallingEdge;
             break;
         case SRTM_IoEventHighLevel:
-            RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptLogicOne);
+            irqEdge = kRGPIO_InterruptLogicOne;
             /* WUU cannot do level, wake on rising edge */
             wuuEdge = kWUU_ExternalPinRisingEdge;
             break;
         case SRTM_IoEventDisable:
-            RGPIO_SetPinInterruptConfig(gpios[gpioIdx], pinIdx, APP_GPIO_INT_SEL, kRGPIO_InterruptOrDMADisabled);
+            irqEdge = kRGPIO_InterruptOrDMADisabled;
             break;
         default:
             break;
     }
 
+    if (event != SRTM_IoEventNone)
+        APP_GPIO_SetupIRQ(gpioIdx, pinIdx, irqEdge, APP_GPIO_IRQCallback_Linux);
     if (!wakeup)
         wuuEdge = kWUU_ExternalPinDisable;
-    APP_IO_SetupWUU(wuuIdx, wuuEdge);
+    APP_GPIO_SetupWUU(gpioIdx, pinIdx, wuuEdge);
 
     return SRTM_Status_Success;
 }
@@ -405,21 +500,32 @@ static void APP_HandleGPIOHander(uint8_t gpioIdx)
     RGPIO_Type *gpio = gpios[gpioIdx];
     uint32_t flags   = RGPIO_GetPinsInterruptFlags(gpio, APP_GPIO_INT_SEL);
     uint16_t ioId;
-    uint8_t i;
-    uint32_t idx;
+    uint8_t pin;
+    uint32_t mask;
 
-    for (i = 0; i < APP_IO_PINS_PER_CHIP; i++)
+    for (pin = 0; pin < APP_IO_PINS_PER_CHIP; pin++)
     {
-        idx = 1U << i;
-        if (!(flags & idx))
+        mask = 1U << pin;
+        if (!(flags & mask))
             continue;
-        ioId = APP_IO_ID(gpioIdx, i);
-        SRTM_IoService_NotifyInputEvent(ioService, ioId);
-        // disable further irq for pin, linux will re-enable after processing
-        // (this is necessary e.g. for level interrupts to not spam)
-        RGPIO_SetPinInterruptConfig(gpio, i, APP_GPIO_INT_SEL, kRGPIO_InterruptOrDMADisabled);
+        ioId = APP_IO_ID(gpioIdx, pin);
+        switch (gpio_irq_cb[APP_IO_Index(gpioIdx, pin)])
+        {
+            case APP_GPIO_IRQCallback_Linux:
+                SRTM_IoService_NotifyInputEvent(ioService, ioId);
+                // disable further irq for pin, linux will re-enable after processing
+                // (this is necessary e.g. for level interrupts to not spam)
+                RGPIO_SetPinInterruptConfig(gpio, pin, APP_GPIO_INT_SEL, kRGPIO_InterruptOrDMADisabled);
+                break;
+            case APP_GPIO_IRQCallback_Custom:
+                custom_GPIO_IRQHandler(gpioIdx, pin);
+                break;
+            default:
+                PRINTF("Invalid irq cb for gpio %d/%d\r\n", gpio, pin);
+                RGPIO_SetPinInterruptConfig(gpio, pin, APP_GPIO_INT_SEL, kRGPIO_InterruptOrDMADisabled);
+        }
         // clear isr
-        RGPIO_ClearPinsInterruptFlags(gpio, APP_GPIO_INT_SEL, idx);
+        RGPIO_ClearPinsInterruptFlags(gpio, APP_GPIO_INT_SEL, mask);
     }
 }
 

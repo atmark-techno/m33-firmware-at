@@ -13,6 +13,7 @@
 #include "fsl_lpuart.h"
 #include "fsl_reset.h"
 #include "fsl_iomuxc.h"
+#include "app_gpio.h"
 #include "lpuart.h"
 
 #include "debug_console.h"
@@ -109,33 +110,27 @@ int DebugConsole_uboot(uint32_t command)
     switch (pin_tx)
     {
         case 2:
-            IOMUXC_SetPinMux(IOMUXC_PTA2_LPUART0_TX, 0U);
-            IOMUXC_SetPinConfig(IOMUXC_PTA2_LPUART0_TX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+            APP_GPIO_PinctrlSet(IOMUXC_PTA2_LPUART0_TX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
             uart = LPUART0;
             break;
         case 14:
-            IOMUXC_SetPinMux(IOMUXC_PTA14_LPUART0_TX, 0U);
-            IOMUXC_SetPinConfig(IOMUXC_PTA14_LPUART0_TX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+            APP_GPIO_PinctrlSet(IOMUXC_PTA14_LPUART0_TX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
             uart = LPUART0;
             break;
         case 18:
-            IOMUXC_SetPinMux(IOMUXC_PTA18_LPUART0_TX, 0U);
-            IOMUXC_SetPinConfig(IOMUXC_PTA18_LPUART0_TX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+            APP_GPIO_PinctrlSet(IOMUXC_PTA18_LPUART0_TX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
             uart = LPUART0;
             break;
         case 6:
-            IOMUXC_SetPinMux(IOMUXC_PTA6_LPUART1_TX, 0U);
-            IOMUXC_SetPinConfig(IOMUXC_PTA6_LPUART1_TX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+            APP_GPIO_PinctrlSet(IOMUXC_PTA6_LPUART1_TX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
             uart = LPUART1;
             break;
         case 10:
-            IOMUXC_SetPinMux(IOMUXC_PTA10_LPUART1_TX, 0U);
-            IOMUXC_SetPinConfig(IOMUXC_PTA10_LPUART1_TX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+            APP_GPIO_PinctrlSet(IOMUXC_PTA10_LPUART1_TX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
             uart = LPUART1;
             break;
         case 22:
-            IOMUXC_SetPinMux(IOMUXC_PTA22_LPUART1_TX, 0U);
-            IOMUXC_SetPinConfig(IOMUXC_PTA22_LPUART1_TX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+            APP_GPIO_PinctrlSet(IOMUXC_PTA22_LPUART1_TX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
             uart = LPUART1;
             break;
         default:
@@ -146,38 +141,32 @@ int DebugConsole_uboot(uint32_t command)
         case 3:
             if (uart != LPUART0)
                 goto inval;
-            IOMUXC_SetPinMux(IOMUXC_PTA3_LPUART0_RX, 0U);
-            IOMUXC_SetPinConfig(IOMUXC_PTA3_LPUART0_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+            APP_GPIO_PinctrlSet(IOMUXC_PTA3_LPUART0_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
             break;
         case 15:
             if (uart != LPUART0)
                 goto inval;
-            IOMUXC_SetPinMux(IOMUXC_PTA15_LPUART0_RX, 0U);
-            IOMUXC_SetPinConfig(IOMUXC_PTA15_LPUART0_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+            APP_GPIO_PinctrlSet(IOMUXC_PTA15_LPUART0_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
             break;
         case 19:
             if (uart != LPUART0)
                 goto inval;
-            IOMUXC_SetPinMux(IOMUXC_PTA19_LPUART0_RX, 0U);
-            IOMUXC_SetPinConfig(IOMUXC_PTA19_LPUART0_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+            APP_GPIO_PinctrlSet(IOMUXC_PTA19_LPUART0_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
             break;
         case 7:
             if (uart != LPUART1)
                 goto inval;
-            IOMUXC_SetPinMux(IOMUXC_PTA7_LPUART1_RX, 0U);
-            IOMUXC_SetPinConfig(IOMUXC_PTA7_LPUART1_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+            APP_GPIO_PinctrlSet(IOMUXC_PTA7_LPUART1_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
             break;
         case 11:
             if (uart != LPUART1)
                 goto inval;
-            IOMUXC_SetPinMux(IOMUXC_PTA11_LPUART1_RX, 0U);
-            IOMUXC_SetPinConfig(IOMUXC_PTA11_LPUART1_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+            APP_GPIO_PinctrlSet(IOMUXC_PTA11_LPUART1_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
             break;
         case 23:
             if (uart != LPUART1)
                 goto inval;
-            IOMUXC_SetPinMux(IOMUXC_PTA23_LPUART1_RX, 0U);
-            IOMUXC_SetPinConfig(IOMUXC_PTA23_LPUART1_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+            APP_GPIO_PinctrlSet(IOMUXC_PTA23_LPUART1_RX, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
             break;
         default:
             goto inval;

@@ -593,8 +593,7 @@ void APP_CAN_Suspend(void)
     uint8_t gpioIdx = APP_GPIO_IDX(s_canInitParams.suspend_wakeup_gpio);
     uint8_t pinIdx  = APP_PIN_IDX(s_canInitParams.suspend_wakeup_gpio);
 
-    APP_IO_SetupWUU(APP_IO_GetWUUPin(gpioIdx, pinIdx),
-                    s_canIsWakeupSource ? kWUU_ExternalPinFallingEdge : kWUU_ExternalPinDisable);
+    APP_GPIO_SetupWUU(gpioIdx, pinIdx, s_canIsWakeupSource ? kWUU_ExternalPinFallingEdge : kWUU_ExternalPinDisable);
 }
 
 void APP_CAN_Resume(void)
