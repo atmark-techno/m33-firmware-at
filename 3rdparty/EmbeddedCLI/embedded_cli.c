@@ -162,7 +162,7 @@ const char *embedded_cli_get_history(struct embedded_cli *cli,
 #if EMBEDDED_CLI_HISTORY_LEN
 static void embedded_cli_extend_history(struct embedded_cli *cli)
 {
-    int len = strlen(cli->buffer);
+    size_t len = strlen(cli->buffer);
     if (len > 0) {
         // If the new entry is the same as the most recent history entry,
         // then don't insert it
@@ -372,6 +372,18 @@ bool embedded_cli_insert_char(struct embedded_cli *cli, char ch)
             cli->have_escape = true;
             cli->counter = 0;
             break;
+        case '\x15': // Ctrl-U
+            // move back data after cursor, including last \0
+            memmove(cli->buffer, cli->buffer + cli->cursor, cli->len - cli->cursor + 1);
+            cli->len = cli->len - cli->cursor;
+            // clear from beggining of buffer,
+            // print buffer again and move back to start
+            term_cursor_back(cli, cli->cursor);
+            cli_puts(cli, CLEAR_EOL);
+            cli_puts(cli, cli->buffer);
+            term_cursor_back(cli, cli->len);
+            cli->cursor = 0;
+            break;
         case '[':
             if (cli->have_escape)
                 cli->have_csi = true;
@@ -425,12 +437,11 @@ int embedded_cli_argc(struct embedded_cli *cli, char ***argv)
     char in_string = '\0';
     if (!cli->done)
         return 0;
-    for (size_t i = 0; i < sizeof(cli->buffer) && cli->buffer[i] != '\0';
-         i++) {
-
+    for (size_t i = 0; i < sizeof(cli->buffer) && cli->buffer[i] != '\0';) {
         // If we're escaping this character, just absorb it regardless
         if (in_escape) {
             in_escape = false;
+            i++;
             continue;
         }
 
@@ -440,7 +451,8 @@ int embedded_cli_argc(struct embedded_cli *cli, char ***argv)
                 memmove(&cli->buffer[i], &cli->buffer[i + 1],
                         sizeof(cli->buffer) - i - 1);
                 in_string = '\0';
-                i--;
+            } else {
+                i++;
             }
             continue;
         }
@@ -451,11 +463,12 @@ int embedded_cli_argc(struct embedded_cli *cli, char ***argv)
             if (in_arg)
                 cli->buffer[i] = '\0';
             in_arg = false;
+            i++;
             continue;
         }
 
         if (!in_arg) {
-            if (pos >= EMBEDDED_CLI_MAX_ARGC) {
+            if (pos >= EMBEDDED_CLI_MAX_ARGC - 1) {
                 break;
             }
             cli->argv[pos] = &cli->buffer[i];
@@ -467,17 +480,16 @@ int embedded_cli_argc(struct embedded_cli *cli, char ***argv)
             // Absorb the escape character
             memmove(&cli->buffer[i], &cli->buffer[i + 1],
                     sizeof(cli->buffer) - i - 1);
-            i--;
             in_escape = true;
-        }
-
-        // If we're starting a new string, absorb the character and shuffle
-        // things back
-        if (cli->buffer[i] == '\'' || cli->buffer[i] == '"') {
+        } else if (cli->buffer[i] == '\'' || cli->buffer[i] == '"') {
+            // If we're starting a new string, absorb the character and
+            // shuffle things back
             in_string = cli->buffer[i];
             memmove(&cli->buffer[i], &cli->buffer[i + 1],
                     sizeof(cli->buffer) - i - 1);
-            i--;
+        } else {
+            // Just move to the next character
+            i++;
         }
     }
     // Traditionally, there is a NULL entry at argv[argc].
