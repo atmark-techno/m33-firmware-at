@@ -242,6 +242,10 @@ static uint8_t APP_SPI_init(uint8_t bus_id, struct srtm_spi_init_payload *init)
     spi_devices[bus_id]->sck_pin  = init->gpio.sck_pin;
     spi_devices[bus_id]->miso_pin = init->gpio.miso_pin;
     spi_devices[bus_id]->mosi_pin = init->gpio.mosi_pin;
+    APP_GPIO_SetupGPIO_Input(APP_IO_SPLIT_ID(init->gpio.miso_pin));
+    /* we use SPI_MODE_0 so init to 0 (start of transfer will set clk to 1) */
+    APP_GPIO_SetupGPIO_Output(APP_IO_SPLIT_ID(init->gpio.sck_pin), 0);
+    APP_GPIO_SetupGPIO_Output(APP_IO_SPLIT_ID(init->gpio.mosi_pin), 0);
 
     PRINTF("spi %d: init ok\r\n", bus_id);
 
