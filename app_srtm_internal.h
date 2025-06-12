@@ -15,12 +15,15 @@ extern srtm_dispatcher_t disp;
 /* Used by drivers allowing flexio to ensure only one use it at the same time */
 extern bool flexio_used;
 
-/* Used by drivers for performance sensitive code manipulating gpios */
-extern RGPIO_Type *const gpios[];
-
 /* app_adc.c */
 void APP_ADC_InitService(void);
 void APP_ADC_Resume(void);
+
+/* app_gpio.c */
+void APP_GPIO_InitService(void);
+void APP_GPIO_ResetService(srtm_peercore_t core);
+void pinctrl_set(uint32_t pinctrl0, uint32_t pinctrl1, uint32_t pinctrl2, uint32_t pinctrl3, uint32_t pinctrl4,
+                 uint32_t pinctrl5);
 
 /* app_i2c.c */
 void APP_I2C_InitService(void);

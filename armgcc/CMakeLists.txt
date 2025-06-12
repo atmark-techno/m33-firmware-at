@@ -73,6 +73,8 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../app_adc.c"
 "${ProjDirPath}/../app_audio.c"
 "${ProjDirPath}/../app_dac.c"
+"${ProjDirPath}/../app_gpio.c"
+"${ProjDirPath}/../app_gpio.h"
 "${ProjDirPath}/../app_i2c.c"
 "${ProjDirPath}/../app_pwm.c"
 "${ProjDirPath}/../app_uboot.h"

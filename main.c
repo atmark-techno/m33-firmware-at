@@ -25,6 +25,7 @@
 #include "pin_mux.h"
 #include "board.h"
 #include "app_srtm.h"
+#include "app_gpio.h"
 #include "cli.h"
 #include "lpm.h"
 #include "main.h"

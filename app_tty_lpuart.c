@@ -9,6 +9,7 @@
 #include "fsl_reset.h"
 
 #include "app_tty.h"
+#include "app_gpio.h"
 #include "build_bug.h"
 #include "debug_console.h"
 #include "main.h"

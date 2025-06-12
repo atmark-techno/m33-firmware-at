@@ -11,6 +11,7 @@
 
 #include "app_srtm_internal.h"
 #include "app_tty.h"
+#include "app_gpio.h"
 #include "tty.h"
 #include "build_bug.h"
 #include "main.h"

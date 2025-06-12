@@ -17,6 +17,7 @@
 #include "srtm_message_struct.h"
 #include "srtm_can_service.h"
 #include "app_srtm_internal.h"
+#include "app_gpio.h"
 #include "build_bug.h"
 #include "main.h"
 
