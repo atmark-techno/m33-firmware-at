@@ -84,13 +84,12 @@ lpm_rtd_power_mode_e sleepWithLinux = LPM_PowerModeDeepSleep;
 static SemaphoreHandle_t s_wakeupSig;
 static SemaphoreHandle_t handleSuspendSig;
 static lpm_rtd_power_mode_e suspendPowerMode;
-static const char *s_modeNames[] = { "ACTIVE", "WAIT", "STOP", "Sleep", "Deep Sleep", "Power Down", "Deep Power Down" };
+static const char *s_modeNames[] = { "ACTIVE",          "WAIT",       "STOP",
+                                     "Sleep",           "Deep Sleep", "Power Down",
+                                     "Deep Power Down", "Ignore",     "Active underdrive" };
 extern lpm_ad_power_mode_e AD_CurrentMode;
-extern bool option_v_boot_flag;
 extern lpm_rtd_power_mode_e s_curMode;
 extern lpm_rtd_power_mode_e s_lastMode;
-extern pca9460_buck3ctrl_t buck3_ctrl;
-extern pca9460_ldo1_cfg_t ldo1_cfg;
 // clang-format off
 mode_combi_t mode_combi_array_for_single_boot[] = {
     {LPM_PowerModeActive, AD_ACT, MODE_COMBI_YES},
@@ -231,9 +230,6 @@ void HardFault_Handler(void)
 /*******************************************************************************
  * Function Code
  ******************************************************************************/
-extern lpm_ad_power_mode_e AD_CurrentMode;
-extern pca9460_buck3ctrl_t buck3_ctrl;
-extern pca9460_ldo1_cfg_t ldo1_cfg;
 static uint32_t iomuxBackup[25 + 16 + 24]; /* Backup 25 PTA, 16 PTB and 24 PTC IOMUX registers */
 static uint32_t gpioICRBackup[25 + 16 + 24];
 
