@@ -23,9 +23,9 @@
  * The code that knows what GPIO pins do what should have declared four
  * functions, ideally as inlines, before including this header:
  *
- *  void setsck(struct spi_device *, int is_on);
- *  void setmosi(struct spi_device *, int is_on);
- *  int getmiso(struct spi_device *);
+ *  void setsck(struct spi_gpio_settings *, int is_on);
+ *  void setmosi(struct spi_gpio_settings *, int is_on);
+ *  int getmiso(struct spi_gpio_settings *);
  *  void spidelay(unsigned);
  *
  * setsck()'s is_on parameter is a zero/nonzero boolean.
@@ -54,8 +54,8 @@
 #define u8 uint8_t
 #define likely(x) (x)
 
-static inline u32 bitbang_txrx_be_cpha0(struct spi_device *spi, unsigned nsecs, unsigned cpol, unsigned flags, u32 word,
-                                        u8 bits)
+static inline u32 bitbang_txrx_be_cpha0(struct spi_gpio_settings *spi, unsigned nsecs, unsigned cpol, unsigned flags,
+                                        u32 word, u8 bits)
 {
     /* if (cpol == 0) this is SPI_MODE_0; else this is SPI_MODE_2 */
 
@@ -87,8 +87,8 @@ static inline u32 bitbang_txrx_be_cpha0(struct spi_device *spi, unsigned nsecs, 
     return word;
 }
 
-static inline u32 bitbang_txrx_be_cpha1(struct spi_device *spi, unsigned nsecs, unsigned cpol, unsigned flags, u32 word,
-                                        u8 bits)
+static inline u32 bitbang_txrx_be_cpha1(struct spi_gpio_settings *spi, unsigned nsecs, unsigned cpol, unsigned flags,
+                                        u32 word, u8 bits)
 {
     /* if (cpol == 0) this is SPI_MODE_1; else this is SPI_MODE_3 */
 
@@ -120,7 +120,7 @@ static inline u32 bitbang_txrx_be_cpha1(struct spi_device *spi, unsigned nsecs, 
     return word;
 }
 
-static inline u32 bitbang_txrx_le_cpha0(struct spi_device *spi, unsigned int nsecs, unsigned int cpol,
+static inline u32 bitbang_txrx_le_cpha0(struct spi_gpio_settings *spi, unsigned int nsecs, unsigned int cpol,
                                         unsigned int flags, u32 word, u8 bits)
 {
     /* if (cpol == 0) this is SPI_MODE_0; else this is SPI_MODE_2 */
@@ -154,7 +154,7 @@ static inline u32 bitbang_txrx_le_cpha0(struct spi_device *spi, unsigned int nse
     return word;
 }
 
-static inline u32 bitbang_txrx_le_cpha1(struct spi_device *spi, unsigned int nsecs, unsigned int cpol,
+static inline u32 bitbang_txrx_le_cpha1(struct spi_gpio_settings *spi, unsigned int nsecs, unsigned int cpol,
                                         unsigned int flags, u32 word, u8 bits)
 {
     /* if (cpol == 0) this is SPI_MODE_1; else this is SPI_MODE_3 */

@@ -81,6 +81,8 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../app_pwm.c"
 "${ProjDirPath}/../app_uboot.h"
 "${ProjDirPath}/../app_spi.c"
+"${ProjDirPath}/../app_spi.h"
+"${ProjDirPath}/../app_spi_gpio.c"
 "${ProjDirPath}/../spi_bitbang_txrx.h"
 "${ProjDirPath}/../app_tty.c"
 "${ProjDirPath}/../app_tty.h"

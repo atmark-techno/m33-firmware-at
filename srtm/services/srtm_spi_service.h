@@ -49,12 +49,19 @@ typedef enum
     SRTM_SPI_CMD_INIT,
 } srtm_spi_cmd_t;
 
+typedef enum
+{
+    SRTM_SPI_TYPE_GPIO = 0U,
+    // LPSPI, FLEXIO..
+    SRTM_SPI_TYPES_COUNT,
+} srtm_spi_type_t;
+
 struct srtm_spi_init_payload
 {
-    uint32_t type;
+    srtm_spi_type_t type;
     union
     {
-        struct
+        struct srtm_spi_init_gpio_payload
         {
             uint32_t sck_pin;
             uint32_t miso_pin;
@@ -85,13 +92,6 @@ SRTM_PACKED_BEGIN struct _srtm_spi_payload
 SRTM_ANON_DEC_END
 
 typedef struct _srtm_spi_payload *srtm_spi_payload_t;
-
-typedef enum
-{
-    SRTM_SPI_TYPE_GPIO = 0U,
-    // LPSPI, FLEXIO..
-    SRTM_SPI_TYPES_COUNT,
-} srtm_spi_type_t;
 
 static inline const char *srtm_spi_type_to_str(srtm_spi_type_t type)
 {

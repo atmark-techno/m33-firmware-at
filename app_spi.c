@@ -15,239 +15,112 @@
 #include "srtm_message_struct.h"
 #include "srtm_spi_service.h"
 #include "app_srtm_internal.h"
-#include "app_gpio.h"
+#include "app_spi.h"
 #include "build_bug.h"
 #include "main.h"
 #include "semphr.h"
 
-static srtm_service_t spiService;
+/* global settings */
+#define SPI_MAX_PORTS 4
+static struct spi_settings *spi_settings[SPI_MAX_PORTS];
+srtm_service_t spiService;
 
-#define MAX_SPI_BUSES 4
-static struct spi_device
+/* Hooks for each type.
+ * We'd ideally use a linker-generated array like linux/u-boot for this,
+ * but this is overkill so just list all valid types manually. */
+extern const struct spi_hooks spi_gpio_hooks;
+static struct spi_hooks const *spi_hooks[SRTM_SPI_TYPES_COUNT] = {
+    [SRTM_SPI_TYPE_GPIO] = &spi_gpio_hooks,
+};
+
+/* get settings or NULL, log error if caller name given */
+static struct spi_settings *get_settings(uint8_t port_idx, const char *caller)
 {
-    srtm_spi_type_t type;
-    uint32_t sck_pin;
-    uint32_t miso_pin;
-    uint32_t mosi_pin;
-} * spi_devices[MAX_SPI_BUSES];
-
-#define SPI_TASK_PRIORITY (3U)
-
-static TaskHandle_t spi_xfer_task;
-static SemaphoreHandle_t spi_xfer_sem;
-static srtm_response_t spi_xfer_response;
-static uint8_t *spi_xfer_buf;
-static uint16_t spi_xfer_bits_per_word;
-static uint16_t spi_xfer_len;
-static struct spi_device *spi_xfer_dev;
-
-// used in spi_bitbang_txrx.h
-static inline void setsck(const struct spi_device *spi, int is_on)
-{
-    uint8_t gpioIdx = APP_GPIO_IDX(spi->sck_pin);
-    uint8_t pinIdx  = APP_PIN_IDX(spi->sck_pin);
-
-    APP_GPIO_Write(gpioIdx, pinIdx, is_on);
-}
-static inline void setmosi(const struct spi_device *spi, int is_on)
-{
-    uint8_t gpioIdx = APP_GPIO_IDX(spi->mosi_pin);
-    uint8_t pinIdx  = APP_PIN_IDX(spi->mosi_pin);
-
-    APP_GPIO_Write(gpioIdx, pinIdx, is_on ? 1 : 0);
-}
-static inline int getmiso(const struct spi_device *spi)
-{
-    uint8_t gpioIdx = APP_GPIO_IDX(spi->miso_pin);
-    uint8_t pinIdx  = APP_PIN_IDX(spi->miso_pin);
-
-    return APP_GPIO_Read(gpioIdx, pinIdx);
-}
-
-/* There seem to be no problem with no delay.
- * If we need a delay for testing (or some other SPI device), this stub
- * can be used with delay parameter of bitbang_txrx_be_cpha0.
- * loops=1000 takes about 150us.
- */
-#if 0
-static inline void spidelay(unsigned int loops)
-{
-    unsigned i;
-    for (i = 0; i < loops; i++)
+    if (port_idx >= SPI_MAX_PORTS)
     {
-        __asm__ volatile("" : "+g"(i) : :);
+        if (caller)
+            PRINTF("spi %d %s: port_idx %d too big\r\n", port_idx, caller, port_idx);
+        return NULL;
     }
-}
-#else
-#define spidelay(...)
-#endif
 
-#include "spi_bitbang_txrx.h"
-
-static inline void txrx_8(struct spi_device *spi, uint16_t bits_per_word, uint16_t len, uint8_t *buf)
-{
-    while (len > 0)
+    if (!spi_settings[port_idx])
     {
-        uint8_t word = *buf;
-        word         = bitbang_txrx_be_cpha0(spi, 1 /*delay*/, 0 /* cpol */, 0 /* flags */, word, bits_per_word);
-        *buf++       = word;
-        len -= 1;
+        if (caller)
+            PRINTF("spi %d %s without init?\r\n", port_idx, caller);
+        return NULL;
     }
+    return spi_settings[port_idx];
 }
 
-static inline void txrx_16(struct spi_device *spi, uint16_t bits_per_word, uint16_t len, uint16_t *buf)
-{
-    while (len > 0)
-    {
-        uint16_t word = *buf;
-        word          = bitbang_txrx_be_cpha0(spi, 1 /*delay*/, 0 /* cpol */, 0 /* flags */, word, bits_per_word);
-        *buf++        = word;
-        len -= 2;
-    }
-}
-
-static inline void txrx_32(struct spi_device *spi, uint16_t bits_per_word, uint16_t len, uint32_t *buf)
-{
-    while (len > 0)
-    {
-        uint32_t word = *buf;
-        word          = bitbang_txrx_be_cpha0(spi, 1 /*delay*/, 0 /* cpol */, 0 /* flags */, word, bits_per_word);
-        *buf++        = word;
-        len -= 4;
-    }
-}
-
-static void spi_xfer_loop(void *pvPatameters)
-{
-    uint8_t ret;
-
-    while (true)
-    {
-        xSemaphoreTake(spi_xfer_sem, portMAX_DELAY);
-        ret = 0;
-
-        if (!spi_xfer_buf)
-            continue;
-
-        if (spi_xfer_bits_per_word <= 8)
-        {
-            txrx_8(spi_xfer_dev, spi_xfer_bits_per_word, spi_xfer_len, spi_xfer_buf);
-        }
-        else if (spi_xfer_bits_per_word <= 16)
-        {
-            txrx_16(spi_xfer_dev, spi_xfer_bits_per_word, spi_xfer_len, (uint16_t *)spi_xfer_buf);
-        }
-        else if (spi_xfer_bits_per_word <= 32)
-        {
-            txrx_32(spi_xfer_dev, spi_xfer_bits_per_word, spi_xfer_len, (uint32_t *)spi_xfer_buf);
-        }
-        else
-        {
-            ret = SRTM_SPI_RETCODE_EINVAL;
-        }
-        spi_xfer_buf = NULL;
-        SRTM_SPIService_SendResponse(spiService, spi_xfer_response, ret);
-    }
-}
-
-static srtm_status_t APP_SPI_transfer(srtm_response_t response, uint8_t bus_id, uint16_t bits_per_word, uint16_t len,
+static srtm_status_t APP_SPI_transfer(srtm_response_t response, uint8_t port_idx, uint16_t bits_per_word, uint16_t len,
                                       uint8_t *tx_buf, uint8_t *rx_buf)
 {
-    uint8_t ret = 0;
-    if (bus_id >= MAX_SPI_BUSES)
+    struct spi_settings *settings = get_settings(port_idx, "transfer");
+    uint8_t ret                   = 0;
+
+    if (!settings)
     {
         ret = SRTM_SPI_RETCODE_EINVAL;
         goto out_fail;
     }
-    if (!spi_devices[bus_id])
-    {
-        ret = SRTM_SPI_RETCODE_EINVAL;
-        goto out_fail;
-    }
-    // check type/dispatch if we add more types
 
-    if (spi_xfer_buf)
+    if (!spi_hooks[settings->type]->transfer)
     {
-        PRINTF("SPI xfer while previous one still in progress!\r\n");
-        ret = SRTM_SPI_RETCODE_EBUSY;
+        ret = SRTM_SPI_RETCODE_UNSUPPORTED;
         goto out_fail;
     }
 
-    // tx_buffer is gone when we return here, copy to rx_buffer (that stays) which will be overwritten
-    memcpy(rx_buf, tx_buf, len);
-    spi_xfer_buf           = rx_buf;
-    spi_xfer_bits_per_word = bits_per_word;
-    spi_xfer_len           = len;
-    spi_xfer_response      = response;
-    spi_xfer_dev           = spi_devices[bus_id];
-    xSemaphoreGive(spi_xfer_sem);
+    ret = spi_hooks[settings->type]->transfer(settings, response, bits_per_word, len, tx_buf, rx_buf);
+    if (ret)
+        goto out_fail;
+
     return 0;
 
 out_fail:
     return SRTM_SPIService_SendResponse(spiService, response, ret);
 }
 
-static uint8_t APP_SPI_init(uint8_t bus_id, struct srtm_spi_init_payload *init)
+static uint8_t APP_SPI_init(uint8_t port_idx, struct srtm_spi_init_payload *init)
 {
-    if (bus_id >= MAX_SPI_BUSES)
+    struct spi_settings *settings;
+    const struct spi_hooks *hooks;
+    int rc = 0;
+
+    if (port_idx >= SPI_MAX_PORTS)
+    {
+        PRINTF("spi %d %s: port_idx %d too big\r\n", port_idx, "init", port_idx);
         return SRTM_SPI_RETCODE_EINVAL;
-    if (spi_devices[bus_id])
+    }
+    if (spi_settings[port_idx])
+    {
+        PRINTF("spi port %d was already init!\r\n", port_idx);
         return SRTM_SPI_RETCODE_EBUSY;
-
-    if (init->type != SRTM_SPI_TYPE_GPIO)
-    {
-        PRINTF("spi %d: type %d not supported in this version\r\n", bus_id, init->type);
-        return SRTM_SPI_RETCODE_UNSUPPORTED;
     }
-    if (init->gpio.mode != 0)
+    if (init->type >= SRTM_SPI_TYPES_COUNT || !spi_hooks[init->type])
     {
-        PRINTF("spi %d: modes not supported in this version\r\n", bus_id);
+        PRINTF("spi port %d type %" PRIu32 " either type too high or not defined\r\n", port_idx, init->type);
         return SRTM_SPI_RETCODE_UNSUPPORTED;
     }
 
-    if (APP_IO_GetIndex(init->gpio.sck_pin) == 0xffff)
+    hooks    = spi_hooks[init->type];
+    settings = pvPortMalloc(sizeof(*settings) + hooks->settings_size);
+    if (!settings)
     {
-        PRINTF("spi %d: invalid %s\r\n", bus_id, "sck_pin");
-        return SRTM_SPI_RETCODE_EINVAL;
-    }
-    if (APP_IO_GetIndex(init->gpio.miso_pin) == 0xffff)
-    {
-        PRINTF("spi %d: invalid %s\r\n", bus_id, "miso_pin");
-        return SRTM_SPI_RETCODE_EINVAL;
-    }
-    if (APP_IO_GetIndex(init->gpio.mosi_pin) == 0xffff)
-    {
-        PRINTF("spi %d: invalid %s\r\n", bus_id, "mosi_pin");
-        return SRTM_SPI_RETCODE_EINVAL;
-    }
-
-    spi_devices[bus_id] = pvPortMalloc(sizeof(*spi_devices[0]));
-    if (!spi_devices[bus_id])
         return SRTM_SPI_RETCODE_ENOMEM;
-
-    /* only init once */
-    if (spi_xfer_sem == NULL)
-    {
-        spi_xfer_sem = xSemaphoreCreateBinary();
-        if (!spi_xfer_sem)
-        {
-            vPortFree(spi_devices[bus_id]);
-            spi_devices[bus_id] = NULL;
-            return SRTM_SPI_RETCODE_ENOMEM;
-        }
-        xTaskCreate(spi_xfer_loop, "SPI xfer task", 128U, NULL, SPI_TASK_PRIORITY, &spi_xfer_task);
     }
 
-    spi_devices[bus_id]->type     = init->type;
-    spi_devices[bus_id]->sck_pin  = init->gpio.sck_pin;
-    spi_devices[bus_id]->miso_pin = init->gpio.miso_pin;
-    spi_devices[bus_id]->mosi_pin = init->gpio.mosi_pin;
-    APP_GPIO_SetupGPIO_Input(APP_IO_SPLIT_ID(init->gpio.miso_pin));
-    /* we use SPI_MODE_0 so init to 0 (start of transfer will set clk to 1) */
-    APP_GPIO_SetupGPIO_Output(APP_IO_SPLIT_ID(init->gpio.sck_pin), 0);
-    APP_GPIO_SetupGPIO_Output(APP_IO_SPLIT_ID(init->gpio.mosi_pin), 0);
+    settings->type     = init->type;
+    settings->port_idx = port_idx;
 
-    PRINTF("spi %d: init ok\r\n", bus_id);
+    if (hooks->init)
+        rc = hooks->init(settings, init);
+    if (rc)
+    {
+        vPortFree(settings);
+        return rc;
+    }
+
+    spi_settings[port_idx] = settings;
 
     return 0;
 }
