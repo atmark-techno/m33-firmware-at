@@ -140,6 +140,7 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 )
 
 target_include_directories(${MCUX_SDK_PROJECT_NAME} PRIVATE
+    ${ProjDirPath}/../custom
     ${ProjDirPath}/..
     ${ProjDirPath}/../3rdparty/printf
     ${ProjDirPath}/../boards/a900

@@ -9,6 +9,7 @@
 #include "task.h"
 #include "timers.h"
 #include "main.h"
+#include "custom.h"
 
 #include "srtm_dispatcher.h"
 #include "srtm_peercore.h"
@@ -909,6 +910,7 @@ void APP_SRTM_EarlySuspend(void)
 #ifdef DEBUG_SUSPEND
     PRINTF("%s\r\n", __func__);
 #endif
+    custom_early_suspend();
     APP_TTY_Suspend();
     APP_CAN_Suspend();
 }
@@ -918,6 +920,7 @@ void APP_SRTM_Suspend(void)
 #ifdef DEBUG_SUSPEND
     PRINTF("%s\r\n", __func__);
 #endif
+    custom_suspend();
     APP_WDOG_Suspend();
 }
 
@@ -928,6 +931,7 @@ void APP_SRTM_LateResume(void)
 #endif
     APP_TTY_Resume();
     APP_CAN_Resume();
+    custom_late_resume();
 }
 
 void APP_SRTM_Resume(void)
@@ -935,6 +939,7 @@ void APP_SRTM_Resume(void)
 #ifdef DEBUG_SUSPEND
     PRINTF("%s\r\n", __func__);
 #endif
+    custom_resume();
     APP_WDOG_Resume();
     APP_I2C_Resume();
     /*

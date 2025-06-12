@@ -28,6 +28,7 @@
 #include "cli.h"
 #include "lpm.h"
 #include "main.h"
+#include "custom.h"
 #include "fsl_rtd_cmc.h"
 #include "fsl_sentinel.h"
 #include "fsl_wuu.h"
@@ -466,6 +467,7 @@ void APP_PowerPreSwitchHook(lpm_rtd_power_mode_e targetMode)
 #ifdef DEBUG_SUSPEND
     PRINTF("%s\r\n", __func__);
 #endif
+    custom_m33_suspend(targetMode);
     if ((LPM_PowerModeActive != targetMode))
     {
         PRINTF("Preparing for %s\r\n", s_modeNames[targetMode]);
@@ -507,6 +509,7 @@ void APP_PowerPostSwitchHook(lpm_rtd_power_mode_e targetMode, bool result)
         BOARD_SetTrdcGlobalConfig();
         BOARD_SetTrdcAfterApdReset();
     }
+    custom_m33_resume(targetMode);
 }
 static inline const char *APP_GetAllowCombiName(allow_combi_e allow)
 {
@@ -1023,6 +1026,8 @@ int main(void)
     RESET_PeripheralReset(kRESET_Lpi2c1);
     // RESET_PeripheralReset(kRESET_Lpi2c2); // Secure Element
 
+    custom_early_init();
+
     APP_SRTM_Init();
 
     /* register callback for restart the app task when A35 reset */
@@ -1069,6 +1074,7 @@ int main(void)
 #endif /* MCMGR_USED */
 
     APP_CreateTask();
+    custom_init();
 
     /* Start FreeRTOS scheduler. */
     vTaskStartScheduler();
