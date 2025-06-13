@@ -19,6 +19,35 @@ struct custom_tty_settings *get_custom(struct tty_settings *settings)
     return (struct custom_tty_settings *)(settings + 1);
 }
 
+/* This helper sends data to linux.
+ * It's also possible to get a buffer early and write directly into it to
+ * avoid a copy */
+static void custom_tty_to_linux(struct tty_settings *settings, char *buf, uint16_t len)
+{
+    /* We should not send data to linux when the tty is not active to avoid filling buffer on linux side */
+    if ((settings->state & (TTY_ACTIVE | TTY_SUSPENDED)) != TTY_ACTIVE)
+        return;
+
+    while (len > 0)
+    {
+        uint8_t *send_buf;
+        uint16_t send_len;
+
+        /* get buffer from SRTM */
+        srtm_notification_t notif = SRTM_TtyService_NotifyAlloc(settings->port_idx, &send_buf, &send_len);
+
+        /* copy data and send */
+        send_len = MIN(send_len, len);
+        memcpy(send_buf, buf, send_len);
+        SRTM_TtyService_NotifySend(ttyService, notif, len);
+
+        len -= send_len;
+        buf += send_len;
+    }
+}
+
+/* tx is from point of view of linux, this function is called when
+ * data is sent from linux */
 static int custom_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
 {
     struct custom_tty_settings *custom = get_custom(settings);
@@ -26,17 +55,18 @@ static int custom_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
     /* Handle input from linux here.
      * The default implementation just echoes back
      */
-    uint8_t *back_buf;
-    uint16_t maxlen;
-    srtm_notification_t notif = SRTM_TtyService_NotifyAlloc(settings->port_idx, &back_buf, &maxlen);
-
-    /* truncate to whatever srtm sent us */
-    len = MIN(maxlen, len);
-    memcpy(back_buf, buf, len);
-    SRTM_TtyService_NotifySend(ttyService, notif, len);
+    custom_tty_to_linux(settings, (char *)buf, len);
 
     /* (unused variable warning workaround) */
     (void)custom;
+
+    return 0;
+}
+
+static int custom_activate(struct tty_settings *settings)
+{
+    /* This function is called when linux first opens or last close the tty */
+    PRINTF("custom tty is %s\r\n", (settings->state & TTY_ACTIVE) ? "open" : "closed");
 
     return 0;
 }
@@ -58,6 +88,7 @@ static int custom_init(struct tty_settings *settings, struct srtm_tty_init_paylo
 const struct tty_hooks tty_custom_hooks = {
     /* unset hooks are skipped */
     .tx            = custom_tx,
+    .activate      = custom_activate,
     .init          = custom_init,
     .settings_size = sizeof(struct custom_tty_settings),
 };
