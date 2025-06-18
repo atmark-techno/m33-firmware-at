@@ -320,7 +320,10 @@ void IoSuspendOne(bool disableUnused, uint8_t gpioIdx, uint8_t pinIdx, uint32_t 
     }
     iomuxBackup[backupIndex]   = *IOMUXC;
     gpioICRBackup[backupIndex] = GPIO->ICR[pinIdx];
-    GPIO->ICR[pinIdx]          = 0; /* disable interrupts */
+    if (disableUnused)
+    {
+        GPIO->ICR[pinIdx] = 0; /* disable interrupts */
+    }
 
     /* regroup skipped pins logic here */
     /* JTAG pins, for easier debugging -- PTA[20-23] skipped if DEBUG_SUSPEND_SKIP_JTAG_PINS set */
