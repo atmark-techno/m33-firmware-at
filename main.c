@@ -424,41 +424,55 @@ static void IoResume(bool disableUnused)
 
     backupIndex = 0;
 
-    /* Restore PTA IOMUXC and GPIOA ICR registers */
-    GPIOA->PDOR = gpioOutputBackup[0].pdor;
-    GPIOA->PDDR = gpioOutputBackup[0].pddr;
-    for (i = 0; i <= 24; i++)
+    /* IOMUXC first (only WUU done in 'active' sleep) */
+    for (i = 0; i <= 24; i++, backupIndex++)
     {
-        /* skip non-WUU pins for light sleep */
         if (!disableUnused && IOMUXC0->PCR0_IOMUXCARRAY0[i] != IOMUXC_PCR_MUX_MODE(0xD))
             continue;
         IOMUXC0->PCR0_IOMUXCARRAY0[i] = iomuxBackup[backupIndex];
-        GPIOA->ICR[i]                 = gpioICRBackup[backupIndex];
-        backupIndex++;
     }
 
-    /* Restore PTB IOMUXC and GPIOB ICR registers */
-    GPIOB->PDOR = gpioOutputBackup[1].pdor;
-    GPIOB->PDDR = gpioOutputBackup[1].pddr;
-    for (i = 0; i <= 15; i++)
+    for (i = 0; i <= 15; i++, backupIndex++)
     {
         if (!disableUnused && IOMUXC0->PCR0_IOMUXCARRAY1[i] != IOMUXC_PCR_MUX_MODE(0xD))
             continue;
         IOMUXC0->PCR0_IOMUXCARRAY1[i] = iomuxBackup[backupIndex];
-        GPIOB->ICR[i]                 = gpioICRBackup[backupIndex];
-        backupIndex++;
     }
 
-    /* Restore PTC IOMUXC and GPIOC ICR registers */
-    GPIOC->PDOR = gpioOutputBackup[2].pdor;
-    GPIOC->PDDR = gpioOutputBackup[2].pddr;
-    for (i = 0; i <= 23; i++)
+    for (i = 0; i <= 23; i++, backupIndex++)
     {
         if (!disableUnused) /* PTC has no WUU */
             continue;
         IOMUXC0->PCR0_IOMUXCARRAY2[i] = iomuxBackup[backupIndex];
-        GPIOC->ICR[i]                 = gpioICRBackup[backupIndex];
-        backupIndex++;
+    }
+
+    if (disableUnused)
+    {
+        /* all the rest only for normal suspend */
+        backupIndex = 0;
+
+        GPIOA->PDOR = gpioOutputBackup[0].pdor;
+        GPIOA->PDDR = gpioOutputBackup[0].pddr;
+        for (i = 0; i <= 24; i++, backupIndex++)
+        {
+            GPIOA->ICR[i] = gpioICRBackup[backupIndex];
+        }
+
+        /* Restore PTB IOMUXC and GPIOB ICR registers */
+        GPIOB->PDOR = gpioOutputBackup[1].pdor;
+        GPIOB->PDDR = gpioOutputBackup[1].pddr;
+        for (i = 0; i <= 15; i++, backupIndex++)
+        {
+            GPIOB->ICR[i] = gpioICRBackup[backupIndex];
+        }
+
+        /* Restore PTC IOMUXC and GPIOC ICR registers */
+        GPIOC->PDOR = gpioOutputBackup[2].pdor;
+        GPIOC->PDDR = gpioOutputBackup[2].pddr;
+        for (i = 0; i <= 23; i++, backupIndex++)
+        {
+            GPIOC->ICR[i] = gpioICRBackup[backupIndex];
+        }
     }
 
     WUU0->PE1 = PE1;
