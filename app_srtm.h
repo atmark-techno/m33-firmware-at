@@ -96,6 +96,9 @@ typedef void (*app_irq_handler_t)(IRQn_Type irq, void *param);
 extern "C" {
 #endif
 
+/* for hardfault handler */
+void hardfault_process_uboot_messages(void);
+
 /* Wake linux */
 void APP_SRTM_WakeupCA35(void);
 

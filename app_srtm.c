@@ -37,6 +37,7 @@
 #include "pin_mux.h"
 #include "printf.h"
 #include "rsc_table.h"
+#include "errno.h"
 
 /*******************************************************************************
  * Variables
@@ -45,6 +46,7 @@ volatile app_srtm_state_t srtmState;
 bool option_v_boot_flag          = false;
 static bool need_reset_peer_core = false;
 bool flexio_used;
+static bool uboot_done;
 
 /* For CMC1_IRQHandler */
 static int64_t apd_boot_cnt = 0; /* it's cold boot when apd_boot_cnt(Application Domain, A Core) == 1 */
@@ -670,6 +672,65 @@ static void APP_PowerOnCA35(void)
     vTaskDelay(pdMS_TO_TICKS(200));
 }
 
+void hardfault_process_uboot_messages(void)
+{
+    /* This only handles necessary lifecycle messages to rollback if we hardfaulted early on.
+     * If we already booted then skip this. */
+    if (uboot_done)
+        return;
+    DebugConsole_Emergency("Handling hardfault uboot messages...\r\n");
+    MU_Init(MU0_MUA);
+    MU_SetFlags(MU0_MUA, 0);
+    while (true)
+    {
+        uint32_t command = uboot_recv();
+        switch (command & 0xff)
+        {
+            case UBOOT_HANDSHAKE:
+                DebugConsole_Emergency("hardfault uboot handshake\r\n");
+                /* need this to relocate */
+                BOARD_SetTrdcGlobalConfig();
+                uboot_send(EFAULT);
+                CMC_ADClrAD_PSDORF(CMC_AD, CMC_AD_AD_PSDORF_AD_PERIPH(1));
+                break;
+            case UBOOT_BOOT:
+                uboot_done = true;
+                return;
+            case UBOOT_RESET:
+                DebugConsole_Emergency("hardfault uboot reset\r\n");
+                /* does not return */
+                PMIC_Reset();
+                break;
+            /* need these to avoid processing next values as commands... */
+            case UBOOT_PINCTRL:
+            {
+                uint32_t pinctrl[6];
+                uboot_recv_many(pinctrl, sizeof(pinctrl));
+
+                uboot_send(EFAULT);
+                break;
+            }
+            case UBOOT_I2C:
+                /* must be init, ignore 3 values */
+                uboot_recv();
+                uboot_recv();
+                uboot_recv();
+                uboot_send(EFAULT);
+                break;
+            case UBOOT_WDOG:
+                /* init, ignore 1 value */
+                uboot_recv();
+                uboot_send(EFAULT);
+                break;
+            /* these do not have trailing data so could be ignored, but this avoids waiting for timeout */
+            case UBOOT_PING:
+            case UBOOT_DEBUG_CONSOLE:
+                uboot_send(EFAULT);
+                break;
+        }
+    }
+}
+
 static void process_uboot_messages(void)
 {
     /* handle things from uboot */
@@ -702,6 +763,7 @@ static void process_uboot_messages(void)
                 break;
             case UBOOT_BOOT:
                 PRINTF("uboot: booting into linux\r\n");
+                uboot_done = true;
                 /* reset any service that might have been used by uboot */
                 APP_SRTM_ResetServices();
                 return;

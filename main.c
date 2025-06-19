@@ -40,6 +40,8 @@
 
 #include "srtm_message.h"
 #include "srtm_message_struct.h"
+#include "app_uboot.h"
+#include "errno.h"
 /*******************************************************************************
  * Struct Definitions
  ******************************************************************************/
@@ -161,7 +163,19 @@ mode_combi_t mode_combi_array_for_dual_or_lp_boot[] = {
 };
 // clang-format on
 
-char hardfault_buf[32];
+static void spin_sleep(int ms)
+{
+    while (ms-- > 0)
+    {
+        /* calibrated at normal drive (160MHz) */
+        volatile int loop = 26525;
+
+        while (loop-- > 0)
+            ;
+    }
+}
+
+static char hardfault_buf[32];
 void HardFault_Handler(void)
 {
     /* volatile apparently helps compiler not optimize these variables away,
@@ -222,6 +236,22 @@ void HardFault_Handler(void)
     if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
         __asm("bkpt 1");
 
+    /* uboot cannot enter relocation if we crash early, allow it a chance to rollback */
+    hardfault_process_uboot_messages();
+
+    /* If this happens early boot we won't have a chance to rollback:
+     * check current time and sleep for at least 30s after boot */
+    TickType_t tick = xTaskGetTickCount();
+    if (tick < configINITIAL_TICK_COUNT + pdMS_TO_TICKS(30000))
+    {
+        int delay = 30000 - pdTICKS_TO_MS(tick - configINITIAL_TICK_COUNT);
+        DebugConsole_Emergency("Waiting for 30s after boot to reset\r\n");
+        sprintf(hardfault_buf, "Sleeping approx %dms\r\n", delay);
+        DebugConsole_Emergency(hardfault_buf);
+        spin_sleep(delay);
+    }
+
+    DebugConsole_Emergency("RESET\r\n");
     /* we don't know if it's safe to print something in console here, just reset in doubt..
      * Ideally try to store a flag in something that survives reset (rtc?) and use that? */
     PMIC_Reset();
