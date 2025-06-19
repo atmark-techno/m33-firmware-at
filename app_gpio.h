@@ -10,13 +10,29 @@
 #include "fsl_wuu.h"
 #include "fsl_iomuxc.h"
 
-/* driver m33 API */
+/* Internal variables, ignore */
+extern RGPIO_Type *const gpios[];
+extern const uint8_t wuuPins[];
+
+/************************************
+ * API for usage within m33 firmware
+ ************************************/
+/* GPIOs are shared with linux and it is important to register
+ * the pinctrl through this function to ensure linux cannot use it.
+ * Example usage: APP_GPIO_PinctrlSet(IOMUXC_PTB12_PTB12, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+ */
 int APP_GPIO_PinctrlSet(uint32_t pinctrl0, uint32_t pinctrl1, uint32_t pinctrl2, uint32_t pinctrl3, uint32_t pinctrl4,
                         uint32_t pinctrl5);
 
-/* Not used directly anymore, use APP_GPIO_write/read below */
-extern RGPIO_Type *const gpios[];
+/* Direction must be set before reading or writing */
+void APP_GPIO_SetupGPIO_Input(uint8_t gpioIdx, uint8_t pinIdx);
+void APP_GPIO_SetupGPIO_Output(uint8_t gpioIdx, uint8_t pinIdx, uint8_t value);
 
+/* read and write to gpio after having set direction.
+ * Example:
+ *   APP_GPIO_Write(gpioIdx, pinIdx, 1);
+ *   value = APP_GPIO_Read(gpioIdx, pinIdx);
+ */
 static inline void APP_GPIO_Write(uint8_t gpioIdx, uint8_t pinIdx, uint8_t output)
 {
     RGPIO_PinWrite(gpios[gpioIdx], pinIdx, output);
@@ -26,20 +42,41 @@ static inline uint32_t APP_GPIO_Read(uint8_t gpioIdx, uint8_t pinIdx)
     return RGPIO_PinRead(gpios[gpioIdx], pinIdx);
 }
 
-void APP_GPIO_SetupGPIO_Input(uint8_t gpioIdx, uint8_t pinIdx);
-void APP_GPIO_SetupGPIO_Output(uint8_t gpioIdx, uint8_t pinIdx, uint8_t value);
-
+/* Register IRQ, for custom app to be used with something such as:
+ *   APP_GPIO_SetupIRQ(gpioIdx, pinIdx, edge, APP_GPIO_IRQCallback_Custom);
+ * where edge is one of:
+ *   kRGPIO_InterruptOrDMADisabled        // Interrupt/DMA request is disabled.
+ *   kRGPIO_DMARisingEdge                 // DMA request on rising edge.
+ *   kRGPIO_DMAFallingEdge                // DMA request on falling edge.
+ *   kRGPIO_DMAEitherEdge                 // DMA request on either edge.
+ *   kRGPIO_FlagRisingEdge                // Flag sets on rising edge.
+ *   kRGPIO_FlagFallingEdge               // Flag sets on falling edge.
+ *   kRGPIO_FlagEitherEdge                // Flag sets on either edge.
+ *   kRGPIO_InterruptLogicZero            // Interrupt when logic zero.
+ *   kRGPIO_InterruptRisingEdge           // Interrupt on rising edge.
+ *   kRGPIO_InterruptFallingEdge          // Interrupt on falling edge.
+ *   kRGPIO_InterruptEitherEdge           // Interrupt on either edge.
+ *   kRGPIO_InterruptLogicOne             // Interrupt when logic one.
+ *   kRGPIO_ActiveHighTriggerOutputEnable // Enable active high-trigger output.
+ *   kRGPIO_ActiveLowTriggerOutputEnable  // Enable active low-trigger output.
+ */
 enum APP_GPIO_IRQCallback
 {
     APP_GPIO_IRQCallback_Linux,  /* reserved for srtm driver */
     APP_GPIO_IRQCallback_Custom, /* calls custom_GPIO_IRQHandler(gpioIdx, pinIdx) on irq */
 };
+void custom_GPIO_IRQHandler(uint8_t gpioIdx, uint8_t pinIdx); // call into custom/custom.c
 void APP_GPIO_SetupIRQ(uint8_t gpioIdx, uint8_t pinIdx, rgpio_interrupt_config_t edge, enum APP_GPIO_IRQCallback cb);
 
+/* Register pin to Wake Up Unit (WUU), to wake up from sleep modes:
+ *   APP_GPIO_SetupWUU(gpioIdx, pinIdx, edge);
+ * where edge is one of:
+ *   kWUU_ExternalPinDisable     // disabled as wake up input.
+ *   kWUU_ExternalPinRisingEdge  // enabled with the rising edge detection.
+ *   kWUU_ExternalPinFallingEdge // enabled with the falling edge detection.
+ *   kWUU_ExternalPinAnyEdge     // enabled with any change detection.
+ */
 void APP_GPIO_SetupWUU(uint8_t gpioIdx, uint8_t pinIdx, wuu_external_pin_edge_detection_t wuuEdge);
-
-/* defined in custom/gpio.c */
-void custom_GPIO_IRQHandler(uint8_t gpioIdx, uint8_t pinIdx);
 
 /* various constants and index manipulation helpers... */
 #define APP_IO_PINS_PER_CHIP 25U
@@ -75,7 +112,6 @@ static inline uint16_t APP_IO_GetId(uint8_t inputIdx)
         return 0xffff;
     return ((inputIdx / APP_IO_PINS_PER_CHIP) << 8U) | (inputIdx % APP_IO_PINS_PER_CHIP);
 }
-extern const uint8_t wuuPins[];
 static inline uint8_t APP_IO_GetWUUPin(uint8_t gpio_idx, uint8_t pin_idx)
 {
     /* only PTA/PTB */

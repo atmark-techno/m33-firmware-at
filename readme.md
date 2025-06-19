@@ -22,6 +22,7 @@ Hardware bridge to linux is split by component:
 
 The `custom` directory contains hooks that can be customized for specific applications.
 
+- `custom/custom.c`: hooks at various points of lifecycle (boot, before/after suspend) and gpio irq
 - `custom/cli_custom.c`: add commands for CLI (ttyrpmsg0 from linux or console)
 - `custom/app_tty_custom.c`: free form console that can be bound as ttyrpmsgX through linux DTS
 
