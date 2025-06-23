@@ -48,7 +48,7 @@ static void custom_tty_to_linux(struct tty_settings *settings, char *buf, uint16
 
 /* tx is from point of view of linux, this function is called when
  * data is sent from linux */
-static int custom_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
+static int custom_tty_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
 {
     struct custom_tty_settings *custom = get_custom(settings);
 
@@ -63,7 +63,7 @@ static int custom_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
     return 0;
 }
 
-static int custom_activate(struct tty_settings *settings)
+static int custom_tty_activate(struct tty_settings *settings)
 {
     /* This function is called when linux first opens or last close the tty */
     PRINTF("custom tty is %s\r\n", (settings->state & TTY_ACTIVE) ? "open" : "closed");
@@ -71,7 +71,7 @@ static int custom_activate(struct tty_settings *settings)
     return 0;
 }
 
-static int custom_init(struct tty_settings *settings, struct srtm_tty_init_payload *generic_init)
+static int custom_tty_init(struct tty_settings *settings, struct srtm_tty_init_payload *generic_init)
 {
     struct custom_tty_settings *custom        = get_custom(settings);
     struct srtm_tty_init_custom_payload *init = &generic_init->custom;
@@ -87,8 +87,8 @@ static int custom_init(struct tty_settings *settings, struct srtm_tty_init_paylo
 /* manually added to tty_hooks top of app_tty.c */
 const struct tty_hooks tty_custom_hooks = {
     /* unset hooks are skipped */
-    .tx            = custom_tx,
-    .activate      = custom_activate,
-    .init          = custom_init,
+    .tx            = custom_tty_tx,
+    .activate      = custom_tty_activate,
+    .init          = custom_tty_init,
     .settings_size = sizeof(struct custom_tty_settings),
 };
