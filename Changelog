@@ -1,0 +1,43 @@
+1.3
+===
+- BREAKING (linux rpmsg compat): rpmsg spi protocol update
+A new (common) init field was added so protocol version was updated,
+and m33 update will require a linux update.
+- spi: implement lpspi for spi[0-3]
+- suspend: implement underdrive control for m33 core, and add a new
+'active_ud' mode to automatically enter underdrive when linux sleeps
+- suspend/wdog: implement m33-side wdog handover for when linux suspend
+in active* mode
+- wdog: refactor out of app_srtm.c and implement wdog for uboot, so
+failure to boot linux will reset
+- hardfault handler: implement minimum uboot protocol handling to
+allow uboot relocation and rollback in case of early hardfault
+- custom: add more custom hooks for easier prototyping
+- gpio: refactor with custom consumers in mind.
+- suspend: fix suspend in deep sleep for >24h. This used to require
+a hard reset because the sentinel wdog timer apparently was not suspended
+during deep sleep.
+
+  - 2025-06-23
+
+1.2
+===
+- dac/audio services
+- flexio support baudrate change
+- (mostly) fix A core voltage not being lowered during suspend
+
+  -- 2025-05-26
+
+1.1.1
+===========
+- add spi rpmsg implementation
+- only log wdog ping once after init (boot/resume)
+- fix rare reboot loop on sd boot (secure enclave reset loop)
+
+  -- 2025-04-14
+
+1.0
+===
+Initial release for Armadillo 900
+
+  -- 2025-04-01
