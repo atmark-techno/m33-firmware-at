@@ -17,3 +17,5 @@ void custom_resume(void);
 void custom_late_resume(void);
 void custom_m33_suspend(lpm_rtd_power_mode_e targetMode);
 void custom_m33_resume(lpm_rtd_power_mode_e targetMode);
+
+extern portTickType gOldTime, gNewTime, gOldDiffTime;

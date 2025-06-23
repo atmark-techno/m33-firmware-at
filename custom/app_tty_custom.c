@@ -8,6 +8,14 @@
 #include "app_tty.h"
 #include "build_bug.h"
 
+// demo variables:
+// timer handler to periodically report flow rate
+static TimerHandle_t xAutoReloadTimer;
+// tty handle to send message to linux from timer
+static struct tty_settings *tty;
+// time of last edge pulses
+portTickType gOldTime, gNewTime, gOldDiffTime;
+
 /* custom settings private data */
 struct custom_tty_settings
 {
@@ -22,7 +30,7 @@ struct custom_tty_settings *get_custom(struct tty_settings *settings)
 /* This helper sends data to linux.
  * It's also possible to get a buffer early and write directly into it to
  * avoid a copy */
-static void custom_tty_to_linux(struct tty_settings *settings, char *buf, uint16_t len)
+void custom_tty_to_linux(struct tty_settings *settings, char *buf, uint16_t len)
 {
     /* We should not send data to linux when the tty is not active to avoid filling buffer on linux side */
     if ((settings->state & (TTY_ACTIVE | TTY_SUSPENDED)) != TTY_ACTIVE)
@@ -50,23 +58,86 @@ static void custom_tty_to_linux(struct tty_settings *settings, char *buf, uint16
  * data is sent from linux */
 static int custom_tty_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
 {
-    struct custom_tty_settings *custom = get_custom(settings);
-
-    /* Handle input from linux here.
-     * The default implementation just echoes back
-     */
-    custom_tty_to_linux(settings, (char *)buf, len);
-
-    /* (unused variable warning workaround) */
-    (void)custom;
+    // ignore data sent here
 
     return 0;
+}
+
+static void autoReloadTimerCallback(TimerHandle_t xTimer)
+{
+    portTickType NowTime, DiffTime, OldTime, NewTime;
+    uint32_t ml;
+    taskENTER_CRITICAL();
+    NewTime = gNewTime;
+    OldTime = gOldTime;
+    taskEXIT_CRITICAL();
+    if ((OldTime != 0) && (NewTime != 0))
+    {
+        NowTime = xTaskGetTickCount();
+        if ((NowTime - NewTime) >= pdMS_TO_TICKS(7500))
+        {
+            //最終取得から7.5秒経過していたら、0mlにし、パルス間隔取得はリスタート
+            ml           = 0;
+            gOldDiffTime = 0;
+            taskENTER_CRITICAL();
+            gNewTime = 0;
+            gOldTime = 0;
+            taskEXIT_CRITICAL();
+        }
+        else
+        {
+            if ((gOldDiffTime != 0) && ((NowTime - NewTime) > gOldDiffTime))
+            {
+                //最終パルスと今の時間の差分が、最終パルス間隔より大きいなら
+                //今の時間からパルス間隔を計算する
+                DiffTime = NowTime - NewTime;
+            }
+            else
+            {
+                //上記以外はふつうに計算
+                DiffTime     = NewTime - OldTime;
+                gOldDiffTime = DiffTime;
+            }
+            ml = 50 * pdMS_TO_TICKS(60000) / pdMS_TO_TICKS(DiffTime);
+        }
+    }
+    else
+    {
+        ml = 0;
+    }
+
+    char str[32];
+    int len;
+
+    len = snprintf(str, sizeof(str), "now=%05umL/min\r\n", ml);
+    custom_tty_to_linux(tty, str, len);
 }
 
 static int custom_tty_activate(struct tty_settings *settings)
 {
     /* This function is called when linux first opens or last close the tty */
     PRINTF("custom tty is %s\r\n", (settings->state & TTY_ACTIVE) ? "open" : "closed");
+
+    if (settings->state & TTY_ACTIVE)
+    {
+        // create timer to send data regularily
+        if (!xAutoReloadTimer)
+        {
+            gOldTime         = 0;
+            gNewTime         = 0;
+            gOldDiffTime     = 0;
+            xAutoReloadTimer = xTimerCreate("Reload", pdMS_TO_TICKS(1000), pdTRUE, NULL, autoReloadTimerCallback);
+            assert(xAutoReloadTimer != NULL);
+            xTimerStart(xAutoReloadTimer, portMAX_DELAY);
+        }
+    }
+    else if (xAutoReloadTimer)
+    {
+        // stop it all
+        xTimerStop(xAutoReloadTimer, portMAX_DELAY);
+        xTimerDelete(xAutoReloadTimer, portMAX_DELAY);
+        xAutoReloadTimer = NULL;
+    }
 
     return 0;
 }
@@ -77,6 +148,9 @@ static int custom_tty_init(struct tty_settings *settings, struct srtm_tty_init_p
     struct srtm_tty_init_custom_payload *init = &generic_init->custom;
 
     PRINTF("initializing tty %d as CUSTOM '%s'\r\n", settings->port_idx, init->name);
+
+    // remember tty for timer
+    tty = settings;
 
     /* Init more things here... */
     (void)custom;
