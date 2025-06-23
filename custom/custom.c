@@ -10,6 +10,7 @@
 
 #include "app_gpio.h"
 #include "custom.h"
+#include "main.h"
 
 /* This file provides a base for custom application development (that does nothing at all). */
 
@@ -41,6 +42,11 @@ void custom_init(void)
     APP_GPIO_PinctrlSet(IOMUXC_PTB12_PTB12, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
     APP_GPIO_SetupGPIO_Input(1, 12);
     APP_GPIO_SetupIRQ(1, 12, kRGPIO_InterruptRisingEdge, APP_GPIO_IRQCallback_Custom);
+
+    /* Setup to keep m33 alive at lower rate when linux suspends */
+    sleepWithLinux = LPM_PowerModeActiveUD;
+
+    initTimer();
 }
 void custom_linux_boot(void) {}
 void custom_early_suspend(void) {}

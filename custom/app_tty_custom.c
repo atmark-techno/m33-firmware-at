@@ -7,6 +7,7 @@
 
 #include "app_tty.h"
 #include "build_bug.h"
+#include "main.h"
 
 // demo variables:
 // timer handler to periodically report flow rate
@@ -15,6 +16,8 @@ static TimerHandle_t xAutoReloadTimer;
 static struct tty_settings *tty;
 // time of last edge pulses
 portTickType gOldTime, gNewTime, gOldDiffTime;
+// alert threshold for wakeup
+static uint32_t alert;
 
 /* custom settings private data */
 struct custom_tty_settings
@@ -33,7 +36,7 @@ struct custom_tty_settings *get_custom(struct tty_settings *settings)
 void custom_tty_to_linux(struct tty_settings *settings, char *buf, uint16_t len)
 {
     /* We should not send data to linux when the tty is not active to avoid filling buffer on linux side */
-    if ((settings->state & (TTY_ACTIVE | TTY_SUSPENDED)) != TTY_ACTIVE)
+    if (!(settings->state & TTY_ACTIVE))
         return;
 
     while (len > 0)
@@ -56,9 +59,20 @@ void custom_tty_to_linux(struct tty_settings *settings, char *buf, uint16_t len)
 
 /* tx is from point of view of linux, this function is called when
  * data is sent from linux */
-static int custom_tty_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
+static int custom_tty_tx(struct tty_settings *settings, uint8_t *_buf, uint16_t len)
 {
-    // ignore data sent here
+    char *buf = (char *)_buf;
+
+    // parse requests from linux
+#define ALERT "alert="
+    if (!strncmp(buf, ALERT, strlen(ALERT)))
+    {
+        char str[32];
+
+        alert = atoi(buf + strlen(ALERT));
+        len   = snprintf(str, sizeof(str), "ok alert=%u\r\n", alert);
+        custom_tty_to_linux(settings, str, len);
+    }
 
     return 0;
 }
@@ -67,6 +81,7 @@ static void autoReloadTimerCallback(TimerHandle_t xTimer)
 {
     portTickType NowTime, DiffTime, OldTime, NewTime;
     uint32_t ml;
+
     taskENTER_CRITICAL();
     NewTime = gNewTime;
     OldTime = gOldTime;
@@ -106,6 +121,24 @@ static void autoReloadTimerCallback(TimerHandle_t xTimer)
         ml = 0;
     }
 
+    // linux not ready yet
+    if (!tty)
+        return;
+
+    if ((tty->state & TTY_SUSPENDED))
+    {
+        if (alert && ml > alert)
+        {
+            PRINTF("%u > %u: wakeup\r\n", ml, alert);
+            APP_Wakeup(false);
+            custom_tty_to_linux(tty, "wakeup\r\n", 8);
+        }
+        else
+        {
+            return;
+        }
+    }
+
     char str[32];
     int len;
 
@@ -113,31 +146,17 @@ static void autoReloadTimerCallback(TimerHandle_t xTimer)
     custom_tty_to_linux(tty, str, len);
 }
 
+void initTimer(void)
+{
+    xAutoReloadTimer = xTimerCreate("Reload", pdMS_TO_TICKS(1000), pdTRUE, NULL, autoReloadTimerCallback);
+    assert(xAutoReloadTimer != NULL);
+    xTimerStart(xAutoReloadTimer, portMAX_DELAY);
+}
+
 static int custom_tty_activate(struct tty_settings *settings)
 {
     /* This function is called when linux first opens or last close the tty */
-    PRINTF("custom tty is %s\r\n", (settings->state & TTY_ACTIVE) ? "open" : "closed");
-
-    if (settings->state & TTY_ACTIVE)
-    {
-        // create timer to send data regularily
-        if (!xAutoReloadTimer)
-        {
-            gOldTime         = 0;
-            gNewTime         = 0;
-            gOldDiffTime     = 0;
-            xAutoReloadTimer = xTimerCreate("Reload", pdMS_TO_TICKS(1000), pdTRUE, NULL, autoReloadTimerCallback);
-            assert(xAutoReloadTimer != NULL);
-            xTimerStart(xAutoReloadTimer, portMAX_DELAY);
-        }
-    }
-    else if (xAutoReloadTimer)
-    {
-        // stop it all
-        xTimerStop(xAutoReloadTimer, portMAX_DELAY);
-        xTimerDelete(xAutoReloadTimer, portMAX_DELAY);
-        xAutoReloadTimer = NULL;
-    }
+    // timer is always active in this version
 
     return 0;
 }
