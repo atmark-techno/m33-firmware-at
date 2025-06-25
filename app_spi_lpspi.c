@@ -132,9 +132,9 @@ out_busy:
 
 static int spi_lpspi_init(struct spi_settings *settings, struct srtm_spi_init_payload *generic_init)
 {
-    struct spi_lpspi_settings *spi          = get_spi_lpspi(settings);
-    struct srtm_spi_init_gpio_payload *init = &generic_init->gpio;
-    uint8_t port_idx                        = settings->port_idx;
+    struct spi_lpspi_settings *spi           = get_spi_lpspi(settings);
+    struct srtm_spi_init_lpspi_payload *init = &generic_init->lpspi;
+    uint8_t port_idx                         = settings->port_idx;
 
     if (init->mode != 0)
     {
@@ -142,7 +142,7 @@ static int spi_lpspi_init(struct spi_settings *settings, struct srtm_spi_init_pa
         return SRTM_SPI_RETCODE_UNSUPPORTED;
     }
 
-    switch (generic_init->lpspi.spi_index)
+    switch (init->spi_index)
     {
         case 0:
             spi->base          = LPSPI0;
@@ -173,10 +173,10 @@ static int spi_lpspi_init(struct spi_settings *settings, struct srtm_spi_init_pa
             spi->reset         = kRESET_Lpspi3;
             break;
         default:
-            PRINTF("lpspi index %d not supported\r\n", generic_init->lpspi.spi_index);
+            PRINTF("lpspi index %d not supported\r\n", init->spi_index);
             return SRTM_SPI_RETCODE_EINVAL;
     }
-    spi->spi_index = generic_init->lpspi.spi_index;
+    spi->spi_index = init->spi_index;
 
     /* IRQ enable by can but priority isn't set, set it now */
     NVIC_SetPriority(spi->irqn, APP_LPSPI_IRQ_PRIO);
