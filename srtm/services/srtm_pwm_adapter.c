@@ -42,6 +42,8 @@ typedef struct _srtm_hal_pwm_adapter
     struct _srtm_pwm_adapter adapter;
     hal_pwm_handle_t halPwmHandle[SRTM_PWM_MAX_CHIP_NUM];
     struct _srtm_hal_pwm_setup_config halPwmConfig[SRTM_PWM_MAX_CHIP_NUM][SRTM_PWM_MAX_CHANNEL];
+    void (*initPwm)(hal_pwm_handle_t *halPwmHandle, uint8_t chipId);
+    bool flag_init[SRTM_PWM_MAX_CHIP_NUM];
 } * srtm_hal_pwm_adapter_t;
 
 /*******************************************************************************
@@ -163,7 +165,31 @@ static srtm_status_t SRTM_PwmAdapter_SetPwm(srtm_pwm_adapter_t adapter, uint8_t 
     return setPwm(handle, chipId, channelId, period, dutyCycle, polarity, enable);
 }
 
-srtm_pwm_adapter_t SRTM_PwmAdapter_Create(hal_pwm_handle_t *handles, uint32_t handleNum)
+static void PwmAdapter_initPwm(srtm_pwm_adapter_t adapter, uint8_t chipId)
+{
+    srtm_hal_pwm_adapter_t handle = (srtm_hal_pwm_adapter_t)(void *)adapter;
+
+    if (chipId >= SRTM_PWM_MAX_CHIP_NUM)
+    {
+        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR, "%s: chipId %d must less than max instance %d\r\n", __func__,
+                           chipId, SRTM_PWM_MAX_CHIP_NUM);
+        return;
+    }
+    if (handle->halPwmHandle[chipId] == NULL)
+    {
+        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR, "%s: chipId %d not supported\r\n", __func__, chipId);
+        return;
+    }
+
+    if (handle->flag_init[chipId])
+        return;
+
+    handle->initPwm(handle->halPwmHandle, chipId);
+    handle->flag_init[chipId] = true;
+}
+
+srtm_pwm_adapter_t SRTM_PwmAdapter_Create(hal_pwm_handle_t *handles, uint32_t handleNum,
+                                          void (*initPwm)(hal_pwm_handle_t *halPwmHandle, uint8_t chipId))
 {
     srtm_hal_pwm_adapter_t handle;
     uint32_t i;
@@ -183,9 +209,12 @@ srtm_pwm_adapter_t SRTM_PwmAdapter_Create(hal_pwm_handle_t *handles, uint32_t ha
         handle->halPwmHandle[i] = handles[i];
     }
 
+    handle->initPwm = initPwm;
+
     /* Adapter interfaces. */
-    handle->adapter.getPwm = SRTM_PwmAdapter_GetPwm;
-    handle->adapter.setPwm = SRTM_PwmAdapter_SetPwm;
+    handle->adapter.getPwm  = SRTM_PwmAdapter_GetPwm;
+    handle->adapter.setPwm  = SRTM_PwmAdapter_SetPwm;
+    handle->adapter.initPwm = PwmAdapter_initPwm;
 
     return &handle->adapter;
 }

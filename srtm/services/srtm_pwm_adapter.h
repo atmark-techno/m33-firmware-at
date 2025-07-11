@@ -30,8 +30,8 @@ extern "C" {
  * @brief Create PWM adapter.
  *
  */
-srtm_pwm_adapter_t SRTM_PwmAdapter_Create(hal_pwm_handle_t *handles, uint32_t handleNum);
-
+srtm_pwm_adapter_t SRTM_PwmAdapter_Create(hal_pwm_handle_t *handles, uint32_t handleNum,
+                                          void (*initPwm)(hal_pwm_handle_t *halPwmHandle, uint8_t chipId));
 /*!
  * @brief Destroy PWM adapter.
  *

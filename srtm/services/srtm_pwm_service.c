@@ -96,6 +96,7 @@ static srtm_status_t SRTM_PwmService_Request(srtm_service_t service, srtm_reques
                            command, pwmReq->chipId, pwmReq->channelId, pwmReq->period, pwmReq->dutyCycle,
                            pwmReq->polarity, pwmReq->enable);
         memcpy(pwmResp, pwmReq, sizeof(struct _srtm_pwm_payload));
+        adapter->initPwm(adapter, pwmResp->chipId);
         switch (command)
         {
             case SRTM_PWM_CMD_GET:
