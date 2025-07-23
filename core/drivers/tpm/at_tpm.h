@@ -8,8 +8,8 @@
  *
  * Based on: mcux-sdk/core/drivers/tpm/fsl_tpm.h
  */
-#ifndef FSL_TPM_H_
-#define FSL_TPM_H_
+#ifndef AT_TPM_H_
+#define AT_TPM_H_
 
 #include "fsl_common.h"
 
@@ -38,6 +38,10 @@
 
 /*! @brief Help macro to get the max counter value */
 #define TPM_MAX_COUNTER_VALUE(x) ((1U != (uint8_t)FSL_FEATURE_TPM_HAS_32BIT_COUNTERn(x)) ? 0xFFFFU : 0xFFFFFFFFU)
+
+#ifndef PWM_FULL_RATIO
+#define PWM_FULL_RATIO (1ULL << 32) /*!< Full ratio of PWM, 2^32 */
+#endif
 
 /*!
  * @brief List of TPM channels.
@@ -112,18 +116,18 @@ typedef struct _tpm_chnl_pwm_signal_param
     tpm_pwm_pause_level_select_t pauseLevel; /*!< PWM output level when counter first enabled or paused */
 #endif
     tpm_pwm_level_select_t level; /*!< PWM output active level select */
-    uint8_t dutyCyclePercent;     /*!< PWM pulse width, value should be between 0 to 100
+    uint64_t dutyCycleRatio;      /*!< PWM pulse width, value should be between 0 to PWM_FULL_RATIO
                                        0=inactive signal(0% duty cycle)...
-                                       100=always active signal (100% duty cycle)*/
+                                       PWM_FULL_RATIO=always active signal (100% duty cycle)*/
 #if defined(FSL_FEATURE_TPM_HAS_COMBINE) && FSL_FEATURE_TPM_HAS_COMBINE
-    uint8_t firstEdgeDelayPercent; /*!< Used only in combined PWM mode to generate asymmetrical PWM.
-                                        Specifies the delay to the first edge in a PWM period.
-                                        If unsure, leave as 0. Should be specified as percentage
-                                        of the PWM period, (dutyCyclePercent + firstEdgeDelayPercent) value
-                                        should be not greate than 100. */
-    bool enableComplementary;      /*!< Used only in combined PWM mode.
-                                        true: The combined channels output complementary signals;
-                                        false: The combined channels output same signals; */
+    uint64_t firstEdgeDelayRatio; /*!< Used only in combined PWM mode to generate asymmetrical PWM.
+                                       Specifies the delay to the first edge in a PWM period.
+                                       If unsure, leave as 0. Should be specified as ratio
+                                       of the PWM period, (dutyCycleRatio + firstEdgeDelayRatio) value
+                                       should be not greater than PWM_FULL_RATIO. */
+    bool enableComplementary;     /*!< Used only in combined PWM mode.
+                                       true: The combined channels output complementary signals;
+                                       false: The combined channels output same signals; */
 #if (defined(FSL_FEATURE_TPM_HAS_PAUSE_LEVEL_SELECT) && FSL_FEATURE_TPM_HAS_PAUSE_LEVEL_SELECT)
     tpm_pwm_pause_level_select_t secPauseLevel; /*!< Used only in combined PWM mode. Define the second channel output
                                                    level when counter first enabled or paused */
@@ -937,4 +941,4 @@ static inline void TPM_Reset(TPM_Type *base)
 
 /*! @}*/
 
-#endif /* FSL_TPM_H_ */
+#endif /* AT_TPM_H_ */

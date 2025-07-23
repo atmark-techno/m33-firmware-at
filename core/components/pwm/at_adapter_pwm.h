@@ -8,13 +8,17 @@
  * Based on: mcux-sdk/core/components/pwm/fsl_adapter_pwm.h
  */
 
-#ifndef _PWM_H_
-#define _PWM_H_
+#ifndef _AT_PWM_H_
+#define _AT_PWM_H_
 
 /*!
  * @addtogroup PWM_Adapter
  * @{
  */
+
+#ifndef PWM_FULL_RATIO
+#define PWM_FULL_RATIO (1ULL << 32) /*!< Full ratio of PWM, 2^32 */
+#endif
 
 /************************************************************************************
 *************************************************************************************
@@ -57,7 +61,7 @@ typedef struct _hal_pwm_setup_config
     hal_pwm_level_select_t level; /*!< PWM output pulse level select */
     hal_pwm_mode_t mode;          /*!< PWM mode select */
     uint32_t pwmFreq_Hz;          /*!< PWM frequency */
-    uint8_t dutyCyclePercent;     /*!< PWM duty cycle percent */
+    uint64_t dutyCycleRatio;      /*!< PWM duty cycle ratio to period */
 } hal_pwm_setup_config_t;
 
 /*! @brief Hal pwm handle size. */
@@ -159,4 +163,4 @@ hal_pwm_status_t HAL_PwmUpdateDutycycle(hal_pwm_handle_t halPwmHandle, uint8_t c
 }
 #endif
 /*! @}*/
-#endif /* _PWM_H_ */
+#endif /* _AT_PWM_H_ */

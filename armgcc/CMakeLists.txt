@@ -102,6 +102,10 @@ add_executable(${MCUX_SDK_PROJECT_NAME}
 "${ProjDirPath}/../termbits.h"
 "${ProjDirPath}/../tty.c"
 "${ProjDirPath}/../tty.h"
+"${ProjDirPath}/../core/drivers/tpm/at_tpm.c"
+"${ProjDirPath}/../core/drivers/tpm/at_tpm.h"
+"${ProjDirPath}/../core/components/pwm/at_adapter_pwm_tpm.c"
+"${ProjDirPath}/../core/components/pwm/at_adapter_pwm.h"
 "${ProjDirPath}/../debug_console.c"
 "${ProjDirPath}/../debug_console.h"
 "${ProjDirPath}/../3rdparty/printf/printf.c"
@@ -149,6 +153,8 @@ target_include_directories(${MCUX_SDK_PROJECT_NAME} PRIVATE
     ${ProjDirPath}/../boards/a900
     ${ProjDirPath}/../srtm/channels
     ${ProjDirPath}/../srtm/services
+    ${ProjDirPath}/../core/drivers/tpm
+    ${ProjDirPath}/../core/components/pwm
     ${CMAKE_BINARY_DIR}/CMakeFiles/
 )
 

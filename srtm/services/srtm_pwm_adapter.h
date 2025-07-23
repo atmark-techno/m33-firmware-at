@@ -8,7 +8,7 @@
 #pragma once
 
 #include "srtm_pwm_service.h"
-#include "fsl_adapter_pwm.h"
+#include "at_adapter_pwm.h"
 
 /*!
  * @addtogroup srtm_service

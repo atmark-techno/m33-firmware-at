@@ -9,7 +9,7 @@
 #include "srtm_heap.h"
 #include "srtm_pwm_service.h"
 #include "fsl_common.h"
-#include "fsl_adapter_pwm.h"
+#include "at_adapter_pwm.h"
 
 /* uncomment to debug this service */
 //#undef SRTM_DEBUG_VERBOSE_LEVEL
@@ -52,12 +52,12 @@ typedef struct _srtm_hal_pwm_adapter
 static srtm_status_t setPwm(srtm_hal_pwm_adapter_t adapter, uint8_t chipId, uint8_t channelId, uint64_t period,
                             uint64_t dutyCycle, uint8_t polarity, uint8_t enable)
 {
-    uint8_t dutyCyclePercent;
+    uint64_t dutyCycleRatio;
     uint32_t pwmFreq_Hz = SECOND_TO_NANOSECOND / period;
     hal_pwm_mode_t mode = kHAL_CenterAlignedPwm;
     hal_pwm_level_select_t level;
 
-    dutyCyclePercent = dutyCycle * 100 / period;
+    dutyCycleRatio = dutyCycle * PWM_FULL_RATIO / period;
 
     if (enable == PWM_ENABLE)
     {
@@ -71,12 +71,12 @@ static srtm_status_t setPwm(srtm_hal_pwm_adapter_t adapter, uint8_t chipId, uint
         level = kHAL_PwmNoPwmSignal;
     }
 
-    adapter->halPwmConfig[chipId][channelId].period                     = period;
-    adapter->halPwmConfig[chipId][channelId].dutyCycle                  = dutyCycle;
-    adapter->halPwmConfig[chipId][channelId].pwmConfig.level            = level;
-    adapter->halPwmConfig[chipId][channelId].pwmConfig.dutyCyclePercent = dutyCyclePercent;
-    adapter->halPwmConfig[chipId][channelId].pwmConfig.pwmFreq_Hz       = pwmFreq_Hz;
-    adapter->halPwmConfig[chipId][channelId].pwmConfig.mode             = mode;
+    adapter->halPwmConfig[chipId][channelId].period                   = period;
+    adapter->halPwmConfig[chipId][channelId].dutyCycle                = dutyCycle;
+    adapter->halPwmConfig[chipId][channelId].pwmConfig.level          = level;
+    adapter->halPwmConfig[chipId][channelId].pwmConfig.dutyCycleRatio = dutyCycleRatio;
+    adapter->halPwmConfig[chipId][channelId].pwmConfig.pwmFreq_Hz     = pwmFreq_Hz;
+    adapter->halPwmConfig[chipId][channelId].pwmConfig.mode           = mode;
 
     return HAL_PwmSetupPwm(adapter->halPwmHandle[chipId], channelId,
                            &adapter->halPwmConfig[chipId][channelId].pwmConfig) == kStatus_HAL_PwmSuccess ?

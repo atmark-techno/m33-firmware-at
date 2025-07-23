@@ -23,7 +23,7 @@
 #include "fsl_reset.h"
 #include "fsl_cache.h"
 #if defined(BOARD_USE_TPM) && BOARD_USE_TPM
-#include "fsl_tpm.h"
+#include "at_tpm.h"
 #endif /* BOARD_USE_TPM */
 #if defined(BOARD_USE_PCA6416A) && BOARD_USE_PCA6416A
 #include "fsl_pca6416a.h"
@@ -1826,9 +1826,9 @@ void BOARD_EnableMipiDsiBacklight(void)
 {
     tpm_config_t tpmInfo;
     tpm_chnl_pwm_signal_param_t pwmChannelConfig = {
-        .chnlNumber       = (tpm_chnl_t)TPM0_CH2,
-        .level            = kTPM_HighTrue,
-        .dutyCyclePercent = FULL_DUTY_CYCLE,
+        .chnlNumber     = (tpm_chnl_t)TPM0_CH2,
+        .level          = kTPM_HighTrue,
+        .dutyCycleRatio = PWM_FULL_RATIO,
     };
 
     TPM_GetDefaultConfig(&tpmInfo);

@@ -9,8 +9,8 @@
  */
 
 #include "fsl_common.h"
-#include "fsl_adapter_pwm.h"
-#include "fsl_tpm.h"
+#include "at_adapter_pwm.h"
+#include "at_tpm.h"
 
 /************************************************************************************
 *************************************************************************************
@@ -90,11 +90,11 @@ hal_pwm_status_t HAL_PwmSetupPwm(hal_pwm_handle_t halPwmHandle, uint8_t channel,
     assert(halPwmState->instance < (sizeof(s_tpmBase) / sizeof(s_tpmBase[0])));
     assert(setupConfig);
     tpm_chnl_pwm_signal_param_t pwmChannelConfig = {
-        .chnlNumber       = (tpm_chnl_t)channel,
-        .level            = (tpm_pwm_level_select_t)setupConfig->level,
-        .dutyCyclePercent = setupConfig->dutyCyclePercent,
+        .chnlNumber     = (tpm_chnl_t)channel,
+        .level          = (tpm_pwm_level_select_t)setupConfig->level,
+        .dutyCycleRatio = setupConfig->dutyCycleRatio,
 #if defined(FSL_FEATURE_TPM_HAS_COMBINE) && FSL_FEATURE_TPM_HAS_COMBINE
-        .firstEdgeDelayPercent = 0
+        .firstEdgeDelayRatio = 0
 #endif
     };
 

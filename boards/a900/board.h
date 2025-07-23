@@ -131,7 +131,6 @@
 #define TPM0_CH2 (2UL)
 /* 500 Hz */
 #define TPM0_CH2_PWM_FREQ (500UL)
-#define FULL_DUTY_CYCLE (100UL)
 
 /* IT6161(U10) */
 #define BOARD_IT6161_I2C LPI2C0

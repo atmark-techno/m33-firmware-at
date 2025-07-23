@@ -7,9 +7,13 @@
  * SPDX-License-Identifier: BSD-3-Clause
  *
  * Based on: mcux-sdk/core/drivers/tpm/fsl_tpm.c
+ *
+ * In the original source code, the resolution of dutycycle is 1% relative to PERIOD.
+ * To improve the resolution of dutycycle, changes were made to the
+ * resolution-related parts of the original source code.
  */
 
-#include "fsl_tpm.h"
+#include "at_tpm.h"
 
 /*
  * $Coverage Justification Reference$
@@ -331,7 +335,8 @@ static status_t TPM_SetupSinglePwmChannel(TPM_Type *base, uint32_t mod, tpm_pwm_
      * $Branch Coverage Justification$
      * (mod == counterMax) not covered. $ref tpm_c_ref_3$.
      */
-    if (((chnlParams.dutyCyclePercent == 100U) && (mod == counterMax)) || (chnlParams.dutyCyclePercent > 100U))
+    if (((chnlParams.dutyCycleRatio == PWM_FULL_RATIO) && (mod == counterMax)) ||
+        (chnlParams.dutyCycleRatio > PWM_FULL_RATIO))
     {
         return kStatus_OutOfRange;
     }
@@ -350,34 +355,34 @@ static status_t TPM_SetupSinglePwmChannel(TPM_Type *base, uint32_t mod, tpm_pwm_
             /* The instance should support combine mode and the channel number should be the pair number */
             return kStatus_InvalidArgument;
         }
-        if (((chnlParams.firstEdgeDelayPercent + chnlParams.dutyCyclePercent) > 100U) ||
-            ((chnlParams.firstEdgeDelayPercent > 0U) && (chnlParams.dutyCyclePercent == 0U)) ||
-            ((chnlParams.firstEdgeDelayPercent == 0U) && (chnlParams.deadTimeValue[0] != 0U)))
+        if (((chnlParams.firstEdgeDelayRatio + chnlParams.dutyCycleRatio) > PWM_FULL_RATIO) ||
+            ((chnlParams.firstEdgeDelayRatio > 0U) && (chnlParams.dutyCycleRatio == 0U)) ||
+            ((chnlParams.firstEdgeDelayRatio == 0U) && (chnlParams.deadTimeValue[0] != 0U)))
         {
             /* Return error if the following situation occurs :
-             * firstEdgeDelayPercent + dutyCyclePercent > 100
-             * firstEdgeDelayPercent > 0 and dutyCyclePercent == 0
-             * firstEdgeDelayPercent == 0 and deadTimeValue[0] != 0
+             * firstEdgeDelayRatio + dutyCycleRatio > PWM_FULL_RATIO
+             * firstEdgeDelayRatio > 0 and dutyCycleRatio == 0
+             * firstEdgeDelayRatio == 0 and deadTimeValue[0] != 0
              */
             return kStatus_OutOfRange;
         }
         /* Configure delay of the first edge */
         uint32_t cnvFirstEdge;
         /* Configure dutycycle */
-        if (chnlParams.dutyCyclePercent == 0U)
+        if (chnlParams.dutyCycleRatio == 0U)
         {
             cnvFirstEdge = mod + 1U;
             cnv          = 0;
         }
-        else if (chnlParams.dutyCyclePercent == 100U)
+        else if (chnlParams.dutyCycleRatio == PWM_FULL_RATIO)
         {
             cnvFirstEdge = 0U;
             cnv          = mod + 1U;
         }
         else
         {
-            cnvFirstEdge = (mod * chnlParams.firstEdgeDelayPercent) / 100U;
-            cnv          = (mod * chnlParams.dutyCyclePercent) / 100U;
+            cnvFirstEdge = (mod * chnlParams.firstEdgeDelayRatio) / PWM_FULL_RATIO;
+            cnv          = (mod * chnlParams.dutyCycleRatio) / PWM_FULL_RATIO;
         }
 
         /* Set the combine bit for the channel pair */
@@ -443,13 +448,13 @@ static status_t TPM_SetupSinglePwmChannel(TPM_Type *base, uint32_t mod, tpm_pwm_
     {
 #endif
         /* Configure dutycycle */
-        if (chnlParams.dutyCyclePercent == 100U)
+        if (chnlParams.dutyCycleRatio == PWM_FULL_RATIO)
         {
             cnv = mod + 1U;
         }
         else
         {
-            cnv = (mod * chnlParams.dutyCyclePercent) / 100U;
+            cnv = (mod * chnlParams.dutyCycleRatio) / PWM_FULL_RATIO;
         }
         /* Fix ERROR050050 When TPM is configured in EPWM mode as PS = 0, the compare event is missed on
         the first reload/overflow after writing 1 to the CnV register and causes an incorrect duty output.*/
