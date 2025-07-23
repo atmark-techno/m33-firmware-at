@@ -142,8 +142,8 @@ void TPM_Init(TPM_Type *base, const tpm_config_t *config)
 #if defined(FSL_FEATURE_TPM_HAS_GLOBAL_TIME_BASE_SYNC) && FSL_FEATURE_TPM_HAS_GLOBAL_TIME_BASE_SYNC
                  TPM_CONF_GTBSYNC(config->syncGlobalTimeBase) |
 #endif
-                 TPM_CONF_CROT(config->enableReloadOnTrigger) |
-                 TPM_CONF_CSOT(config->enableStartOnTrigger) | TPM_CONF_CSOO(config->enableStopOnOverflow) |
+                 TPM_CONF_CROT(config->enableReloadOnTrigger) | TPM_CONF_CSOT(config->enableStartOnTrigger) |
+                 TPM_CONF_CSOO(config->enableStopOnOverflow) |
 #if defined(FSL_FEATURE_TPM_HAS_PAUSE_COUNTER_ON_TRIGGER) && FSL_FEATURE_TPM_HAS_PAUSE_COUNTER_ON_TRIGGER
                  TPM_CONF_CPOT(config->enablePauseOnTrigger) |
 #endif
@@ -293,9 +293,7 @@ tpm_clock_prescale_t TPM_CalculateCounterClkDiv(TPM_Type *base, uint32_t counter
  * return kStatus_Success if the PWM setup was successful,
  *         kStatus_Error on failure
  */
-static status_t TPM_SetupSinglePwmChannel(TPM_Type *base,
-                                          uint32_t mod,
-                                          tpm_pwm_mode_t mode,
+static status_t TPM_SetupSinglePwmChannel(TPM_Type *base, uint32_t mod, tpm_pwm_mode_t mode,
                                           tpm_chnl_pwm_signal_param_t chnlParams)
 {
     uint32_t cnv;
@@ -493,12 +491,8 @@ static status_t TPM_SetupSinglePwmChannel(TPM_Type *base,
  * return kStatus_Success if the PWM setup was successful,
  *         kStatus_Error on failure
  */
-status_t TPM_SetupPwm(TPM_Type *base,
-                      const tpm_chnl_pwm_signal_param_t *chnlParams,
-                      uint8_t numOfChnls,
-                      tpm_pwm_mode_t mode,
-                      uint32_t pwmFreq_Hz,
-                      uint32_t srcClock_Hz)
+status_t TPM_SetupPwm(TPM_Type *base, const tpm_chnl_pwm_signal_param_t *chnlParams, uint8_t numOfChnls,
+                      tpm_pwm_mode_t mode, uint32_t pwmFreq_Hz, uint32_t srcClock_Hz)
 {
     assert(NULL != chnlParams);
 
@@ -595,9 +589,7 @@ status_t TPM_SetupPwm(TPM_Type *base,
  * return kStatus_Success if the PWM setup was successful,
  *        kStatus_Error on failure
  */
-status_t TPM_UpdatePwmDutycycle(TPM_Type *base,
-                                tpm_chnl_t chnlNumber,
-                                tpm_pwm_mode_t currentPwmMode,
+status_t TPM_UpdatePwmDutycycle(TPM_Type *base, tpm_chnl_t chnlNumber, tpm_pwm_mode_t currentPwmMode,
                                 uint8_t dutyCyclePercent)
 {
     uint32_t cnv, mod;
@@ -797,9 +789,7 @@ void TPM_SetupInputCapture(TPM_Type *base, tpm_chnl_t chnlNumber, tpm_input_capt
  * param compareMode  Action to take on the channel output when the compare condition is met
  * param compareValue Value to be programmed in the CnV register.
  */
-void TPM_SetupOutputCompare(TPM_Type *base,
-                            tpm_chnl_t chnlNumber,
-                            tpm_output_compare_mode_t compareMode,
+void TPM_SetupOutputCompare(TPM_Type *base, tpm_chnl_t chnlNumber, tpm_output_compare_mode_t compareMode,
                             uint32_t compareValue)
 {
     assert(((uint8_t)chnlNumber < (uint8_t)FSL_FEATURE_TPM_CHANNEL_COUNTn(base)) &&
@@ -847,9 +837,7 @@ void TPM_SetupOutputCompare(TPM_Type *base,
  * param edgeParam      Sets up the dual edge capture function
  * param filterValue    Filter value, specify 0 to disable filter.
  */
-void TPM_SetupDualEdgeCapture(TPM_Type *base,
-                              tpm_chnl_t chnlPairNumber,
-                              const tpm_dual_edge_capture_param_t *edgeParam,
+void TPM_SetupDualEdgeCapture(TPM_Type *base, tpm_chnl_t chnlPairNumber, const tpm_dual_edge_capture_param_t *edgeParam,
                               uint32_t filterValue)
 {
     assert(NULL != edgeParam);
@@ -926,9 +914,7 @@ void TPM_SetupDualEdgeCapture(TPM_Type *base,
  * param phaseBParams Phase B configuration parameters
  * param quadMode     Selects encoding mode used in quadrature decoder mode
  */
-void TPM_SetupQuadDecode(TPM_Type *base,
-                         const tpm_phase_params_t *phaseAParams,
-                         const tpm_phase_params_t *phaseBParams,
+void TPM_SetupQuadDecode(TPM_Type *base, const tpm_phase_params_t *phaseAParams, const tpm_phase_params_t *phaseBParams,
                          tpm_quad_decode_mode_t quadMode)
 {
     assert(NULL != phaseAParams);
@@ -1102,7 +1088,7 @@ uint32_t TPM_GetEnabledInterrupts(TPM_Type *base)
 
 /*!
  * brief Register callback.
- * 
+ *
  * If channel or overflow interrupt is enabled by the user, then a callback can be registered
  * which will be invoked when the interrupt is triggered.
  *

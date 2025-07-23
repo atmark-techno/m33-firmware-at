@@ -152,9 +152,7 @@ hal_pwm_status_t HAL_PwmSetupPwm(hal_pwm_handle_t halPwmHandle, uint8_t channel,
  * @param dutyCyclePercent     PWM duty cycle percent
  * @retval kStatus_HAL_PwmSuccess pwm Update duty cycle succeed
  */
-hal_pwm_status_t HAL_PwmUpdateDutycycle(hal_pwm_handle_t halPwmHandle,
-                                        uint8_t channel,
-                                        hal_pwm_mode_t mode,
+hal_pwm_status_t HAL_PwmUpdateDutycycle(hal_pwm_handle_t halPwmHandle, uint8_t channel, hal_pwm_mode_t mode,
                                         uint8_t dutyCyclePercent);
 
 #if defined(__cplusplus)

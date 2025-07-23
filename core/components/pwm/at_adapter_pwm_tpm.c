@@ -29,7 +29,7 @@ typedef struct _hal_pwm_handle_struct_t
 ************************************************************************************/
 
 static TPM_Type *const s_tpmBase[]                                        = TPM_BASE_PTRS;
-static uint8_t s_pwmUsedChannel[sizeof(s_tpmBase) / sizeof(s_tpmBase[0])] = {0};
+static uint8_t s_pwmUsedChannel[sizeof(s_tpmBase) / sizeof(s_tpmBase[0])] = { 0 };
 
 /************************************************************************************
 *************************************************************************************
@@ -115,9 +115,7 @@ hal_pwm_status_t HAL_PwmSetupPwm(hal_pwm_handle_t halPwmHandle, uint8_t channel,
 /*! -------------------------------------------------------------------------
  * \brief   update the Duty cycle
  *---------------------------------------------------------------------------*/
-hal_pwm_status_t HAL_PwmUpdateDutycycle(hal_pwm_handle_t halPwmHandle,
-                                        uint8_t channel,
-                                        hal_pwm_mode_t mode,
+hal_pwm_status_t HAL_PwmUpdateDutycycle(hal_pwm_handle_t halPwmHandle, uint8_t channel, hal_pwm_mode_t mode,
                                         uint8_t dutyCyclePercent)
 {
     hal_pwm_handle_struct_t *halPwmState = halPwmHandle;
