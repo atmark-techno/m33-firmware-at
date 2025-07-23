@@ -99,7 +99,7 @@ hal_pwm_status_t HAL_PwmSetupPwm(hal_pwm_handle_t halPwmHandle, uint8_t channel,
     };
 
     if ((int32_t)kStatus_Success != TPM_SetupPwm(s_tpmBase[halPwmState->instance], (void *)&pwmChannelConfig, 1,
-                                                 (tpm_pwm_mode_t)setupConfig->mode, setupConfig->pwmFreq_Hz,
+                                                 (tpm_pwm_mode_t)setupConfig->mode, setupConfig->period,
                                                  halPwmState->pwmClock_Hz))
     {
         return kStatus_HAL_PwmFail;

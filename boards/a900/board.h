@@ -129,8 +129,8 @@
 #define BOARD_PCA6416A_AC_OK (8U + 5U)
 
 #define TPM0_CH2 (2UL)
-/* 500 Hz */
-#define TPM0_CH2_PWM_FREQ (500UL)
+/* 500 Hz (2 ms) */
+#define TPM0_CH2_PWM_PERIOD (2000000UL)
 
 /* IT6161(U10) */
 #define BOARD_IT6161_I2C LPI2C0

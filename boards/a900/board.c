@@ -1833,7 +1833,7 @@ void BOARD_EnableMipiDsiBacklight(void)
 
     TPM_GetDefaultConfig(&tpmInfo);
     TPM_Init(TPM0, (void *)&tpmInfo);
-    TPM_SetupPwm(TPM0, (void *)&pwmChannelConfig, 1, kTPM_EdgeAlignedPwm, CLOCK_GetTpmClkFreq(0U), TPM0_CH2_PWM_FREQ);
+    TPM_SetupPwm(TPM0, (void *)&pwmChannelConfig, 1, kTPM_EdgeAlignedPwm, CLOCK_GetTpmClkFreq(0U), TPM0_CH2_PWM_PERIOD);
     TPM_StartTimer(TPM0, kTPM_SystemClock);
 }
 #endif /* BOARD_USE_TPM. */

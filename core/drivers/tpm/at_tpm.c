@@ -11,6 +11,13 @@
  * In the original source code, the resolution of dutycycle is 1% relative to PERIOD.
  * To improve the resolution of dutycycle, changes were made to the
  * resolution-related parts of the original source code.
+ *
+ * In the original source code, instead of period, it accepts the reciprocal integer
+ * frequency value as an argument. This means that even if specify a period value that
+ * corresponds to a non-integer frequency, the period that is actually set corresponds to
+ * the frequency rounded to an integer value.
+ * In order to allow any period value to be set, changed it so that the argument accepts
+ * the period value itself instead of the frequency.
  */
 
 #include "at_tpm.h"
@@ -490,14 +497,14 @@ static status_t TPM_SetupSinglePwmChannel(TPM_Type *base, uint32_t mod, tpm_pwm_
  * param chnlParams  Array of PWM channel parameters to configure the channel(s)
  * param numOfChnls  Number of channels to configure, this should be the size of the array passed in
  * param mode        PWM operation mode, options available in enumeration ::tpm_pwm_mode_t
- * param pwmFreq_Hz  PWM signal frequency in Hz
+ * param period      PWM signal period in nanoseconds
  * param srcClock_Hz TPM counter clock in Hz
  *
  * return kStatus_Success if the PWM setup was successful,
  *         kStatus_Error on failure
  */
 status_t TPM_SetupPwm(TPM_Type *base, const tpm_chnl_pwm_signal_param_t *chnlParams, uint8_t numOfChnls,
-                      tpm_pwm_mode_t mode, uint32_t pwmFreq_Hz, uint32_t srcClock_Hz)
+                      tpm_pwm_mode_t mode, uint32_t period, uint32_t srcClock_Hz)
 {
     assert(NULL != chnlParams);
 
@@ -506,7 +513,12 @@ status_t TPM_SetupPwm(TPM_Type *base, const tpm_chnl_pwm_signal_param_t *chnlPar
     uint32_t tpmClock   = (srcClock_Hz / (1UL << (base->SC & TPM_SC_PS_MASK)));
     status_t status     = kStatus_Success;
 
-    if ((0U == pwmFreq_Hz) || (0U == srcClock_Hz) || (0U == numOfChnls) || (tpmClock < pwmFreq_Hz))
+    /*
+     * tpmClock < pwmClock
+     * => (1 / tpmClock) > (period / SECOND_TO_NANOSECOND)
+     * => (tpmClock * period) < SECOND_TO_NANOSECOND
+     */
+    if ((0U == srcClock_Hz) || (0U == numOfChnls) || ((uint64_t)tpmClock * period < SECOND_TO_NANOSECOND))
     {
         return kStatus_InvalidArgument;
     }
@@ -518,7 +530,7 @@ status_t TPM_SetupPwm(TPM_Type *base, const tpm_chnl_pwm_signal_param_t *chnlPar
 #endif
         case kTPM_EdgeAlignedPwm:
             base->SC &= ~TPM_SC_CPWMS_MASK;
-            mod = (tpmClock / pwmFreq_Hz) - 1U;
+            mod = ((uint64_t)tpmClock * period / SECOND_TO_NANOSECOND) - 1U;
 
             /*
              * $Branch Coverage Justification$
@@ -533,7 +545,7 @@ status_t TPM_SetupPwm(TPM_Type *base, const tpm_chnl_pwm_signal_param_t *chnlPar
             break;
         case kTPM_CenterAlignedPwm:
             base->SC |= TPM_SC_CPWMS_MASK;
-            mod = tpmClock / (pwmFreq_Hz * 2u);
+            mod = ((uint64_t)tpmClock * period) / (SECOND_TO_NANOSECOND * 2u);
             /*
              * $Branch Coverage Justification$
              * (mod > counterMax >> 1U) not covered. $ref tpm_c_tpm_3$.

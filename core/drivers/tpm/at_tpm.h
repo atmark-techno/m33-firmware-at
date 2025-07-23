@@ -43,6 +43,10 @@
 #define PWM_FULL_RATIO (1ULL << 32) /*!< Full ratio of PWM, 2^32 */
 #endif
 
+#ifndef SECOND_TO_NANOSECOND
+#define SECOND_TO_NANOSECOND (1000000000ULL)
+#endif
+
 /*!
  * @brief List of TPM channels.
  * @note Actual number of available channels is SoC dependent

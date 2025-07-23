@@ -28,7 +28,6 @@
 #define PWM_ENABLE (1U)
 #define PWM_POLARITY_NORMAL (0U)
 #define PWM_POLARITY_INVERSED (1U)
-#define SECOND_TO_NANOSECOND (1000000000ULL)
 
 typedef struct _srtm_hal_pwm_setup_config
 {
@@ -53,9 +52,22 @@ static srtm_status_t setPwm(srtm_hal_pwm_adapter_t adapter, uint8_t chipId, uint
                             uint64_t dutyCycle, uint8_t polarity, uint8_t enable)
 {
     uint64_t dutyCycleRatio;
-    uint32_t pwmFreq_Hz = SECOND_TO_NANOSECOND / period;
     hal_pwm_mode_t mode = kHAL_CenterAlignedPwm;
     hal_pwm_level_select_t level;
+    /*
+     * period > UINT32_MAX (= 4.3 seconds)
+     *
+     * When dutyCycle exceeds 2^32 -1 (approximately 4.3s), the multiplication
+     * in the following equation causes an overflow exceeding 64 bits, and
+     * dutyCycleRatio does not become the intended value.
+     * Therefore, by imposing a constraint of 2^32 -1 or less on period a
+     * constraint of 2^32 -1 or less is imposed on period, dutyCycle <= 2^32 -1
+     * is guaranteed (assuming that dutyCycle <= period).
+     */
+    if (period > UINT32_MAX)
+    {
+        return SRTM_Status_Error;
+    }
 
     dutyCycleRatio = dutyCycle * PWM_FULL_RATIO / period;
 
@@ -75,7 +87,7 @@ static srtm_status_t setPwm(srtm_hal_pwm_adapter_t adapter, uint8_t chipId, uint
     adapter->halPwmConfig[chipId][channelId].dutyCycle                = dutyCycle;
     adapter->halPwmConfig[chipId][channelId].pwmConfig.level          = level;
     adapter->halPwmConfig[chipId][channelId].pwmConfig.dutyCycleRatio = dutyCycleRatio;
-    adapter->halPwmConfig[chipId][channelId].pwmConfig.pwmFreq_Hz     = pwmFreq_Hz;
+    adapter->halPwmConfig[chipId][channelId].pwmConfig.period         = period;
     adapter->halPwmConfig[chipId][channelId].pwmConfig.mode           = mode;
 
     return HAL_PwmSetupPwm(adapter->halPwmHandle[chipId], channelId,

@@ -20,6 +20,10 @@
 #define PWM_FULL_RATIO (1ULL << 32) /*!< Full ratio of PWM, 2^32 */
 #endif
 
+#ifndef SECOND_TO_NANOSECOND
+#define SECOND_TO_NANOSECOND (1000000000ULL)
+#endif
+
 /************************************************************************************
 *************************************************************************************
 * Include
@@ -60,7 +64,7 @@ typedef struct _hal_pwm_setup_config
 {
     hal_pwm_level_select_t level; /*!< PWM output pulse level select */
     hal_pwm_mode_t mode;          /*!< PWM mode select */
-    uint32_t pwmFreq_Hz;          /*!< PWM frequency */
+    uint32_t period;              /*!< PWM period */
     uint64_t dutyCycleRatio;      /*!< PWM duty cycle ratio to period */
 } hal_pwm_setup_config_t;
 
