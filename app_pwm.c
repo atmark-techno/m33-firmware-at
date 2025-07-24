@@ -31,14 +31,14 @@ static void pwm_init_device(hal_pwm_handle_t *halPwmHandle, uint8_t chipId)
     switch (chipId)
     {
         case 0:
-            /* 16-bit -> Max period = 1.64 ms, Min period = 25 ns */
-            CLOCK_SetIpSrcDiv(kCLOCK_Tpm0, kCLOCK_Pcc1BusIpSrcCm33Bus, 1U, 0U);
+            /* 16-bit -> Max period = 6.55 ms, Min period = 100 ns */
+            CLOCK_SetIpSrcDiv(kCLOCK_Tpm0, kCLOCK_Pcc1BusIpSrcCm33Bus, 7U, 0U);
             RESET_PeripheralReset(kRESET_Tpm0);
             HAL_PwmInit(halPwmHandle[0], 0U, CLOCK_GetTpmClkFreq(0U));
             break;
         case 1:
-            /* 32-bit -> Max period = 107 s, Min period = 25 ns */
-            CLOCK_SetIpSrcDiv(kCLOCK_Tpm1, kCLOCK_Pcc1BusIpSrcCm33Bus, 1U, 0U);
+            /* 32-bit -> Max period = 53.7 s, Min period = 12.5 ns */
+            CLOCK_SetIpSrcDiv(kCLOCK_Tpm1, kCLOCK_Pcc1BusIpSrcCm33Bus, 0U, 0U);
             RESET_PeripheralReset(kRESET_Tpm1);
             HAL_PwmInit(halPwmHandle[1], 1U, CLOCK_GetTpmClkFreq(1U));
             break;
