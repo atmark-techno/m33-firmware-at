@@ -52,7 +52,7 @@ static srtm_status_t setPwm(srtm_hal_pwm_adapter_t adapter, uint8_t chipId, uint
                             uint64_t dutyCycle, uint8_t polarity, uint8_t enable)
 {
     uint64_t dutyCycleRatio;
-    hal_pwm_mode_t mode = kHAL_CenterAlignedPwm;
+    hal_pwm_mode_t mode = kHAL_EdgeAlignedPwm;
     hal_pwm_level_select_t level;
     /*
      * period > UINT32_MAX (= 4.3 seconds)
