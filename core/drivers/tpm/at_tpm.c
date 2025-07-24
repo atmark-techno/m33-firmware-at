@@ -461,7 +461,14 @@ static status_t TPM_SetupSinglePwmChannel(TPM_Type *base, uint32_t mod, tpm_pwm_
         }
         else
         {
-            cnv = (mod * chnlParams.dutyCycleRatio) / PWM_FULL_RATIO;
+            if (mode == kTPM_EdgeAlignedPwm)
+            {
+                cnv = (((uint64_t)mod + 1U) * chnlParams.dutyCycleRatio) / PWM_FULL_RATIO;
+            }
+            else
+            {
+                cnv = (mod * chnlParams.dutyCycleRatio) / PWM_FULL_RATIO;
+            }
         }
         /* Fix ERROR050050 When TPM is configured in EPWM mode as PS = 0, the compare event is missed on
         the first reload/overflow after writing 1 to the CnV register and causes an incorrect duty output.*/
