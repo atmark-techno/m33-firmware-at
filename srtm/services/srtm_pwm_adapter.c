@@ -69,19 +69,9 @@ static srtm_status_t setPwm(srtm_hal_pwm_adapter_t adapter, uint8_t chipId, uint
         return SRTM_Status_Error;
     }
 
-    dutyCycleRatio = dutyCycle * PWM_FULL_RATIO / period;
+    dutyCycleRatio = (enable == PWM_ENABLE) ? dutyCycle * PWM_FULL_RATIO / period : 0;
 
-    if (enable == PWM_ENABLE)
-    {
-        if (polarity == PWM_POLARITY_NORMAL)
-            level = kHAL_PwmHighTrue;
-        else
-            level = kHAL_PwmLowTrue;
-    }
-    else
-    {
-        level = kHAL_PwmNoPwmSignal;
-    }
+    level = (polarity == PWM_POLARITY_NORMAL) ? kHAL_PwmHighTrue : kHAL_PwmLowTrue;
 
     adapter->halPwmConfig[chipId][channelId].period                   = period;
     adapter->halPwmConfig[chipId][channelId].dutyCycle                = dutyCycle;
