@@ -15,6 +15,7 @@
 #include "tty.h"
 #include "build_bug.h"
 #include "main.h"
+#include "srtm_message.h"
 
 #define TTY_RX_TASK_PRIORITY (3U)
 #define APP_FLEXIO_IRQ_PRIO (5U)
@@ -278,6 +279,9 @@ static void flexio_tty_rx_task(void *pvParameters)
             maxlen = tmp_maxlen;
         }
     }
+
+    SRTM_Notification_Destroy(notif);
+    SRTM_Notification_Destroy(next_notif);
 
     vTaskDelete(NULL);
 }
