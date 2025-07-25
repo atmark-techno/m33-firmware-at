@@ -36,7 +36,7 @@ static uint8_t s_pwmUsedChannel[sizeof(s_tpmBase) / sizeof(s_tpmBase[0])] = { 0 
 * Public functions
 *************************************************************************************
 ************************************************************************************/
-hal_pwm_status_t HAL_PwmInit(hal_pwm_handle_t halPwmHandle, uint8_t instance, uint32_t srcClock_Hz)
+hal_pwm_status_t HAL_PwmInit(hal_pwm_handle_t halPwmHandle, uint8_t instance, uint32_t srcClock_Hz, bool force)
 {
     tpm_config_t tpmInfo;
     hal_pwm_handle_struct_t *halPwmState = halPwmHandle;
@@ -47,6 +47,11 @@ hal_pwm_status_t HAL_PwmInit(hal_pwm_handle_t halPwmHandle, uint8_t instance, ui
     assert(sizeof(hal_pwm_handle_struct_t) == HAL_PWM_HANDLE_SIZE);
     halPwmState->pwmClock_Hz = srcClock_Hz;
     halPwmState->instance    = instance;
+
+    if (force)
+    {
+        s_pwmUsedChannel[instance] = 0U;
+    }
 
     /* Initialize tpm module */
     if (0U == s_pwmUsedChannel[instance])

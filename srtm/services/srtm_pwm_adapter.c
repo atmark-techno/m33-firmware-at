@@ -190,6 +190,25 @@ static void PwmAdapter_initPwm(srtm_pwm_adapter_t adapter, uint8_t chipId)
     handle->flag_init[chipId] = true;
 }
 
+void SRTM_PWMAdapter_flag_init(srtm_pwm_adapter_t adapter, uint8_t chipId, bool flag)
+{
+    srtm_hal_pwm_adapter_t handle = (srtm_hal_pwm_adapter_t)(void *)adapter;
+
+    if (chipId >= SRTM_PWM_MAX_CHIP_NUM)
+    {
+        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR, "%s: chipId %d must less than max instance %d\r\n", __func__,
+                           chipId, SRTM_PWM_MAX_CHIP_NUM);
+        return;
+    }
+    if (handle->halPwmHandle[chipId] == NULL)
+    {
+        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR, "%s: chipId %d not supported\r\n", __func__, chipId);
+        return;
+    }
+
+    handle->flag_init[chipId] = flag;
+}
+
 srtm_pwm_adapter_t SRTM_PwmAdapter_Create(hal_pwm_handle_t *handles, uint32_t handleNum,
                                           void (*initPwm)(hal_pwm_handle_t *halPwmHandle, uint8_t chipId))
 {

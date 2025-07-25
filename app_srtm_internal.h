@@ -31,9 +31,6 @@ void APP_I2C_Resume(void);
 void APP_I2C_ResetService(void);
 void APP_I2C_uboot(uint32_t subcommand);
 
-/* app_pwm.c */
-void APP_PWM_InitService(void);
-
 /* app_spi.c */
 void APP_SPI_InitService(void);
 

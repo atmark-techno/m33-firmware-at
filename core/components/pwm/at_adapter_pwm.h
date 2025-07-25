@@ -108,7 +108,7 @@ extern "C" {
  * Example below shows how to use this API to configure the PWM.
  * @code
  *   HAL_PWM_HANDLE_DEFINE(pwmHandle);
- *   HAL_PwmInit((hal_pwm_handle_t)pwmHandle, BOARD_PWM_INSTANCE, BOARD_PWM_SOURCE_CLOCK);
+ *   HAL_PwmInit((hal_pwm_handle_t)pwmHandle, BOARD_PWM_INSTANCE, BOARD_PWM_SOURCE_CLOCK, false);
  * @endcode
  *
  * @param  halPwmHandle Hal pwm adapter handle, the handle buffer with size #HAL_PWM_HANDLE_SIZE should be
@@ -123,10 +123,11 @@ extern "C" {
  * detail information please refer to the SOC corresponding RM.
  * Invalid instance value will cause initialization failure.
  * @param  srcClock_Hz Frequency of source clock of the pwm module
+ * @param  force Force initialization regardless of channel usage
  * @retval kStatus_HAL_PwmSuccess pwm initialization succeed
  *
  */
-hal_pwm_status_t HAL_PwmInit(hal_pwm_handle_t halPwmHandle, uint8_t instance, uint32_t srcClock_Hz);
+hal_pwm_status_t HAL_PwmInit(hal_pwm_handle_t halPwmHandle, uint8_t instance, uint32_t srcClock_Hz, bool force);
 
 /*!
  * @brief DeInitilizate the pwm adapter module.

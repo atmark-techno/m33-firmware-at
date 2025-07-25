@@ -39,6 +39,13 @@ srtm_pwm_adapter_t SRTM_PwmAdapter_Create(hal_pwm_handle_t *handles, uint32_t ha
  */
 void SRTM_PwmAdapter_Destroy(srtm_pwm_adapter_t adapter);
 
+/*!
+ * @brief Directly manipulate flag_init.
+ *
+ * @param adapter SRTM adapter to manipulate.
+ */
+void SRTM_PWMAdapter_flag_init(srtm_pwm_adapter_t adapter, uint8_t chipId, bool flag);
+
 #ifdef __cplusplus
 }
 #endif
