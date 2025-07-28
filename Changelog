@@ -1,3 +1,12 @@
+1.4
+===
+- spi/lpspi: fix to properly use lpspi's mode on init (instead of different union value)
+- tty/flexio: fix memory leak on setcflag
+- pwm: add TPM2/3 support
+- pwm: improve setting precision (do not round to 1%)
+
+  -- 2025-07-29
+
 1.3
 ===
 - BREAKING (linux rpmsg compat): rpmsg spi protocol update
@@ -18,7 +27,7 @@ allow uboot relocation and rollback in case of early hardfault
 a hard reset because the sentinel wdog timer apparently was not suspended
 during deep sleep.
 
-  - 2025-06-23
+  -- 2025-06-23
 
 1.2
 ===
