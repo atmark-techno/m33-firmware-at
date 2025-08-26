@@ -34,6 +34,7 @@ enum tty_rpmsg_init_type
     TTY_TYPE_CUSTOM,
     TTY_TYPE_M33_CONSOLE,
     TTY_TYPE_FLEXIO,
+    TTY_TYPE_LPUART_1WIRE,
     _TTY_TYPE_COUNT,
 };
 

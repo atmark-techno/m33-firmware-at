@@ -51,7 +51,7 @@ static void lpuart_tty_rx_task(void *pvParameters)
     struct lpuart_tty_settings *lpuart = get_lpuart(settings);
 
     assert(settings);
-    assert(settings->type == TTY_TYPE_LPUART);
+    assert(settings->type == TTY_TYPE_LPUART || settings->type == TTY_TYPE_LPUART_1WIRE);
 
     /* if task was created during suspend make it wait here... */
     if (settings->state & TTY_SUSPENDED)
@@ -348,6 +348,49 @@ void lpuart_resume(struct tty_settings *settings)
     lpuart_init_device(settings);
 }
 
+static int lpuart_1wire_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
+{
+    struct lpuart_tty_settings *lpuart = get_lpuart(settings);
+    int rc;
+
+    if (settings->state & TTY_SUSPENDED)
+    {
+        PRINTF("tty %d write while not ready (state %x)\r\n", settings->port_idx, settings->state);
+        return kStatus_Fail;
+    }
+
+    // 1wire mode could not output(TXDIR does not work).
+    // disable it during sending chars.
+    lpuart->uart_base->CTRL &= ~(LPUART_CTRL_LOOPS_MASK | LPUART_CTRL_RSRC_MASK);
+    rc = LPUART_RTOS_Send(&lpuart->lpuart_rtos_handle, buf, len);
+    lpuart->uart_base->CTRL |= LPUART_CTRL_LOOPS_MASK | LPUART_CTRL_RSRC_MASK;
+    if (rc)
+    {
+        PRINTF("%d send fail for buf len %d, first byte %x: %d\r\n", settings->port_idx, len, len > 0 ? buf[0] : 0, rc);
+    }
+    return rc;
+}
+
+static int lpuart_1wire_init(struct tty_settings *settings, struct srtm_tty_init_payload *generic_init)
+{
+    struct lpuart_tty_settings *lpuart = get_lpuart(settings);
+    int ret;
+
+    ret = lpuart_init(settings, generic_init);
+    if (ret == 0)
+    {
+        // enable 1wire (Single-Wire) mode
+        lpuart->uart_base->CTRL &= ~(LPUART_CTRL_TE_MASK | LPUART_CTRL_RE_MASK);
+        lpuart->uart_base->CTRL |= LPUART_CTRL_LOOPS_MASK | LPUART_CTRL_RSRC_MASK;
+        lpuart->uart_base->CTRL |= LPUART_CTRL_TE_MASK | LPUART_CTRL_RE_MASK;
+
+        // input direction
+        lpuart->uart_base->CTRL &= ~LPUART_CTRL_TXDIR_MASK;
+    }
+
+    return ret;
+}
+
 /* manually added to tty_hooks top of app_tty.c */
 const struct tty_hooks tty_lpuart_hooks = {
     .tx            = lpuart_tx,
@@ -355,6 +398,18 @@ const struct tty_hooks tty_lpuart_hooks = {
     .setwake       = lpuart_setwake,
     .activate      = lpuart_activate,
     .init          = lpuart_init,
+    .resumeTask    = lpuart_resumeTask,
+    .suspend       = lpuart_suspend,
+    .resume        = lpuart_resume,
+    .settings_size = sizeof(struct lpuart_tty_settings),
+};
+
+const struct tty_hooks tty_lpuart_1wire_hooks = {
+    .tx            = lpuart_1wire_tx,
+    .setcflag      = lpuart_setcflag,
+    .setwake       = lpuart_setwake,
+    .activate      = lpuart_activate,
+    .init          = lpuart_1wire_init,
     .resumeTask    = lpuart_resumeTask,
     .suspend       = lpuart_suspend,
     .resume        = lpuart_resume,
