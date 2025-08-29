@@ -27,6 +27,7 @@
 #include "app_pwm.h"
 #include "app_tty.h"
 #include "app_uboot.h"
+#include "app_rtc.h"
 #include "board.h"
 #include "build_bug.h"
 #include "debug_console.h"
@@ -328,6 +329,11 @@ static void APP_SRTM_Linkup(void)
 
     /* Create and add SRTM DAC channel to peer core */
     rpmsgConfig.epName = APP_SRTM_DAC_CHANNEL_NAME;
+    chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
+    SRTM_PeerCore_AddChannel(core, chan);
+
+    /* Create and add SRTM RTC channel to peer core */
+    rpmsgConfig.epName = APP_SRTM_RTC_CHANNEL_NAME;
     chan               = SRTM_RPMsgEndpoint_Create(&rpmsgConfig);
     SRTM_PeerCore_AddChannel(core, chan);
 
@@ -655,6 +661,7 @@ static void APP_SRTM_InitServices(void)
     APP_SPI_InitService();
     APP_AUDIO_InitService();
     APP_DAC_InitService();
+    APP_RTC_InitService();
 }
 
 void APP_PowerOffCA35(void)

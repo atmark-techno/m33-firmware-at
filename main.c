@@ -25,6 +25,7 @@
 #include "board.h"
 #include "app_srtm.h"
 #include "app_gpio.h"
+#include "app_rtc.h"
 #include "cli.h"
 #include "lpm.h"
 #include "main.h"
@@ -32,6 +33,7 @@
 #include "fsl_rtd_cmc.h"
 #include "fsl_sentinel.h"
 #include "fsl_wuu.h"
+#include "fsl_bbnsm.h"
 #include "fsl_lpuart.h"
 #include "lpuart.h"
 
@@ -710,6 +712,24 @@ void LPTMR1_IRQHandler(void)
     LPTMR_StopTimer(LPTMR1);
 
     if (wakeup)
+    {
+        APP_Wakeup(true);
+    }
+}
+
+/* BBNSM interrupt handler. */
+void BBNSM_IRQHandler(void)
+{
+    if (!(BBNSM_GetStatusFlags(BBNSM) & kBBNSM_RTC_AlarmInterruptFlag))
+    {
+        return;
+    }
+
+    PRINTF("BBNSM IRQ (alarm)\r\n");
+
+    APP_RTC_NotifyAlarm();
+
+    if (AD_CurrentMode == AD_PD)
     {
         APP_Wakeup(true);
     }
