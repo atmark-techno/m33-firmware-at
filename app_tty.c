@@ -120,6 +120,19 @@ static int APP_TTY_activate(uint8_t port_idx, bool active)
     return tty_hooks[settings->type]->activate(settings);
 }
 
+static int APP_TTY_control(uint8_t port_idx, uint32_t mask_n_flag)
+{
+    struct tty_settings *settings = get_settings(port_idx, "control");
+
+    if (!settings)
+        return kStatus_Fail;
+
+    if (!tty_hooks[settings->type]->control)
+        return kStatus_Success;
+
+    return tty_hooks[settings->type]->control(settings, mask_n_flag);
+}
+
 static int APP_TTY_init(uint8_t port_idx, struct srtm_tty_init_payload *init)
 {
     struct tty_settings *settings;
@@ -173,7 +186,7 @@ static int APP_TTY_init(uint8_t port_idx, struct srtm_tty_init_payload *init)
 
 void APP_TTY_InitService(void)
 {
-    ttyService = SRTM_TtyService_Create(APP_TTY_tx, APP_TTY_setcflag, APP_TTY_setwake, APP_TTY_init, APP_TTY_activate);
+    ttyService = SRTM_TtyService_Create(APP_TTY_tx, APP_TTY_setcflag, APP_TTY_setwake, APP_TTY_init, APP_TTY_activate, APP_TTY_control);
     SRTM_Dispatcher_RegisterService(disp, ttyService);
 }
 

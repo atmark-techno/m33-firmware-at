@@ -194,6 +194,40 @@ static int lpuart_activate(struct tty_settings *settings)
     return 0;
 }
 
+static int lpuart_control(struct tty_settings *settings, uint32_t mask_n_flag)
+{
+    struct lpuart_tty_settings *lpuart = get_lpuart(settings);
+    const uint32_t mask = (mask_n_flag >> TTY_RPMSG_COMMAND_CTRL_SHIFT) & 0xffff;
+    const uint32_t flag = mask_n_flag & 0xffff;
+
+    if (mask & TTY_RPMSG_COMMAND_CTRL_BRK_EN)
+    {
+        /*
+         * LPUART IP now has two known bugs, one is CTS has higher
+         * priority than the break signal, which causes the break
+         * signal sending through UARTCTRL_SBK may impacted by the
+         * CTS input if the HW flow control is enabled. It exists on
+         * all platforms we support in this driver.  Another bug is
+         * i.MX8QM LPUART may have an additional break character
+         * being sent after SBK was cleared.  To avoid above two
+         * bugs, we use Transmit Data Inversion function to send the
+         * break signal instead of UARTCTRL_SBK.
+         */
+        if (flag & TTY_RPMSG_COMMAND_CTRL_BRK_EN)
+        {
+            lpuart->uart_base->CTRL &= ~LPUART_CTRL_TE_MASK;
+            lpuart->uart_base->CTRL |= LPUART_CTRL_TXINV_MASK;
+        }
+        else
+        {
+            lpuart->uart_base->CTRL &= ~LPUART_CTRL_TXINV_MASK;
+            lpuart->uart_base->CTRL |= LPUART_CTRL_TE_MASK;
+        }
+    }
+
+    return 0;
+}
+
 static int lpuart_init_device(struct tty_settings *settings)
 {
     struct lpuart_tty_settings *lpuart = get_lpuart(settings);
@@ -371,6 +405,28 @@ static int lpuart_1wire_tx(struct tty_settings *settings, uint8_t *buf, uint16_t
     return rc;
 }
 
+static int lpuart_1wire_control(struct tty_settings *settings, uint32_t mask_n_flag)
+{
+    struct lpuart_tty_settings *lpuart = get_lpuart(settings);
+    const uint32_t mask = (mask_n_flag >> TTY_RPMSG_COMMAND_CTRL_SHIFT) & 0xffff;
+    const uint32_t flag = mask_n_flag & 0xffff;
+    int ret = 0;
+
+    if (mask & TTY_RPMSG_COMMAND_CTRL_BRK_EN)
+    {
+
+        ret = lpuart_control(settings, mask_n_flag);
+
+        // 1wire mode could not output. disable it during sending break.
+        if (flag & TTY_RPMSG_COMMAND_CTRL_BRK_EN)
+            lpuart->uart_base->CTRL &= ~(LPUART_CTRL_LOOPS_MASK | LPUART_CTRL_RSRC_MASK);
+        else
+            lpuart->uart_base->CTRL |= LPUART_CTRL_LOOPS_MASK | LPUART_CTRL_RSRC_MASK;
+    }
+
+    return ret;
+}
+
 static int lpuart_1wire_init(struct tty_settings *settings, struct srtm_tty_init_payload *generic_init)
 {
     struct lpuart_tty_settings *lpuart = get_lpuart(settings);
@@ -397,6 +453,7 @@ const struct tty_hooks tty_lpuart_hooks = {
     .setcflag      = lpuart_setcflag,
     .setwake       = lpuart_setwake,
     .activate      = lpuart_activate,
+    .control       = lpuart_control,
     .init          = lpuart_init,
     .resumeTask    = lpuart_resumeTask,
     .suspend       = lpuart_suspend,
@@ -409,6 +466,7 @@ const struct tty_hooks tty_lpuart_1wire_hooks = {
     .setcflag      = lpuart_setcflag,
     .setwake       = lpuart_setwake,
     .activate      = lpuart_activate,
+    .control       = lpuart_1wire_control,
     .init          = lpuart_1wire_init,
     .resumeTask    = lpuart_resumeTask,
     .suspend       = lpuart_suspend,

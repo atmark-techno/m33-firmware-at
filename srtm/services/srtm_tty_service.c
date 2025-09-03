@@ -46,6 +46,7 @@ typedef struct _srtm_tty_service
     srtm_tty_service_set_wake_t setWake;
     srtm_tty_service_init_t init;
     srtm_tty_service_activate_t activate;
+    srtm_tty_service_control_t control;
     srtm_channel_t channel;
 } * srtm_tty_service_t;
 
@@ -89,6 +90,7 @@ enum tty_rpmsg_header_cmd
     TTY_RPMSG_COMMAND_SET_WAKE,
     TTY_RPMSG_COMMAND_INIT,
     TTY_RPMSG_COMMAND_ACTIVATE,
+    TTY_RPMSG_COMMAND_CTRL,
 };
 
 /*******************************************************************************
@@ -226,6 +228,23 @@ static srtm_status_t SRTM_TtyService_Request(srtm_service_t service, srtm_reques
                 retCode = kStatus_InvalidArgument;
             }
             break;
+        case TTY_RPMSG_COMMAND_CTRL:
+            if (payload->len == sizeof(tcflag_t) && handle->control != NULL)
+            {
+                uint32_t mask_n_flag;
+                memcpy(&mask_n_flag, &payload->cflag, sizeof(mask_n_flag));
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_DEBUG, "tty %d set mask_n_flag 0x%x\r\n", port_idx, mask_n_flag);
+                status  = handle->control(port_idx, mask_n_flag);
+                retCode = MIN(status, 255);
+            }
+            else
+            {
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
+                                   "%s: Command set control not allowed?!? (or bad len %d, expected %zu)\r\n", __func__,
+                                   payload->len, sizeof(tcflag_t));
+                retCode = kStatus_InvalidArgument;
+            }
+            break;
         default:
             SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: command %d unsupported!\r\n", __func__, command);
             retCode = kStatus_InvalidArgument;
@@ -260,7 +279,7 @@ static srtm_status_t SRTM_TtyService_Notify(srtm_service_t service, srtm_notific
 
 srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service_set_cflag_t setCflag,
                                       srtm_tty_service_set_wake_t setWake, srtm_tty_service_init_t init,
-                                      srtm_tty_service_activate_t activate)
+                                      srtm_tty_service_activate_t activate, srtm_tty_service_control_t control)
 {
     srtm_tty_service_t handle;
 
@@ -274,6 +293,7 @@ srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service
     handle->setWake  = setWake;
     handle->init     = init;
     handle->activate = activate;
+    handle->control  = control;
 
     SRTM_List_Init(&handle->service.node);
     handle->service.dispatcher = NULL;
