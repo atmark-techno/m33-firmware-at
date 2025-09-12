@@ -324,10 +324,13 @@ void lpuart_suspend(struct tty_settings *settings)
 
     /* Deinit will not finish while receive is in progress, it must
      * wait for suspend first. */
-    vTaskPrioritySet(lpuart->rx_task, configMAX_PRIORITIES - 1);
-    while (eTaskGetState(lpuart->rx_task) != eSuspended)
-        ;
-    vTaskPrioritySet(lpuart->rx_task, TTY_RX_TASK_PRIORITY);
+    if (lpuart->rx_task)
+    {
+        vTaskPrioritySet(lpuart->rx_task, configMAX_PRIORITIES - 1);
+        while (eTaskGetState(lpuart->rx_task) != eSuspended)
+            ;
+        vTaskPrioritySet(lpuart->rx_task, TTY_RX_TASK_PRIORITY);
+    }
 
     LPUART_RTOS_Deinit(&lpuart->lpuart_rtos_handle);
 
