@@ -31,7 +31,6 @@ struct lpuart_tty_settings
     uint32_t rs485_de_gpio;
     uint32_t cflag;
     uint32_t suspend_wakeup_gpio; /* rx pin to use for wakeup */
-    enum tty_state state;
     bool wakeup_source;
     TaskHandle_t rx_task;
     lpuart_rtos_handle_t lpuart_rtos_handle;
@@ -313,7 +312,7 @@ void lpuart_resumeTask(struct tty_settings *settings)
 {
     struct lpuart_tty_settings *lpuart = get_lpuart(settings);
 
-    if (lpuart->state & TTY_ACTIVE)
+    if (settings->state & TTY_ACTIVE)
     {
         vTaskResume(lpuart->rx_task);
     }
