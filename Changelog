@@ -1,3 +1,11 @@
+1.5
+===
+- tty/lpuart: fix bug on suspend with tty open
+- tty/lpuart_1wire: add one-wire mode based on lpuart
+- tty/lpuart: add control hook for tcsendbreak
+
+  -- 2025-09-22
+
 1.4
 ===
 - spi/lpspi: fix to properly use lpspi's mode on init (instead of different union value)
