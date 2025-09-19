@@ -197,8 +197,8 @@ static int lpuart_activate(struct tty_settings *settings)
 static int lpuart_control(struct tty_settings *settings, uint32_t mask_n_flag)
 {
     struct lpuart_tty_settings *lpuart = get_lpuart(settings);
-    const uint32_t mask = (mask_n_flag >> TTY_RPMSG_COMMAND_CTRL_SHIFT) & 0xffff;
-    const uint32_t flag = mask_n_flag & 0xffff;
+    const uint32_t mask                = (mask_n_flag >> TTY_RPMSG_COMMAND_CTRL_SHIFT) & 0xffff;
+    const uint32_t flag                = mask_n_flag & 0xffff;
 
     if (mask & TTY_RPMSG_COMMAND_CTRL_BRK_EN)
     {
@@ -393,11 +393,18 @@ static int lpuart_1wire_tx(struct tty_settings *settings, uint8_t *buf, uint16_t
         return kStatus_Fail;
     }
 
+    lpuart->uart_base->CTRL &= ~LPUART_CTRL_RE_MASK;
+    // wait for RE bit to flip (receive in progress)
+    while (lpuart->uart_base->CTRL & LPUART_CTRL_RE_MASK)
+        ;
+
     // 1wire mode could not output(TXDIR does not work).
     // disable it during sending chars.
     lpuart->uart_base->CTRL &= ~(LPUART_CTRL_LOOPS_MASK | LPUART_CTRL_RSRC_MASK);
     rc = LPUART_RTOS_Send(&lpuart->lpuart_rtos_handle, buf, len);
     lpuart->uart_base->CTRL |= LPUART_CTRL_LOOPS_MASK | LPUART_CTRL_RSRC_MASK;
+
+    lpuart->uart_base->CTRL |= LPUART_CTRL_RE_MASK;
     if (rc)
     {
         PRINTF("%d send fail for buf len %d, first byte %x: %d\r\n", settings->port_idx, len, len > 0 ? buf[0] : 0, rc);
@@ -408,20 +415,31 @@ static int lpuart_1wire_tx(struct tty_settings *settings, uint8_t *buf, uint16_t
 static int lpuart_1wire_control(struct tty_settings *settings, uint32_t mask_n_flag)
 {
     struct lpuart_tty_settings *lpuart = get_lpuart(settings);
-    const uint32_t mask = (mask_n_flag >> TTY_RPMSG_COMMAND_CTRL_SHIFT) & 0xffff;
-    const uint32_t flag = mask_n_flag & 0xffff;
-    int ret = 0;
+    const uint32_t mask                = (mask_n_flag >> TTY_RPMSG_COMMAND_CTRL_SHIFT) & 0xffff;
+    const uint32_t flag                = mask_n_flag & 0xffff;
+    int ret                            = 0;
 
     if (mask & TTY_RPMSG_COMMAND_CTRL_BRK_EN)
     {
+        // 1wire mode could not output. disable it during sending break.
+        if (flag & TTY_RPMSG_COMMAND_CTRL_BRK_EN)
+        {
+            lpuart->uart_base->CTRL &= ~LPUART_CTRL_RE_MASK;
+            // wait for RE bit to flip (receive in progress)
+            while (lpuart->uart_base->CTRL & LPUART_CTRL_RE_MASK)
+                ;
+
+            lpuart->uart_base->CTRL &= ~(LPUART_CTRL_LOOPS_MASK | LPUART_CTRL_RSRC_MASK);
+        }
 
         ret = lpuart_control(settings, mask_n_flag);
 
-        // 1wire mode could not output. disable it during sending break.
-        if (flag & TTY_RPMSG_COMMAND_CTRL_BRK_EN)
-            lpuart->uart_base->CTRL &= ~(LPUART_CTRL_LOOPS_MASK | LPUART_CTRL_RSRC_MASK);
-        else
+        // enable it after the break is over.
+        if (!(flag & TTY_RPMSG_COMMAND_CTRL_BRK_EN))
+        {
             lpuart->uart_base->CTRL |= LPUART_CTRL_LOOPS_MASK | LPUART_CTRL_RSRC_MASK;
+            lpuart->uart_base->CTRL |= LPUART_CTRL_RE_MASK;
+        }
     }
 
     return ret;
@@ -437,6 +455,9 @@ static int lpuart_1wire_init(struct tty_settings *settings, struct srtm_tty_init
     {
         // enable 1wire (Single-Wire) mode
         lpuart->uart_base->CTRL &= ~(LPUART_CTRL_TE_MASK | LPUART_CTRL_RE_MASK);
+        // wait for RE bit to flip (receive in progress)
+        while (lpuart->uart_base->CTRL & LPUART_CTRL_RE_MASK)
+            ;
         lpuart->uart_base->CTRL |= LPUART_CTRL_LOOPS_MASK | LPUART_CTRL_RSRC_MASK;
         lpuart->uart_base->CTRL |= LPUART_CTRL_TE_MASK | LPUART_CTRL_RE_MASK;
 
