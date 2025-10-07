@@ -54,6 +54,7 @@ SET(CMAKE_C_FLAGS_DEBUG " \
     -std=gnu99 \
     ${FPU} \
 ")
+get_filename_component(SOURCE_BASE_DIR ../../ ABSOLUTE)
 SET(CMAKE_C_FLAGS_RELEASE " \
     ${CMAKE_C_FLAGS_RELEASE} \
     -DNDEBUG \
@@ -79,6 +80,7 @@ SET(CMAKE_C_FLAGS_RELEASE " \
     -fno-builtin \
     -mapcs \
     -std=gnu99 \
+    -ffile-prefix-map=${SOURCE_BASE_DIR}=/build \
     ${FPU} \
 ")
 SET(CMAKE_CXX_FLAGS_DEBUG " \
