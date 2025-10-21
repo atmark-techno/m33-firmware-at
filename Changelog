@@ -1,3 +1,12 @@
+1.6
+===
+- srtm_rtc: new service for RTC over rpmsg
+- tty/lpuart_1wire: fix '0x00' bogus receives when transmitting
+- make release build more reproducible. Builds with SOURCE_DATE_EPOCH
+set and identical toolchain should now be identical.
+
+  -- 2025-10-21
+
 1.5
 ===
 - tty/lpuart: fix bug on suspend with tty open
