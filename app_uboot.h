@@ -147,3 +147,9 @@ static inline void uboot_send_many(void *buf, int len)
  * Used to ensure m33 is responsive before handshake
  */
 #define UBOOT_PING 7
+
+/* poweroff
+ * uboot -> m33: poweroff command
+ * (no reply)
+ */
+#define UBOOT_POWEROFF 8

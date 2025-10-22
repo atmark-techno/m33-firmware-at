@@ -579,6 +579,13 @@ void CMC1_IRQHandler(void)
     }
 }
 
+static void BBNSM_Poweroff(void)
+{
+    /* Probably also stops RTC/alarm unless enabled with BBNSM_BBNSM_CTRL_RTC_EN/BBNSM_BBNSM_CTRL_TA_EN
+     * We use external RTC so this is ok */
+    BBNSM->BBNSM_CTRL = BBNSM_BBNSM_CTRL_DP_EN(1) | BBNSM_BBNSM_CTRL_TOSP(1); /* 0x03000000 */
+}
+
 static srtm_status_t APP_SRTM_LfclEventHandler(srtm_service_t service, srtm_peercore_t core, srtm_lfcl_event_t event,
                                                void *eventParam, void *userParam)
 {
@@ -589,9 +596,7 @@ static srtm_status_t APP_SRTM_LfclEventHandler(srtm_service_t service, srtm_peer
             /* Relase A Core */
             MU_BootOtherCore(MU0_MUA, (mu_core_boot_mode_t)0);
             PRINTF("\r\nAD shutdown\r\n");
-            /* Probably also stops RTC/alarm unless enabled with BBNSM_BBNSM_CTRL_RTC_EN/BBNSM_BBNSM_CTRL_TA_EN
-             * We use external RTC so this is ok */
-            BBNSM->BBNSM_CTRL = BBNSM_BBNSM_CTRL_DP_EN(1) | BBNSM_BBNSM_CTRL_TOSP(1); /* 0x03000000 */
+            BBNSM_Poweroff();
             break;
         case SRTM_Lfcl_Event_RebootReq:
             PRINTF("\r\nAD is entering reboot.\r\nTriggering M33 reset.\r\n\n");
@@ -709,6 +714,11 @@ void hardfault_process_uboot_messages(void)
                 /* does not return */
                 PMIC_Reset();
                 break;
+            case UBOOT_POWEROFF:
+                DebugConsole_Emergency("hardfault uboot poweroff\r\n");
+                /* does not return */
+                BBNSM_Poweroff();
+                break;
             /* need these to avoid processing next values as commands... */
             case UBOOT_PINCTRL:
             {
@@ -778,6 +788,10 @@ static void process_uboot_messages(void)
             case UBOOT_RESET:
                 PRINTF("uboot: reset\r\n");
                 PMIC_Reset(); /* does not return */
+                break;
+            case UBOOT_POWEROFF:
+                PRINTF("uboot: poweroff\r\n");
+                BBNSM_Poweroff(); /* does not return */
                 break;
             case UBOOT_PINCTRL:
             {
