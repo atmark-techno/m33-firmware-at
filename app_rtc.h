@@ -8,5 +8,6 @@
 
 void APP_RTC_NotifyAlarm(void);
 
-/* Init hook for app_srtm.c */
+/* Init hook for main/app_srtm */
+void APP_RTC_EarlyInit(void);
 void APP_RTC_InitService(void);

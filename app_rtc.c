@@ -20,9 +20,13 @@ static srtm_service_t rtcService;
 
 static HAL_RTC_HANDLE_DEFINE(rtcHandle);
 
-static void APP_RTC_Init(void)
+void APP_RTC_EarlyInit(void)
 {
     HAL_RtcInit(rtcHandle, 0);
+}
+
+static void APP_RTC_Init(void)
+{
     NVIC_ClearPendingIRQ(BBNSM_IRQn);
     NVIC_SetPriority(BBNSM_IRQn, APP_BBNSM_IRQ_PRIO);
     EnableIRQ(BBNSM_IRQn);
