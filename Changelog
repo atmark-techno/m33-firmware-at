@@ -1,3 +1,10 @@
+1.7
+===
+- rtc: fix boot from ONOFF signal (clear leftover BBNSM irq)
+- add poweroff from uboot
+
+  -- 2025-11-06
+
 1.6
 ===
 - srtm_rtc: new service for RTC over rpmsg
