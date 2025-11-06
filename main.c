@@ -720,8 +720,14 @@ void LPTMR1_IRQHandler(void)
 /* BBNSM interrupt handler. */
 void BBNSM_IRQHandler(void)
 {
-    if (!(BBNSM_GetStatusFlags(BBNSM) & kBBNSM_RTC_AlarmInterruptFlag))
+    uint32_t flags = BBNSM_GetStatusFlags(BBNSM);
+
+    if (!(flags & kBBNSM_RTC_AlarmInterruptFlag))
     {
+        PRINTF("BBNSM IRQ unhandled flags: %lx\r\n", flags);
+        /* Note: we must leave Alarm flag set for the srtm handler below,
+         * so only reset unknown flags */
+        BBNSM_ClearStatusFlags(BBNSM, flags);
         return;
     }
 
