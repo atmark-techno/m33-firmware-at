@@ -29,7 +29,7 @@ struct lpuart_tty_settings
     uint32_t reset;
     uint32_t rs485_flags;
     uint32_t rs485_de_gpio;
-    uint32_t cflag;
+    struct ktermios termios;
     uint32_t suspend_wakeup_gpio; /* rx pin to use for wakeup */
     bool wakeup_source;
     TaskHandle_t rx_task;
@@ -103,10 +103,11 @@ static int lpuart_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
     return rc;
 }
 
-static int setcflag(struct tty_settings *settings, tcflag_t cflag)
+static int settermios(struct tty_settings *settings, struct ktermios *termios)
 {
     struct lpuart_tty_settings *lpuart = get_lpuart(settings);
-    speed_t baudrate                   = tty_baudrate(cflag);
+    speed_t baudrate                   = tty_termios_baud_rate(termios);
+    tcflag_t cflag                     = termios->c_cflag;
     lpuart_parity_mode_t parity        = tty_parity(cflag);
     bool cmsparity                     = tty_cmsparity(cflag);
     lpuart_data_bits_t databits        = tty_databits(cflag);
@@ -143,9 +144,19 @@ static int setcflag(struct tty_settings *settings, tcflag_t cflag)
     LPUART_SetStopBit(lpuart->uart_base, stopbits);
 
     /* remember for resume */
-    lpuart->cflag = cflag;
+    lpuart->termios = *termios;
 
     return 0;
+}
+
+static int setcflag(struct tty_settings *settings, tcflag_t cflag)
+{
+    struct lpuart_tty_settings *lpuart = get_lpuart(settings);
+    struct ktermios termios            = lpuart->termios;
+
+    termios.c_cflag = cflag;
+
+    return settermios(settings, &termios);
 }
 
 static int lpuart_setcflag(struct tty_settings *settings, tcflag_t cflag)
@@ -157,6 +168,17 @@ static int lpuart_setcflag(struct tty_settings *settings, tcflag_t cflag)
     }
 
     return setcflag(settings, cflag);
+}
+
+static int lpuart_settermios(struct tty_settings *settings, struct ktermios *termios)
+{
+    if (settings->state & TTY_SUSPENDED)
+    {
+        PRINTF("tty %d settermios while not ready (state %x)\r\n", settings->port_idx, settings->state);
+        return kStatus_Fail;
+    }
+
+    return settermios(settings, termios);
 }
 
 static int lpuart_setwake(struct tty_settings *settings, bool enable)
@@ -239,9 +261,9 @@ static int lpuart_init_device(struct tty_settings *settings)
 
     lpuart_rtos_config_t config = {
         .base = lpuart->uart_base,
-        .baudrate = tty_baudrate(lpuart->cflag),
-        .parity = tty_parity(lpuart->cflag),
-        .stopbits = tty_stopbits(lpuart->cflag),
+        .baudrate = tty_termios_baud_rate(&lpuart->termios),
+        .parity = tty_parity(lpuart->termios.c_cflag),
+        .stopbits = tty_stopbits(lpuart->termios.c_cflag),
         .buffer = lpuart->background_buffer,
         .buffer_size = lpuart->background_buffer_size,
         .rs485 = {
@@ -261,7 +283,7 @@ static int lpuart_init_device(struct tty_settings *settings)
     LPUART_RTOS_SetRxTimeout(&lpuart->lpuart_rtos_handle, 1, 0); /* short timeout to give data back asap */
     LPUART_RTOS_SetTxTimeout(&lpuart->lpuart_rtos_handle, 0, 0); /* XXX no timeout, depends on baud rate */
 
-    return setcflag(settings, lpuart->cflag);
+    return settermios(settings, &lpuart->termios);
 }
 
 static int lpuart_init(struct tty_settings *settings, struct srtm_tty_init_payload *generic_init)
@@ -301,7 +323,7 @@ static int lpuart_init(struct tty_settings *settings, struct srtm_tty_init_paylo
 
     lpuart->rs485_flags         = init->rs485_flags;
     lpuart->rs485_de_gpio       = init->rs485_de_gpio;
-    lpuart->cflag               = init->cflag;
+    lpuart->termios.c_cflag     = init->cflag;
     lpuart->suspend_wakeup_gpio = init->suspend_wakeup_gpio;
 
     if (lpuart->rs485_flags && APP_IO_GetIndex(lpuart->rs485_de_gpio) == 0xffff)
@@ -472,6 +494,7 @@ static int lpuart_1wire_init(struct tty_settings *settings, struct srtm_tty_init
 const struct tty_hooks tty_lpuart_hooks = {
     .tx            = lpuart_tx,
     .setcflag      = lpuart_setcflag,
+    .settermios    = lpuart_settermios,
     .setwake       = lpuart_setwake,
     .activate      = lpuart_activate,
     .control       = lpuart_control,
@@ -485,6 +508,7 @@ const struct tty_hooks tty_lpuart_hooks = {
 const struct tty_hooks tty_lpuart_1wire_hooks = {
     .tx            = lpuart_1wire_tx,
     .setcflag      = lpuart_setcflag,
+    .settermios    = lpuart_settermios,
     .setwake       = lpuart_setwake,
     .activate      = lpuart_activate,
     .control       = lpuart_1wire_control,

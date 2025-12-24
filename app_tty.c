@@ -23,10 +23,10 @@ extern const struct tty_hooks tty_console_hooks;
 extern const struct tty_hooks tty_flexio_hooks;
 extern const struct tty_hooks tty_lpuart_1wire_hooks;
 static struct tty_hooks const *tty_hooks[_TTY_TYPE_COUNT] = {
-    [TTY_TYPE_LPUART]      = &tty_lpuart_hooks,
-    [TTY_TYPE_CUSTOM]      = &tty_custom_hooks,
-    [TTY_TYPE_M33_CONSOLE] = &tty_console_hooks,
-    [TTY_TYPE_FLEXIO]      = &tty_flexio_hooks,
+    [TTY_TYPE_LPUART]       = &tty_lpuart_hooks,
+    [TTY_TYPE_CUSTOM]       = &tty_custom_hooks,
+    [TTY_TYPE_M33_CONSOLE]  = &tty_console_hooks,
+    [TTY_TYPE_FLEXIO]       = &tty_flexio_hooks,
     [TTY_TYPE_LPUART_1WIRE] = &tty_lpuart_1wire_hooks,
 };
 
@@ -79,6 +79,19 @@ static int APP_TTY_setcflag(uint8_t port_idx, tcflag_t cflag)
         return kStatus_Success;
 
     return tty_hooks[settings->type]->setcflag(settings, cflag);
+}
+
+static int APP_TTY_settermios(uint8_t port_idx, struct ktermios *termios)
+{
+    struct tty_settings *settings = get_settings(port_idx, "settermios");
+
+    if (!settings)
+        return kStatus_Fail;
+
+    if (!tty_hooks[settings->type]->settermios)
+        return kStatus_Success;
+
+    return tty_hooks[settings->type]->settermios(settings, termios);
 }
 
 static int APP_TTY_setwake(uint8_t port_idx, bool enable)
@@ -186,7 +199,8 @@ static int APP_TTY_init(uint8_t port_idx, struct srtm_tty_init_payload *init)
 
 void APP_TTY_InitService(void)
 {
-    ttyService = SRTM_TtyService_Create(APP_TTY_tx, APP_TTY_setcflag, APP_TTY_setwake, APP_TTY_init, APP_TTY_activate, APP_TTY_control);
+    ttyService = SRTM_TtyService_Create(APP_TTY_tx, APP_TTY_setcflag, APP_TTY_settermios, APP_TTY_setwake, APP_TTY_init,
+                                        APP_TTY_activate, APP_TTY_control);
     SRTM_Dispatcher_RegisterService(disp, ttyService);
 }
 

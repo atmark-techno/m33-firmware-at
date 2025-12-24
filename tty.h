@@ -7,6 +7,7 @@
 #include "fsl_lpuart.h"
 
 speed_t tty_baudrate(tcflag_t cflag);
+speed_t tty_termios_baud_rate(struct ktermios *termios);
 lpuart_parity_mode_t tty_parity(tcflag_t cflag);
 bool tty_cmsparity(tcflag_t cflag);
 lpuart_data_bits_t tty_databits(tcflag_t cflag);

@@ -35,7 +35,7 @@
 /* Protocol definition */
 #define SRTM_TTY_CATEGORY (0xF1U)
 
-#define SRTM_TTY_VERSION (0x0300U)
+#define SRTM_TTY_VERSION (0x0301U)
 
 /* Service handle */
 typedef struct _srtm_tty_service
@@ -43,6 +43,7 @@ typedef struct _srtm_tty_service
     struct _srtm_service service;
     srtm_tty_service_tx_t tx;
     srtm_tty_service_set_cflag_t setCflag;
+    srtm_tty_service_set_termios_t setTermios;
     srtm_tty_service_set_wake_t setWake;
     srtm_tty_service_init_t init;
     srtm_tty_service_activate_t activate;
@@ -69,6 +70,7 @@ SRTM_PACKED_BEGIN struct _srtm_tty_payload
         uint32_t cflag;
         /* note: packed only by design, sanity is ensured by checking size */
         struct srtm_tty_init_payload init;
+        struct ktermios termios;
         uint8_t retcode;
     } SRTM_PACKED_END;
 } SRTM_PACKED_END;
@@ -91,6 +93,7 @@ enum tty_rpmsg_header_cmd
     TTY_RPMSG_COMMAND_INIT,
     TTY_RPMSG_COMMAND_ACTIVATE,
     TTY_RPMSG_COMMAND_CTRL,
+    TTY_RPMSG_COMMAND_SET_TERMIOS,
 };
 
 /*******************************************************************************
@@ -245,6 +248,24 @@ static srtm_status_t SRTM_TtyService_Request(srtm_service_t service, srtm_reques
                 retCode = kStatus_InvalidArgument;
             }
             break;
+        case TTY_RPMSG_COMMAND_SET_TERMIOS:
+            if (payload->len == sizeof(struct ktermios) && handle->setTermios != NULL)
+            {
+                struct ktermios termios;
+                memcpy(&termios, &payload->termios, sizeof(termios));
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_DEBUG, "tty %d set termios %d:%d\r\n", port_idx, termios.c_cflag,
+                                   termios.c_ospeed);
+                status  = handle->setTermios(port_idx, &termios);
+                retCode = MIN(status, 255);
+            }
+            else
+            {
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN,
+                                   "%s: Command set termios not allowed?!? (or bad len %d, expected %zu)\r\n", __func__,
+                                   payload->len, sizeof(tcflag_t));
+                retCode = kStatus_InvalidArgument;
+            }
+            break;
         default:
             SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: command %d unsupported!\r\n", __func__, command);
             retCode = kStatus_InvalidArgument;
@@ -278,8 +299,9 @@ static srtm_status_t SRTM_TtyService_Notify(srtm_service_t service, srtm_notific
 }
 
 srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service_set_cflag_t setCflag,
-                                      srtm_tty_service_set_wake_t setWake, srtm_tty_service_init_t init,
-                                      srtm_tty_service_activate_t activate, srtm_tty_service_control_t control)
+                                      srtm_tty_service_set_termios_t setTermios, srtm_tty_service_set_wake_t setWake,
+                                      srtm_tty_service_init_t init, srtm_tty_service_activate_t activate,
+                                      srtm_tty_service_control_t control)
 {
     srtm_tty_service_t handle;
 
@@ -288,12 +310,13 @@ srtm_service_t SRTM_TtyService_Create(srtm_tty_service_tx_t tx, srtm_tty_service
     handle = (srtm_tty_service_t)SRTM_Heap_Malloc(sizeof(struct _srtm_tty_service));
     assert(handle);
 
-    handle->tx       = tx;
-    handle->setCflag = setCflag;
-    handle->setWake  = setWake;
-    handle->init     = init;
-    handle->activate = activate;
-    handle->control  = control;
+    handle->tx         = tx;
+    handle->setCflag   = setCflag;
+    handle->setTermios = setTermios;
+    handle->setWake    = setWake;
+    handle->init       = init;
+    handle->activate   = activate;
+    handle->control    = control;
 
     SRTM_List_Init(&handle->service.node);
     handle->service.dispatcher = NULL;

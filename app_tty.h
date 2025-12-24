@@ -39,6 +39,7 @@ struct tty_hooks
 {
     int (*tx)(struct tty_settings *settings, uint8_t *buf, uint16_t len);
     int (*setcflag)(struct tty_settings *settings, tcflag_t cflag);
+    int (*settermios)(struct tty_settings *settings, struct ktermios *termios);
     int (*setwake)(struct tty_settings *settings, bool enable);
     int (*init)(struct tty_settings *settings, struct srtm_tty_init_payload *init);
     int (*activate)(struct tty_settings *settings);
@@ -60,5 +61,5 @@ void APP_TTY_InitService(void);
 void APP_TTY_Suspend(void);
 void APP_TTY_Resume(void);
 
-#define TTY_RPMSG_COMMAND_CTRL_SHIFT   16      // upper 16 bits for mask, lower 16 bits for enable bit
-#define TTY_RPMSG_COMMAND_CTRL_BRK_EN  0x0001
+#define TTY_RPMSG_COMMAND_CTRL_SHIFT 16 // upper 16 bits for mask, lower 16 bits for enable bit
+#define TTY_RPMSG_COMMAND_CTRL_BRK_EN 0x0001
