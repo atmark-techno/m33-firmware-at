@@ -1,3 +1,13 @@
+1.8
+===
+- tty/lpuart: add new settermios srtm API.
+This allows setting baud rate to non-standard values as supported by
+the driver.
+- slightly improve hardfault handler: log stack frame if available
+and increase delay after boot from 30 to 40s
+
+  -- 2026-01-23
+
 1.7
 ===
 - rtc: fix boot from ONOFF signal (clear leftover BBNSM irq)
