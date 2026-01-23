@@ -89,7 +89,7 @@ static int APP_TTY_settermios(uint8_t port_idx, struct ktermios *termios)
         return kStatus_Fail;
 
     if (!tty_hooks[settings->type]->settermios)
-        return kStatus_Success;
+        return kStatus_Fail;
 
     return tty_hooks[settings->type]->settermios(settings, termios);
 }
