@@ -242,12 +242,12 @@ void HardFault_Handler(void)
     hardfault_process_uboot_messages();
 
     /* If this happens early boot we won't have a chance to rollback:
-     * check current time and sleep for at least 30s after boot */
+     * check current time and sleep for at least 40s after boot */
     TickType_t tick = xTaskGetTickCount();
-    if (tick < configINITIAL_TICK_COUNT + pdMS_TO_TICKS(30000))
+    if (tick < configINITIAL_TICK_COUNT + pdMS_TO_TICKS(40000))
     {
-        int delay = 30000 - pdTICKS_TO_MS(tick - configINITIAL_TICK_COUNT);
-        DebugConsole_Emergency("Waiting for 30s after boot to reset\r\n");
+        int delay = 40000 - pdTICKS_TO_MS(tick - configINITIAL_TICK_COUNT);
+        DebugConsole_Emergency("Waiting for 40s after boot to reset\r\n");
         sprintf(hardfault_buf, "Sleeping approx %dms\r\n", delay);
         DebugConsole_Emergency(hardfault_buf);
         spin_sleep(delay);
