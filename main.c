@@ -177,8 +177,32 @@ static void spin_sleep(int ms)
     }
 }
 
+struct HardFaultStackFrame
+{
+    uint32_t r0;
+    uint32_t r1;
+    uint32_t r2;
+    uint32_t r3;
+    uint32_t r12;
+    uint32_t lr;
+    uint32_t return_address;
+    uint32_t xpsr;
+};
+
 static char hardfault_buf[32];
 void HardFault_Handler(void)
+{
+    // load stack frame from MSP or PSP depending on EXC_RETURN in link register (bit 2)
+    // then call C function
+    asm volatile(
+        "tst lr, #4 \n"
+        "ite eq \n"
+        "mrseq r0, msp \n"
+        "mrsne r0, psp \n"
+        "b HardFault_Handler_c \n");
+}
+
+__attribute__((optimize("O0"))) void HardFault_Handler_c(struct HardFaultStackFrame *frame)
 {
     /* volatile apparently helps compiler not optimize these variables away,
      * making access easier in debugger */
@@ -187,49 +211,61 @@ void HardFault_Handler(void)
     volatile uint32_t MMFAR;
     volatile uint32_t BFAR;
 
-    /* These do not seem to have any define provided...
+    /*
      * https://developer.arm.com/documentation/100235/0004/the-cortex-m33-peripherals/system-control-block/system-control-block-registers-summary?lang=en
      * https://interrupt.memfault.com/blog/cortex-m-hardfault-debug
      */
-    HFSR = *(uint32_t *)(0xE000ED2C);
-#define HFSR_FORCED (1 << 30)
-    CFSR = *(uint32_t *)(0xE000ED28);
-#define CFSR_MMFSR_MMARVALID (1 << 7)
-#define CFSR_BFSR_BFARVALID (1 << (8 + 7))
-#define CFSR_UFSR_DIVBYZERO (1 << (16 + 9))
-#define CFSR_UFSR_UNALIGNED (1 << (16 + 8))
-#define CFSR_UFSR_STKOF (1 << (16 + 4))
-#define CFSR_UFSR_INVPC (1 << (16 + 2))
-#define CFSR_UFSR_INVSTATE (1 << (16 + 1))
-#define CFSR_UFSR_UNDEFINSTR (1 << (16 + 0))
-    MMFAR = *(uint32_t *)(0xE000ED34);
-    BFAR  = *(uint32_t *)(0xE000ED38);
+    HFSR  = *(uint32_t *)(0xE000ED2C); // Hard Fault Status Register.
+    CFSR  = *(uint32_t *)(0xE000ED28); // Configurable Fault Status Register.
+    MMFAR = *(uint32_t *)(0xE000ED34); // MemManage Fault Address Register.
+    BFAR  = *(uint32_t *)(0xE000ED38); // Bus Fault Address Register.
 
     DebugConsole_Emergency("\r\n\r\n====================\r\n\r\nHARDFAULT!\r\n");
-    if (HFSR & HFSR_FORCED)
+    if (HFSR & SCB_HFSR_FORCED_Msk)
     {
-        if (CFSR & CFSR_MMFSR_MMARVALID)
+        if (CFSR & SCB_CFSR_MMARVALID_Msk)
         {
             sprintf(hardfault_buf, "MMFAR %lx\r\n", MMFAR);
             DebugConsole_Emergency(hardfault_buf);
         }
-        if (CFSR & CFSR_BFSR_BFARVALID)
+        if (CFSR & SCB_CFSR_BFARVALID_Msk)
         {
             sprintf(hardfault_buf, "BFAR %lx\r\n", BFAR);
             DebugConsole_Emergency(hardfault_buf);
         }
-        /* XXX try to print which task caused that? */
-        if (CFSR & CFSR_UFSR_DIVBYZERO)
+        if (CFSR & SCB_CFSR_PRECISERR_Msk)
+        {
+            DebugConsole_Emergency("Stack frame:\r\n");
+            sprintf(hardfault_buf, "r0 %lx\r\n", frame->r0);
+            DebugConsole_Emergency(hardfault_buf);
+            sprintf(hardfault_buf, "r1 %lx\r\n", frame->r1);
+            DebugConsole_Emergency(hardfault_buf);
+            sprintf(hardfault_buf, "r2 %lx\r\n", frame->r2);
+            DebugConsole_Emergency(hardfault_buf);
+            sprintf(hardfault_buf, "r3 %lx\r\n", frame->r3);
+            DebugConsole_Emergency(hardfault_buf);
+            sprintf(hardfault_buf, "r12 %lx\r\n", frame->r12);
+            DebugConsole_Emergency(hardfault_buf);
+            sprintf(hardfault_buf, "lr %lx\r\n", frame->lr);
+            DebugConsole_Emergency(hardfault_buf);
+            sprintf(hardfault_buf, "return_address %lx\r\n", frame->return_address);
+            DebugConsole_Emergency(hardfault_buf);
+            sprintf(hardfault_buf, "xpsr %lx\r\n", frame->xpsr);
+            DebugConsole_Emergency(hardfault_buf);
+        }
+        if (CFSR & SCB_CFSR_DIVBYZERO_Msk)
             DebugConsole_Emergency("Divide by zero\r\n");
-        if (CFSR & CFSR_UFSR_UNALIGNED)
+        if (CFSR & SCB_CFSR_UNALIGNED_Msk)
             DebugConsole_Emergency("Unaligned access\r\n");
-        if (CFSR & CFSR_UFSR_STKOF)
+        if (CFSR & SCB_CFSR_STKOF_Msk)
             DebugConsole_Emergency("Stack overflow\r\n");
-        if (CFSR & CFSR_UFSR_INVPC)
+        if (CFSR & SCB_CFSR_NOCP_Msk)
+            DebugConsole_Emergency("No Coprocessor\r\n");
+        if (CFSR & SCB_CFSR_INVPC_Msk)
             DebugConsole_Emergency("Invalid PC\r\n");
-        if (CFSR & CFSR_UFSR_INVSTATE)
+        if (CFSR & SCB_CFSR_INVSTATE_Msk)
             DebugConsole_Emergency("Invalid state flag\r\n");
-        if (CFSR & CFSR_UFSR_UNDEFINSTR)
+        if (CFSR & SCB_CFSR_UNDEFINSTR_Msk)
             DebugConsole_Emergency("Undefined instruction\r\n");
     }
     DebugConsole_Emergency("====================\r\n\r\n");
