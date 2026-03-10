@@ -1143,17 +1143,14 @@ int main(void)
             PMIC_Reset();
         }
     }
-    /* It's also possible for POR boot to be after shutdown + ONOFF event
-     * (e.g. external RTC alarm), leaving some state behind */
     APP_RTC_EarlyInit();
     uint32_t flags = BBNSM_GetStatusFlags(BBNSM);
     if (flags & (kBBNSM_RTC_AlarmInterruptFlag | kBBNSM_RTC_RolloverInterruptFlag | kBBNSM_PWR_ON_InterruptFlag |
                  kBBNSM_PWR_OFF_InterruptFlag | kBBNSM_EMG_OFF_InterruptFlag))
     {
-        PRINTF("BBNSM state not clean (%lx), resetting PMIC\r\n", flags);
-        /* PMIC reset does not clear these flags, reset manually.. */
+        /* POR boot does not clear these flags */
         BBNSM_ClearStatusFlags(BBNSM, flags);
-        PMIC_Reset();
+        PRINTF("BBNSM state not clean (%#lx), clear flags\r\n", flags);
     }
     /* Lower RESETKEY_TIMER (PMIC_RST_B assertion timeout) from 8s default to 1s */
     UPOWER_SetPmicReg(0xB /* SYS_CFG1 */, 0x44 /* LOW_VSYS=0b01(default)|RESET_KEYTIMER=0b001 */);
