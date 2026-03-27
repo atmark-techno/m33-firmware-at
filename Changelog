@@ -1,3 +1,12 @@
+1.9
+===
+- no need to reset if booting from ONOFF button
+Since resetting was pointless, the reset process was reverted, leaving the flag
+clearing intact. Both booting from ONOFF button and reset by PMIC_Reset() result
+in a POR boot.
+
+  -- 2026-04-17
+
 1.8
 ===
 - tty/lpuart: add new settermios srtm API.
