@@ -20,6 +20,7 @@
 #include "build_bug.h"
 #include "main.h"
 #include "semphr.h"
+#include "spi.h"
 
 #define SPI_TASK_PRIORITY (3U)
 
@@ -34,6 +35,7 @@ static SemaphoreHandle_t spi_xfer_sem;
 static uint8_t *spi_xfer_buf;
 static TaskHandle_t spi_xfer_task;
 static srtm_response_t spi_xfer_response;
+static uint32_t spi_xfer_mode;
 static uint16_t spi_xfer_bits_per_word;
 static uint16_t spi_xfer_len;
 static struct spi_gpio_settings *spi_xfer_dev;
@@ -87,34 +89,46 @@ static inline void spidelay(unsigned int loops)
 
 #include "spi_bitbang_txrx.h"
 
-static inline void txrx_8(struct spi_gpio_settings *spi, uint16_t bits_per_word, uint16_t len, uint8_t *buf)
+static inline u32 txrx(struct spi_gpio_settings *spi, uint32_t mode, uint8_t word, uint16_t bits_per_word)
+{
+    unsigned cpol = !!(mode & SPI_CPOL);
+    if (mode & SPI_CPHA)
+        return bitbang_txrx_be_cpha1(spi, 1 /*delay*/, cpol, 0 /* flags */, word, bits_per_word);
+    else
+        return bitbang_txrx_be_cpha0(spi, 1 /*delay*/, cpol, 0 /* flags */, word, bits_per_word);
+}
+
+static inline void txrx_8(struct spi_gpio_settings *spi, uint32_t mode, uint16_t bits_per_word, uint16_t len,
+                          uint8_t *buf)
 {
     while (len > 0)
     {
         uint8_t word = *buf;
-        word         = bitbang_txrx_be_cpha0(spi, 1 /*delay*/, 0 /* cpol */, 0 /* flags */, word, bits_per_word);
+        word         = txrx(spi, mode, word, bits_per_word);
         *buf++       = word;
         len -= 1;
     }
 }
 
-static inline void txrx_16(struct spi_gpio_settings *spi, uint16_t bits_per_word, uint16_t len, uint16_t *buf)
+static inline void txrx_16(struct spi_gpio_settings *spi, uint32_t mode, uint16_t bits_per_word, uint16_t len,
+                           uint16_t *buf)
 {
     while (len > 0)
     {
         uint16_t word = *buf;
-        word          = bitbang_txrx_be_cpha0(spi, 1 /*delay*/, 0 /* cpol */, 0 /* flags */, word, bits_per_word);
+        word          = txrx(spi, mode, word, bits_per_word);
         *buf++        = word;
         len -= 2;
     }
 }
 
-static inline void txrx_32(struct spi_gpio_settings *spi, uint16_t bits_per_word, uint16_t len, uint32_t *buf)
+static inline void txrx_32(struct spi_gpio_settings *spi, uint32_t mode, uint16_t bits_per_word, uint16_t len,
+                           uint32_t *buf)
 {
     while (len > 0)
     {
         uint32_t word = *buf;
-        word          = bitbang_txrx_be_cpha0(spi, 1 /*delay*/, 0 /* cpol */, 0 /* flags */, word, bits_per_word);
+        word          = txrx(spi, mode, word, bits_per_word);
         *buf++        = word;
         len -= 4;
     }
@@ -134,15 +148,15 @@ static void spi_xfer_loop(void *pvPatameters)
 
         if (spi_xfer_bits_per_word <= 8)
         {
-            txrx_8(spi_xfer_dev, spi_xfer_bits_per_word, spi_xfer_len, spi_xfer_buf);
+            txrx_8(spi_xfer_dev, spi_xfer_mode, spi_xfer_bits_per_word, spi_xfer_len, spi_xfer_buf);
         }
         else if (spi_xfer_bits_per_word <= 16)
         {
-            txrx_16(spi_xfer_dev, spi_xfer_bits_per_word, spi_xfer_len, (uint16_t *)spi_xfer_buf);
+            txrx_16(spi_xfer_dev, spi_xfer_mode, spi_xfer_bits_per_word, spi_xfer_len, (uint16_t *)spi_xfer_buf);
         }
         else if (spi_xfer_bits_per_word <= 32)
         {
-            txrx_32(spi_xfer_dev, spi_xfer_bits_per_word, spi_xfer_len, (uint32_t *)spi_xfer_buf);
+            txrx_32(spi_xfer_dev, spi_xfer_mode, spi_xfer_bits_per_word, spi_xfer_len, (uint32_t *)spi_xfer_buf);
         }
         else
         {
@@ -176,17 +190,17 @@ static int spi_gpio_transfer(struct spi_settings *settings, srtm_response_t resp
     return 0;
 }
 
+static int spi_gpio_set_mode(struct spi_settings *settings, uint32_t mode)
+{
+    spi_xfer_mode = mode;
+    return 0;
+}
+
 static int spi_gpio_init(struct spi_settings *settings, struct srtm_spi_init_payload *generic_init)
 {
     struct spi_gpio_settings *spi           = get_spi_gpio(settings);
     struct srtm_spi_init_gpio_payload *init = &generic_init->gpio;
     uint8_t port_idx                        = settings->port_idx;
-
-    if (init->mode != 0)
-    {
-        PRINTF("spi %d: modes not supported in this version\r\n", port_idx);
-        return SRTM_SPI_RETCODE_UNSUPPORTED;
-    }
 
     if (APP_IO_GetIndex(init->sck_pin) == 0xffff)
     {
@@ -232,5 +246,6 @@ static int spi_gpio_init(struct spi_settings *settings, struct srtm_spi_init_pay
 const struct spi_hooks spi_gpio_hooks = {
     .init          = spi_gpio_init,
     .transfer      = spi_gpio_transfer,
+    .set_mode      = spi_gpio_set_mode,
     .settings_size = sizeof(struct spi_gpio_settings),
 };

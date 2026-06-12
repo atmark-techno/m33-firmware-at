@@ -20,6 +20,7 @@
 #include "build_bug.h"
 #include "main.h"
 #include "semphr.h"
+#include "spi.h"
 
 #define SPI_TASK_PRIORITY (3U)
 #define APP_LPSPI_IRQ_PRIO (5U)
@@ -65,7 +66,8 @@ static void spi_lpspi_callback(LPSPI_Type *base, lpspi_master_handle_t *handle, 
     spi->transmit_in_progress = false;
 }
 
-static void spi_lpspi_setup_transfer(struct spi_lpspi_settings *spi, uint16_t bits_per_word, uint32_t speed_hz)
+static void spi_lpspi_setup_transfer(struct spi_lpspi_settings *spi, uint32_t mode, uint16_t bits_per_word,
+                                     uint32_t speed_hz)
 {
     lpspi_master_config_t masterConfig;
     uint32_t srcClock_Hz;
@@ -78,6 +80,12 @@ static void spi_lpspi_setup_transfer(struct spi_lpspi_settings *spi, uint16_t bi
     masterConfig.lastSckToPcsDelayInNanoSec    = 1000000000U / masterConfig.baudRate;
     masterConfig.betweenTransferDelayInNanoSec = 1000000000U / masterConfig.baudRate;
     masterConfig.bitsPerFrame                  = bits_per_word;
+    if (mode & SPI_CPHA)
+        masterConfig.cpha = kLPSPI_ClockPhaseSecondEdge;
+    if (mode & SPI_CPOL)
+        masterConfig.cpol = kLPSPI_ClockPolarityActiveLow;
+    if (mode & SPI_CS_HIGH)
+        masterConfig.pcsActiveHighOrLow = kLPSPI_PcsActiveHigh;
 
     srcClock_Hz = CLOCK_GetIpFreq(spi->clock_ip_name);
     LPSPI_MasterInit(spi->base, &masterConfig, srcClock_Hz);
@@ -108,7 +116,7 @@ static int spi_lpspi_transfer(struct spi_settings *settings, srtm_response_t res
         goto out_inval;
     }
 
-    spi_lpspi_setup_transfer(spi, bits_per_word, speed_hz);
+    spi_lpspi_setup_transfer(spi, settings->mode, bits_per_word, speed_hz);
     spi->response = response;
 
     /* Start master transfer, send data to slave */
@@ -130,17 +138,17 @@ out_busy:
     return 0;
 }
 
+static int spi_lpspi_set_mode(struct spi_settings *settings, uint32_t mode)
+{
+    settings->mode = mode;
+    return 0;
+}
+
 static int spi_lpspi_init(struct spi_settings *settings, struct srtm_spi_init_payload *generic_init)
 {
     struct spi_lpspi_settings *spi           = get_spi_lpspi(settings);
     struct srtm_spi_init_lpspi_payload *init = &generic_init->lpspi;
     uint8_t port_idx                         = settings->port_idx;
-
-    if (init->mode != 0)
-    {
-        PRINTF("spi %d: modes not supported in this version\r\n", port_idx);
-        return SRTM_SPI_RETCODE_UNSUPPORTED;
-    }
 
     switch (init->spi_index)
     {
@@ -177,6 +185,7 @@ static int spi_lpspi_init(struct spi_settings *settings, struct srtm_spi_init_pa
             return SRTM_SPI_RETCODE_EINVAL;
     }
     spi->spi_index = init->spi_index;
+    settings->mode = init->mode;
 
     /* IRQ enable by can but priority isn't set, set it now */
     NVIC_SetPriority(spi->irqn, APP_LPSPI_IRQ_PRIO);
@@ -206,6 +215,7 @@ static void spi_lpspi_resume(struct spi_settings *settings)
 const struct spi_hooks spi_lpspi_hooks = {
     .init          = spi_lpspi_init,
     .transfer      = spi_lpspi_transfer,
+    .set_mode      = spi_lpspi_set_mode,
     .resume        = spi_lpspi_resume,
     .settings_size = sizeof(struct spi_lpspi_settings),
 };

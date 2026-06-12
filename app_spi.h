@@ -12,6 +12,7 @@ struct spi_settings
 {
     srtm_spi_type_t type;
     uint8_t port_idx;
+    uint32_t mode;
     /* per-type data follows, force alignment to ensure 'settings + 1' works */
 } __attribute__((aligned(4)));
 
@@ -20,6 +21,7 @@ struct spi_hooks
     int (*init)(struct spi_settings *settings, struct srtm_spi_init_payload *init);
     int (*transfer)(struct spi_settings *settings, srtm_response_t response, uint16_t bits_per_word, uint32_t speed_hz,
                     uint16_t len, uint8_t *tx_buf, uint8_t *rx_buf);
+    int (*set_mode)(struct spi_settings *settings, uint32_t mode);
     void (*suspend)(struct spi_settings *settings);
     void (*resume)(struct spi_settings *settings);
     size_t settings_size;

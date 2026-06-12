@@ -33,7 +33,7 @@
  ******************************************************************************/
 /* Protocol definition */
 #define SRTM_SPI_CATEGORY (0xf4U)
-#define SRTM_SPI_VERSION (0x0200U)
+#define SRTM_SPI_VERSION (0x0201U)
 
 static srtm_status_t SRTM_SPIService_Request(srtm_service_t service, srtm_request_t request);
 static srtm_status_t SRTM_SPIService_Notify(srtm_service_t service, srtm_notification_t notif);
@@ -46,6 +46,7 @@ typedef struct _srtm_spi_service
     /* Interfaces implemented for SPI */
     srtm_spi_init_t init;
     srtm_spi_transfer_t transfer;
+    srtm_spi_set_mode_t set_mode;
 } *srtm_spi_service_t;
 
 static srtm_status_t SRTM_SPIService_Init(srtm_spi_service_t handle, uint8_t busID, uint8_t *buf, uint16_t len)
@@ -65,7 +66,7 @@ static srtm_status_t SRTM_SPIService_Init(srtm_spi_service_t handle, uint8_t bus
     return status;
 }
 
-srtm_service_t SRTM_SPIService_Create(srtm_spi_init_t init, srtm_spi_transfer_t transfer)
+srtm_service_t SRTM_SPIService_Create(srtm_spi_init_t init, srtm_spi_transfer_t transfer, srtm_spi_set_mode_t set_mode)
 {
     srtm_spi_service_t handle;
 
@@ -75,6 +76,7 @@ srtm_service_t SRTM_SPIService_Create(srtm_spi_init_t init, srtm_spi_transfer_t 
 
     handle->init     = init;
     handle->transfer = transfer;
+    handle->set_mode = set_mode;
 
     SRTM_List_Init(&handle->service.node);
     handle->service.dispatcher = NULL;
@@ -127,6 +129,7 @@ static srtm_status_t SRTM_SPIService_Request(srtm_service_t service, srtm_reques
     srtm_response_t response;
     struct _srtm_spi_payload *spiReq;
     struct _srtm_spi_payload *spiResp;
+    uint32_t mode;
 
     assert(service->dispatcher);
 
@@ -148,6 +151,7 @@ static srtm_status_t SRTM_SPIService_Request(srtm_service_t service, srtm_reques
             responseLen = requestLen;
             break;
         case SRTM_SPI_CMD_INIT:
+        case SRTM_SPI_CMD_SET_MODE:
             break;
     }
 
@@ -200,6 +204,15 @@ retry_alloc:
             break;
         case SRTM_SPI_CMD_INIT:
             spiResp->retCode = SRTM_SPIService_Init(handle, spiResp->busID, spiReq->data, requestLen);
+            break;
+        case SRTM_SPI_CMD_SET_MODE:
+            if (spiReq->len != sizeof(mode))
+            {
+                spiResp->retCode = SRTM_Status_InvalidParameter;
+                goto out;
+            }
+            memcpy(&mode, spiReq->data, sizeof(uint32_t));
+            spiResp->retCode = handle->set_mode(spiReq->busID, mode);
             break;
 
         default:

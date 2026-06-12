@@ -82,6 +82,23 @@ out_fail:
     return SRTM_SPIService_SendResponse(spiService, response, ret);
 }
 
+static srtm_status_t APP_SPI_set_mode(uint8_t port_idx, uint32_t mode)
+{
+    struct spi_settings *settings = get_settings(port_idx, "set_mode");
+
+    if (!settings)
+    {
+        return SRTM_SPI_RETCODE_EINVAL;
+    }
+
+    if (!spi_hooks[settings->type]->set_mode)
+    {
+        return SRTM_SPI_RETCODE_UNSUPPORTED;
+    }
+
+    return spi_hooks[settings->type]->set_mode(settings, mode);
+}
+
 static uint8_t APP_SPI_init(uint8_t port_idx, struct srtm_spi_init_payload *init)
 {
     struct spi_settings *settings;
@@ -133,7 +150,7 @@ static uint8_t APP_SPI_init(uint8_t port_idx, struct srtm_spi_init_payload *init
 
 void APP_SPI_InitService(void)
 {
-    spiService = SRTM_SPIService_Create(APP_SPI_init, APP_SPI_transfer);
+    spiService = SRTM_SPIService_Create(APP_SPI_init, APP_SPI_transfer, APP_SPI_set_mode);
     SRTM_Dispatcher_RegisterService(disp, spiService);
 }
 

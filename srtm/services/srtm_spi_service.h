@@ -47,6 +47,7 @@ typedef enum
     /* SPI Service Request Command definition */
     SRTM_SPI_CMD_TRANSFER = 0U,
     SRTM_SPI_CMD_INIT,
+    SRTM_SPI_CMD_SET_MODE,
 } srtm_spi_cmd_t;
 
 typedef enum
@@ -67,15 +68,13 @@ struct srtm_spi_init_payload
             uint32_t sck_pin;
             uint32_t miso_pin;
             uint32_t mosi_pin;
-            // XXX chip select to be done out of band if required
-            // XXX modes (CPHA/CPOL, 3WIRE, LSB...) must be 0 for now
+            /* It exists to maintain compatibility, but it is not used. */
             uint32_t mode;
         } gpio;
         struct srtm_spi_init_lpspi_payload
         {
             uint32_t spi_index;
-            // XXX chip select to be done out of band if required
-            // XXX modes (CPHA/CPOL, 3WIRE, LSB...) must be 0 for now
+            /* It exists to maintain compatibility, but 0 is always passed. */
             uint32_t mode;
         } lpspi;
     };
@@ -119,6 +118,7 @@ struct _srtm_spi_service;
 typedef uint8_t (*srtm_spi_init_t)(uint8_t bus_id, struct srtm_spi_init_payload *init);
 typedef uint8_t (*srtm_spi_transfer_t)(srtm_response_t response, uint8_t bus_id, uint16_t bits_per_word,
                                        uint32_t speed_hz, uint16_t len, uint8_t *tx_buf, uint8_t *rx_buf);
+typedef uint8_t (*srtm_spi_set_mode_t)(uint8_t bus_id, uint32_t mode);
 
 /*******************************************************************************
  * API
@@ -132,7 +132,7 @@ extern "C" {
  * @param adapter SPI adapter to provide real SPI features.
  * @return SRTM service handle on success and NULL on failure.
  */
-srtm_service_t SRTM_SPIService_Create(srtm_spi_init_t init, srtm_spi_transfer_t transfer);
+srtm_service_t SRTM_SPIService_Create(srtm_spi_init_t init, srtm_spi_transfer_t transfer, srtm_spi_set_mode_t set_mode);
 
 /*!
  * @brief Destroy SPI service.
