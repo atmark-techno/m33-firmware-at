@@ -300,7 +300,7 @@ static srtm_status_t SRTM_AudioService_Request(srtm_service_t service, srtm_requ
             }
             else
             {
-                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: audio interface for channel 0x%x not found!\r\n",
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: audio interface for channel %#x not found!\r\n",
                                    __func__, request->channel);
                 audioRespBuf[1] = SRTM_AUDIO_RETURN_CODE_FAIL;
             }
@@ -682,7 +682,7 @@ static srtm_status_t SRTM_AudioService_Notify(srtm_service_t service, srtm_notif
         iface = SRTM_AudioService_FindInterfaceByChannel(handle, notif->channel);
         if (iface == NULL)
         {
-            SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: audio interface for channel 0x%x not found!\r\n", __func__,
+            SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_WARN, "%s: audio interface for channel %#x not found!\r\n", __func__,
                                notif->channel);
             status = SRTM_Status_ServiceNotFound;
         }
@@ -836,7 +836,7 @@ static srtm_status_t SRTM_AudioService_BindChannel(srtm_service_t service, srtm_
     srtm_audio_service_t handle = (srtm_audio_service_t)(void *)service;
 
     assert(service != NULL);
-    SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "%s(0x%x)\r\n", __func__, channel);
+    SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "%s(%#x)\r\n", __func__, channel);
 
     iface = SRTM_AudioService_FindInterfaceByAdapter(handle, sai);
     if (iface != NULL)

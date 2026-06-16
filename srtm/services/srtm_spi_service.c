@@ -186,8 +186,8 @@ retry_alloc:
     }
 
     SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO,
-                       "SRTM receive SPI request:cmd=%x, busID %d, bits_per_word %d, len %dr\n", command, spiReq->busID,
-                       spiReq->bits_per_word, spiReq->len);
+                       "SRTM receive SPI request:cmd=%#x, busID %d, bits_per_word %d, len %dr\n", command,
+                       spiReq->busID, spiReq->bits_per_word, spiReq->len);
     (void)memcpy(spiResp, spiReq, sizeof(struct _srtm_spi_payload));
     spiResp->len = responseLen;
 

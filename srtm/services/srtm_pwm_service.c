@@ -87,12 +87,12 @@ static srtm_status_t SRTM_PwmService_Request(srtm_service_t service, srtm_reques
     else
     {
         SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO,
-                           "SRTM receive PWM request: cmd = 0x%x, chipId = 0x%x, channelId = 0x%x,\
+                           "SRTM receive PWM request: cmd = %#x, chipId = %#x, channelId = %#x,\
                            period    = 0x%" PRIx64
                            ",\
                            dutyCycle = 0x%" PRIx64
-                           ", polarity = 0x%x,\
-                           enable = 0x%x\n",
+                           ", polarity = %#x,\
+                           enable = %#x\n",
                            command, pwmReq->chipId, pwmReq->channelId, pwmReq->period, pwmReq->dutyCycle,
                            pwmReq->polarity, pwmReq->enable);
         memcpy(pwmResp, pwmReq, sizeof(struct _srtm_pwm_payload));

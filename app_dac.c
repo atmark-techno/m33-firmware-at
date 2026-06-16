@@ -69,7 +69,7 @@ static srtm_status_t dac_set(uint8_t idx, uint32_t value)
     }
 
     if (value & (uint32_t)~DAC_DATA_DATA0_MASK)
-        PRINTF("dac_set: value 0x%x is too large so I round it down.\r\n", value);
+        PRINTF("dac_set: value %#x is too large so I round it down.\r\n", value);
 
     DAC12_SetData(handle->base, value);
     handle->lastData = value;
@@ -144,7 +144,7 @@ srtm_status_t dac_init(uint8_t idx, struct srtm_dac_init_data *init)
             return kStatus_Fail;
     }
 
-    PRINTF("DAC init: DAC %x, vref %d, cref %d, speed %d\r\n", idx, init->dac_vref, init->dac_cref, init->dac_speed);
+    PRINTF("DAC init: DAC %#x, vref %d, cref %d, speed %d\r\n", idx, init->dac_vref, init->dac_cref, init->dac_speed);
 
     struct dac_handle *handle = pvPortMalloc(sizeof(*handle));
     if (!handle)

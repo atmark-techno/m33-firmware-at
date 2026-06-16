@@ -636,7 +636,7 @@ static srtm_status_t APP_SRTM_LfclEventHandler(srtm_service_t service, srtm_peer
             PRINTF("\r\nAD entered active mode\r\n");
             break;
         default:
-            PRINTF("\r\n%s: %d unsupported event: 0x%x\r\n", __func__, __LINE__, event);
+            PRINTF("\r\n%s: %d unsupported event: %#x\r\n", __func__, __LINE__, event);
             break;
     }
 

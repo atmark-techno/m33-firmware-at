@@ -146,7 +146,7 @@ srtm_status_t adc_init(uint8_t idx, struct srtm_adc_init_payload *init)
             return kStatus_Fail;
     }
 
-    PRINTF("ADC %d init: ADC %x, chan %d, side %d, scale %d, average %d\r\n", idx, init->adc_index, init->adc_chan,
+    PRINTF("ADC %d init: ADC %#x, chan %d, side %d, scale %d, average %d\r\n", idx, init->adc_index, init->adc_chan,
            init->adc_side, init->adc_scale, init->adc_average);
 
     struct adc_handle *handle = pvPortMalloc(sizeof(handle));

@@ -283,7 +283,7 @@ retry_alloc:
     }
 
     SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO,
-                       "SRTM receive I2C request:cmd=%x, busID %d, slaveAddr 0x%x!, data %d bytes\r\n", command,
+                       "SRTM receive I2C request:cmd=%#x, busID %d, slaveAddr %#x!, data %d bytes\r\n", command,
                        i2cReq->busID, i2cReq->slaveAddr, i2cReq->len);
     (void)memcpy(i2cResp, i2cReq, sizeof(struct _srtm_i2c_payload));
     i2cResp->len = responseLen;

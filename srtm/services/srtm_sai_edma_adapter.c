@@ -1142,7 +1142,7 @@ static srtm_status_t SRTM_SaiEdmaAdapter_SetBuf(srtm_sai_adapter_t adapter, srtm
 #endif
     srtm_sai_edma_buf_runtime_t bufRtm = &rtm->bufRtm;
 
-    SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "%s: %s%d. buf [0x%x, 0x%x]; prd size 0x%x, idx %d\r\n", __func__,
+    SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "%s: %s%d. buf [%#x, %#x]; prd size %#x, idx %d\r\n", __func__,
                        saiDirection[dir], index, bufAddr, bufSize, periodSize, periodIdx);
 
     if (rtm->state != SRTM_AudioStateOpened)

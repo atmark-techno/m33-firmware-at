@@ -536,7 +536,7 @@ static int APP_CAN_init(srtm_can_init_params_t *params)
     {
         if (APP_IO_GetIndex(params->suspend_wakeup_gpio) == 0xffff)
         {
-            PRINTF("can: invalid wakeup gpio %x\r\n", params->suspend_wakeup_gpio);
+            PRINTF("can: invalid wakeup gpio %#x\r\n", params->suspend_wakeup_gpio);
             return kStatus_Fail;
         }
 
@@ -544,7 +544,7 @@ static int APP_CAN_init(srtm_can_init_params_t *params)
         uint8_t pinIdx  = APP_PIN_IDX(params->suspend_wakeup_gpio);
         if (APP_IO_GetWUUPin(gpioIdx, pinIdx) == 255)
         {
-            PRINTF("can: wakeup gpio %x has no WUU\r\n", params->suspend_wakeup_gpio);
+            PRINTF("can: wakeup gpio %#x has no WUU\r\n", params->suspend_wakeup_gpio);
             return kStatus_Fail;
         }
     }

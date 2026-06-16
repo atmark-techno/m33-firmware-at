@@ -57,7 +57,7 @@ static int32_t SRTM_RPMsgEndpoint_RxHandler(void *payload, uint32_t payload_len,
     SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR, "%s: RPMsg recv:\r\n\t", __func__);
     for (uint32_t i = 0U; i < payload_len; i++)
     {
-        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR, "%x ", ((uint8_t *)payload)[i]);
+        SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR, "%#x ", ((uint8_t *)payload)[i]);
     }
     SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR, "\r\n");
 #endif
@@ -148,7 +148,7 @@ static srtm_status_t SRTM_RPMsgEndpoint_SendData(srtm_channel_t channel, void *d
         SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR, "%s: RPMsg send:\r\n\t", __func__);
         for (uint32_t i = 0U; i < len; i++)
         {
-            SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR, "%x ", ((uint8_t *)data)[i]);
+            SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR, "%#x ", ((uint8_t *)data)[i]);
         }
         SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_ERROR, "\r\n");
 #endif

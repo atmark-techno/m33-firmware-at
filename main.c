@@ -225,32 +225,32 @@ __attribute__((optimize("O0"))) void HardFault_Handler_c(struct HardFaultStackFr
     {
         if (CFSR & SCB_CFSR_MMARVALID_Msk)
         {
-            sprintf(hardfault_buf, "MMFAR %lx\r\n", MMFAR);
+            sprintf(hardfault_buf, "MMFAR %#lx\r\n", MMFAR);
             DebugConsole_Emergency(hardfault_buf);
         }
         if (CFSR & SCB_CFSR_BFARVALID_Msk)
         {
-            sprintf(hardfault_buf, "BFAR %lx\r\n", BFAR);
+            sprintf(hardfault_buf, "BFAR %#lx\r\n", BFAR);
             DebugConsole_Emergency(hardfault_buf);
         }
         if (CFSR & SCB_CFSR_PRECISERR_Msk)
         {
             DebugConsole_Emergency("Stack frame:\r\n");
-            sprintf(hardfault_buf, "r0 %lx\r\n", frame->r0);
+            sprintf(hardfault_buf, "r0 %#lx\r\n", frame->r0);
             DebugConsole_Emergency(hardfault_buf);
-            sprintf(hardfault_buf, "r1 %lx\r\n", frame->r1);
+            sprintf(hardfault_buf, "r1 %#lx\r\n", frame->r1);
             DebugConsole_Emergency(hardfault_buf);
-            sprintf(hardfault_buf, "r2 %lx\r\n", frame->r2);
+            sprintf(hardfault_buf, "r2 %#lx\r\n", frame->r2);
             DebugConsole_Emergency(hardfault_buf);
-            sprintf(hardfault_buf, "r3 %lx\r\n", frame->r3);
+            sprintf(hardfault_buf, "r3 %#lx\r\n", frame->r3);
             DebugConsole_Emergency(hardfault_buf);
-            sprintf(hardfault_buf, "r12 %lx\r\n", frame->r12);
+            sprintf(hardfault_buf, "r12 %#lx\r\n", frame->r12);
             DebugConsole_Emergency(hardfault_buf);
-            sprintf(hardfault_buf, "lr %lx\r\n", frame->lr);
+            sprintf(hardfault_buf, "lr %#lx\r\n", frame->lr);
             DebugConsole_Emergency(hardfault_buf);
-            sprintf(hardfault_buf, "return_address %lx\r\n", frame->return_address);
+            sprintf(hardfault_buf, "return_address %#lx\r\n", frame->return_address);
             DebugConsole_Emergency(hardfault_buf);
-            sprintf(hardfault_buf, "xpsr %lx\r\n", frame->xpsr);
+            sprintf(hardfault_buf, "xpsr %#lx\r\n", frame->xpsr);
             DebugConsole_Emergency(hardfault_buf);
         }
         if (CFSR & SCB_CFSR_DIVBYZERO_Msk)
@@ -679,7 +679,7 @@ void WUU0_IRQHandler(void)
     uint32_t pinsFlag;
 
     // MF 2 = LPTMR1, PF = pins (as per wuu index)
-    PRINTF("WUU IRQ (MF %lx / PF %lx)\r\n", WUU0->MF, WUU0->PF);
+    PRINTF("WUU IRQ (MF %#lx / PF %#lx)\r\n", WUU0->MF, WUU0->PF);
 
     if (WUU_GetInternalWakeupModuleFlag(WUU0, WUU_MODULE_LPTMR1))
     {
@@ -760,7 +760,7 @@ void BBNSM_IRQHandler(void)
 
     if (!(flags & kBBNSM_RTC_AlarmInterruptFlag))
     {
-        PRINTF("BBNSM IRQ unhandled flags: %lx\r\n", flags);
+        PRINTF("BBNSM IRQ unhandled flags: %#lx\r\n", flags);
         /* Note: we must leave Alarm flag set for the srtm handler below,
          * so only reset unknown flags */
         BBNSM_ClearStatusFlags(BBNSM, flags);
@@ -973,7 +973,7 @@ static void HandleSuspendTask(void *pvParameters)
             }
             if (s_wakeupPinFlag)
             {
-                PRINTF("Wake up from WUU_Pn 0x%lx\r\n", s_wakeupPinFlag);
+                PRINTF("Wake up from WUU_Pn %#lx\r\n", s_wakeupPinFlag);
             }
             s_wakeupPinFlag = 0;
         }
@@ -1134,11 +1134,11 @@ int main(void)
     {
         if (srs & CMC_SRS_SRR_MASK)
         {
-            PRINTF("Reset cause (%lx) was not POR, but SRR bit is set so ignoring (workaround bootloop)\r\n", srs);
+            PRINTF("Reset cause (%#lx) was not POR, but SRR bit is set so ignoring (workaround bootloop)\r\n", srs);
         }
         else
         {
-            PRINTF("Reset cause not POR (%lx), resetting PMIC\r\n", srs);
+            PRINTF("Reset cause not POR (%#lx), resetting PMIC\r\n", srs);
             /* XXX try to remember somewhere we failed for uboot to log wdt... */
             PMIC_Reset();
         }

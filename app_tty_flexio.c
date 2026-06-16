@@ -365,7 +365,7 @@ static int flexio_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
 
     if (settings->state & TTY_SUSPENDED)
     {
-        PRINTF("tty %d write while not ready (state %x)\r\n", settings->port_idx, settings->state);
+        PRINTF("tty %d write while not ready (state %#x)\r\n", settings->port_idx, settings->state);
         return kStatus_Fail;
     }
 
@@ -384,14 +384,14 @@ static int flexio_setcflag(struct tty_settings *settings, tcflag_t cflag)
 
     if (settings->state & TTY_SUSPENDED)
     {
-        PRINTF("tty %d setcflags while not ready (state %x)\r\n", settings->port_idx, settings->state);
+        PRINTF("tty %d setcflags while not ready (state %#x)\r\n", settings->port_idx, settings->state);
         return kStatus_Fail;
     }
 
     /* only support (8,n,1) */
     if ((cflag & (PARENB | CSTOPB)) || ((cflag & CSIZE) != CS8))
     {
-        PRINTF("Invalid cflag: 0x%x\r\n", cflag);
+        PRINTF("Invalid cflag: %#x\r\n", cflag);
         return kStatus_Fail;
     }
 
@@ -456,7 +456,7 @@ static int flexio_init(struct tty_settings *settings, struct srtm_tty_init_paylo
     struct srtm_tty_init_flexio_payload *init = &generic_init->flexio;
     int rc;
 
-    PRINTF("initializing tty %d as FLEXIO %x\r\n", settings->port_idx, init->flexio_index);
+    PRINTF("initializing tty %d as FLEXIO %#x\r\n", settings->port_idx, init->flexio_index);
 
     switch (init->flexio_index)
     {
@@ -501,7 +501,7 @@ static int flexio_init(struct tty_settings *settings, struct srtm_tty_init_paylo
     {
         if (APP_IO_GetIndex(flexio->suspend_wakeup_gpio) == 0xffff)
         {
-            PRINTF("tty %d: invalid wakeup gpio %x\r\n", settings->port_idx, flexio->suspend_wakeup_gpio);
+            PRINTF("tty %d: invalid wakeup gpio %#x\r\n", settings->port_idx, flexio->suspend_wakeup_gpio);
             return kStatus_Fail;
         }
 
@@ -509,7 +509,7 @@ static int flexio_init(struct tty_settings *settings, struct srtm_tty_init_paylo
         uint8_t pinIdx  = APP_PIN_IDX(flexio->suspend_wakeup_gpio);
         if (APP_IO_GetWUUPin(gpioIdx, pinIdx) == 255)
         {
-            PRINTF("tty %d: wakeup gpio %x has no WUU\r\n", settings->port_idx, flexio->suspend_wakeup_gpio);
+            PRINTF("tty %d: wakeup gpio %#x has no WUU\r\n", settings->port_idx, flexio->suspend_wakeup_gpio);
             return kStatus_Fail;
         }
     }

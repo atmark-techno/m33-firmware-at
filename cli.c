@@ -354,7 +354,7 @@ static int CLI_memwrite(int argc, char **argv)
     }
     if (size < 8 && value >= (1ULL << (size * 8)))
     {
-        PRINTF("%llx too big\r\n", value);
+        PRINTF("%#llx too big\r\n", value);
         return 1;
     }
 

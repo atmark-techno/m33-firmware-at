@@ -91,14 +91,15 @@ static int lpuart_tx(struct tty_settings *settings, uint8_t *buf, uint16_t len)
 
     if (settings->state & TTY_SUSPENDED)
     {
-        PRINTF("tty %d write while not ready (state %x)\r\n", settings->port_idx, settings->state);
+        PRINTF("tty %d write while not ready (state %#x)\r\n", settings->port_idx, settings->state);
         return kStatus_Fail;
     }
 
     rc = LPUART_RTOS_Send(&lpuart->lpuart_rtos_handle, buf, len);
     if (rc)
     {
-        PRINTF("%d send fail for buf len %d, first byte %x: %d\r\n", settings->port_idx, len, len > 0 ? buf[0] : 0, rc);
+        PRINTF("%d send fail for buf len %d, first byte %#x: %d\r\n", settings->port_idx, len, len > 0 ? buf[0] : 0,
+               rc);
     }
     return rc;
 }
@@ -123,7 +124,7 @@ static int settermios(struct tty_settings *settings, struct ktermios *termios)
      */
     if (parity == kLPUART_ParityDisabled && databits == kLPUART_SevenDataBits)
     {
-        PRINTF("Invalid cflag: 0x%x\r\n", cflag);
+        PRINTF("Invalid cflag: %#x\r\n", cflag);
         return kStatus_Fail;
     }
 
@@ -163,7 +164,7 @@ static int lpuart_setcflag(struct tty_settings *settings, tcflag_t cflag)
 {
     if (settings->state & TTY_SUSPENDED)
     {
-        PRINTF("tty %d setcflags while not ready (state %x)\r\n", settings->port_idx, settings->state);
+        PRINTF("tty %d setcflags while not ready (state %#x)\r\n", settings->port_idx, settings->state);
         return kStatus_Fail;
     }
 
@@ -292,7 +293,7 @@ static int lpuart_init(struct tty_settings *settings, struct srtm_tty_init_paylo
     struct srtm_tty_init_lpuart_payload *init = &generic_init->lpuart;
     int rc;
 
-    PRINTF("initializing tty %d as LPUART %x\r\n", settings->port_idx, init->uart_index);
+    PRINTF("initializing tty %d as LPUART %#x\r\n", settings->port_idx, init->uart_index);
 
     switch (init->uart_index)
     {
@@ -328,14 +329,14 @@ static int lpuart_init(struct tty_settings *settings, struct srtm_tty_init_paylo
 
     if (lpuart->rs485_flags && APP_IO_GetIndex(lpuart->rs485_de_gpio) == 0xffff)
     {
-        PRINTF("tty %d: invalid rs485_de gpio %x\r\n", settings->port_idx, lpuart->rs485_de_gpio);
+        PRINTF("tty %d: invalid rs485_de gpio %#x\r\n", settings->port_idx, lpuart->rs485_de_gpio);
         return kStatus_Fail;
     }
     if (lpuart->suspend_wakeup_gpio != -1)
     {
         if (APP_IO_GetIndex(lpuart->suspend_wakeup_gpio) == 0xffff)
         {
-            PRINTF("tty %d: invalid wakeup gpio %x\r\n", settings->port_idx, lpuart->suspend_wakeup_gpio);
+            PRINTF("tty %d: invalid wakeup gpio %#x\r\n", settings->port_idx, lpuart->suspend_wakeup_gpio);
             return kStatus_Fail;
         }
 
@@ -343,7 +344,7 @@ static int lpuart_init(struct tty_settings *settings, struct srtm_tty_init_paylo
         uint8_t pinIdx  = APP_PIN_IDX(lpuart->suspend_wakeup_gpio);
         if (APP_IO_GetWUUPin(gpioIdx, pinIdx) == 255)
         {
-            PRINTF("tty %d: wakeup gpio %x has no WUU\r\n", settings->port_idx, lpuart->suspend_wakeup_gpio);
+            PRINTF("tty %d: wakeup gpio %#x has no WUU\r\n", settings->port_idx, lpuart->suspend_wakeup_gpio);
             return kStatus_Fail;
         }
     }
@@ -411,7 +412,7 @@ static int lpuart_1wire_tx(struct tty_settings *settings, uint8_t *buf, uint16_t
 
     if (settings->state & TTY_SUSPENDED)
     {
-        PRINTF("tty %d write while not ready (state %x)\r\n", settings->port_idx, settings->state);
+        PRINTF("tty %d write while not ready (state %#x)\r\n", settings->port_idx, settings->state);
         return kStatus_Fail;
     }
 
@@ -429,7 +430,8 @@ static int lpuart_1wire_tx(struct tty_settings *settings, uint8_t *buf, uint16_t
     lpuart->uart_base->CTRL |= LPUART_CTRL_RE_MASK;
     if (rc)
     {
-        PRINTF("%d send fail for buf len %d, first byte %x: %d\r\n", settings->port_idx, len, len > 0 ? buf[0] : 0, rc);
+        PRINTF("%d send fail for buf len %d, first byte %#x: %d\r\n", settings->port_idx, len, len > 0 ? buf[0] : 0,
+               rc);
     }
     return rc;
 }

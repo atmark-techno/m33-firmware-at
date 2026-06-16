@@ -252,7 +252,7 @@ int APP_GPIO_PinctrlSet(uint32_t pinctrl0, uint32_t pinctrl1, uint32_t pinctrl2,
     return 0;
 
 inval:
-    PRINTF("PinctrlSet first value (%x) does not look valid (%d/%d)\r\n", pinctrl0, gpioIdx, pinIdx);
+    PRINTF("PinctrlSet first value (%#x) does not look valid (%d/%d)\r\n", pinctrl0, gpioIdx, pinIdx);
     return -EINVAL;
 }
 
@@ -327,7 +327,7 @@ static srtm_status_t APP_IO_PinctrlSet(srtm_service_t service, srtm_peercore_t c
 
     if (pinFuncId[index][0] != pinctrl[0])
     {
-        PRINTF("pinctrl %d/%d first value %x did not match expected %x\r\n", gpioIdx, pinIdx, pinctrl[0],
+        PRINTF("pinctrl %d/%d first value %#x did not match expected %#x\r\n", gpioIdx, pinIdx, pinctrl[0],
                pinFuncId[index][0]);
         return -EINVAL;
     }
@@ -349,7 +349,7 @@ static srtm_status_t APP_IO_OutputInit(srtm_service_t service, srtm_peercore_t c
 
     if (!APP_IO_PinIsGPIO(ioId))
     {
-        PRINTF("Refusing to configure non-GPIO pin %x as output (val %d)\r\n", ioId, ioValue);
+        PRINTF("Refusing to configure non-GPIO pin %#x as output (val %d)\r\n", ioId, ioValue);
         return SRTM_Status_Error;
     }
 
@@ -375,7 +375,7 @@ static srtm_status_t APP_IO_InputGet(srtm_service_t service, srtm_peercore_t cor
 
     if (!APP_IO_PinIsGPIO(ioId))
     {
-        PRINTF("Refusing to get non-GPIO pin %x value\r\n", ioId);
+        PRINTF("Refusing to get non-GPIO pin %#x value\r\n", ioId);
         return SRTM_Status_Error;
     }
 
@@ -395,7 +395,7 @@ static srtm_status_t APP_IO_OutputSet(srtm_service_t service, srtm_peercore_t co
 
     if (!APP_IO_PinIsGPIO(ioId))
     {
-        PRINTF("Refusing to set non-GPIO pin %x (val %d)\r\n", ioId, ioValue);
+        PRINTF("Refusing to set non-GPIO pin %#x (val %d)\r\n", ioId, ioValue);
         return SRTM_Status_Error;
     }
 
@@ -415,7 +415,7 @@ static srtm_status_t APP_IO_ConfInput(uint16_t ioId, srtm_io_event_t event, bool
 
     if (gpioIdx >= APP_IO_CHIPS || pinIdx >= APP_IO_PINS_PER_CHIP || inputIdx >= APP_IO_NUM)
     {
-        PRINTF("Invalid pin 0x%x\r\n", ioId);
+        PRINTF("Invalid pin %#x\r\n", ioId);
         return SRTM_Status_Error;
     }
     if (wakeup && wuuIdx == 255)
@@ -425,7 +425,7 @@ static srtm_status_t APP_IO_ConfInput(uint16_t ioId, srtm_io_event_t event, bool
     }
     if (!APP_IO_PinIsGPIO(ioId))
     {
-        PRINTF("Refusing to configure non-GPIO pin %x as input\r\n", ioId);
+        PRINTF("Refusing to configure non-GPIO pin %#x as input\r\n", ioId);
         return SRTM_Status_Error;
     }
     if (wakeup)

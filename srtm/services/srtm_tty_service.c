@@ -236,7 +236,7 @@ static srtm_status_t SRTM_TtyService_Request(srtm_service_t service, srtm_reques
             {
                 uint32_t mask_n_flag;
                 memcpy(&mask_n_flag, &payload->cflag, sizeof(mask_n_flag));
-                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_DEBUG, "tty %d set mask_n_flag 0x%x\r\n", port_idx, mask_n_flag);
+                SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_DEBUG, "tty %d set mask_n_flag %#x\r\n", port_idx, mask_n_flag);
                 status  = handle->control(port_idx, mask_n_flag);
                 retCode = MIN(status, 255);
             }

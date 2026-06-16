@@ -116,7 +116,7 @@ static int APP_TTY_activate(uint8_t port_idx, bool active)
 
     if (((active && (settings->state & TTY_ACTIVE)) || ((!active && !(settings->state & TTY_ACTIVE)))))
     {
-        PRINTF("active state re-set ? (active %d, state %x)\r\n", active, settings->state);
+        PRINTF("active state re-set ? (active %d, state %#x)\r\n", active, settings->state);
         return kStatus_Success;
     }
 
