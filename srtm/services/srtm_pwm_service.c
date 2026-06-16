@@ -40,7 +40,7 @@ typedef struct _srtm_pwm_service
 {
     struct _srtm_service service;
     srtm_pwm_adapter_t adapter;
-} * srtm_pwm_service_t;
+} *srtm_pwm_service_t;
 
 /*******************************************************************************
  * Code

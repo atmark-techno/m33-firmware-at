@@ -49,7 +49,7 @@ typedef struct _srtm_tty_service
     srtm_tty_service_activate_t activate;
     srtm_tty_service_control_t control;
     srtm_channel_t channel;
-} * srtm_tty_service_t;
+} *srtm_tty_service_t;
 
 #if !(defined(RL_ALLOW_CUSTOM_SHMEM_CONFIG) && (RL_ALLOW_CUSTOM_SHMEM_CONFIG == 1))
 #define RS485_LPUART_BUFFER_LENGTH (RL_BUFFER_PAYLOAD_SIZE)

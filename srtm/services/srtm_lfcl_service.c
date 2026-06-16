@@ -56,7 +56,7 @@ typedef struct _srtm_lfcl_callback
     srtm_list_t node;
     srtm_lfcl_service_cb_t callback;
     void *param;
-} * srtm_lfcl_callback_t;
+} *srtm_lfcl_callback_t;
 
 /* Service handle */
 typedef struct _srtm_lfcl_service
@@ -67,7 +67,7 @@ typedef struct _srtm_lfcl_service
 #if defined(SRTM_STATIC_API) && SRTM_STATIC_API
     srtm_mutex_buf_t mutexStatic;
 #endif
-} * srtm_lfcl_service_t;
+} *srtm_lfcl_service_t;
 
 /*******************************************************************************
  * Prototypes

@@ -47,7 +47,7 @@ typedef struct _srtm_i2c_service
 {
     struct _srtm_service service;
     srtm_i2c_adapter_t adapter;
-} * srtm_i2c_service_t;
+} *srtm_i2c_service_t;
 
 static srtm_status_t SRTM_I2CService_Request(srtm_service_t service, srtm_request_t request);
 static srtm_status_t SRTM_I2CService_Notify(srtm_service_t service, srtm_notification_t notif);

@@ -34,7 +34,7 @@ typedef struct _srtm_rpmsg_endpoint
     srtm_rpmsg_endpoint_rx_cb_t rxCallback;
     void *rxCallbackParam;
     bool started;
-} * srtm_rpmsg_endpoint_t;
+} *srtm_rpmsg_endpoint_t;
 
 /*******************************************************************************
  * Prototypes

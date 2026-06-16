@@ -40,7 +40,7 @@ typedef struct _srtm_adc_service
 {
     struct _srtm_service service;
     srtm_adc_adapter_t adapter;
-} * srtm_adc_service_t;
+} *srtm_adc_service_t;
 
 /*******************************************************************************
  * Code

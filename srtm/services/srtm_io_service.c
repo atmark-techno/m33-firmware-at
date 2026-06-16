@@ -53,7 +53,7 @@ typedef struct _srtm_io_service
     srtm_io_service_pinctrl_set_t pinctrlSet;
     int pin_count;
     srtm_channel_t channel;
-} * srtm_io_service_t;
+} *srtm_io_service_t;
 
 SRTM_PACKED_BEGIN struct _srtm_io_payload
 {

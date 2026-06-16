@@ -43,7 +43,7 @@ typedef struct _srtm_wdog_service
     srtm_wdog_service_enable_t enableCb;
     srtm_wdog_service_ping_t pingCb;
     srtm_channel_t channel;
-} * srtm_wdog_service_t;
+} *srtm_wdog_service_t;
 
 enum wdog_rpmsg_command
 {

@@ -94,12 +94,11 @@ hal_pwm_status_t HAL_PwmSetupPwm(hal_pwm_handle_t halPwmHandle, uint8_t channel,
     assert(channel <= (uint8_t)kTPM_Chnl_7);
     assert(halPwmState->instance < (sizeof(s_tpmBase) / sizeof(s_tpmBase[0])));
     assert(setupConfig);
-    tpm_chnl_pwm_signal_param_t pwmChannelConfig = {
-        .chnlNumber     = (tpm_chnl_t)channel,
-        .level          = (tpm_pwm_level_select_t)setupConfig->level,
-        .dutyCycleRatio = setupConfig->dutyCycleRatio,
+    tpm_chnl_pwm_signal_param_t pwmChannelConfig = { .chnlNumber     = (tpm_chnl_t)channel,
+                                                     .level          = (tpm_pwm_level_select_t)setupConfig->level,
+                                                     .dutyCycleRatio = setupConfig->dutyCycleRatio,
 #if defined(FSL_FEATURE_TPM_HAS_COMBINE) && FSL_FEATURE_TPM_HAS_COMBINE
-        .firstEdgeDelayRatio = 0
+                                                     .firstEdgeDelayRatio = 0
 #endif
     };
 

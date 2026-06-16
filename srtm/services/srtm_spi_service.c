@@ -46,7 +46,7 @@ typedef struct _srtm_spi_service
     /* Interfaces implemented for SPI */
     srtm_spi_init_t init;
     srtm_spi_transfer_t transfer;
-} * srtm_spi_service_t;
+} *srtm_spi_service_t;
 
 static srtm_status_t SRTM_SPIService_Init(srtm_spi_service_t handle, uint8_t busID, uint8_t *buf, uint16_t len)
 {

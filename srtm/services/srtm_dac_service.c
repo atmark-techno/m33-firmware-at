@@ -41,7 +41,7 @@ typedef struct _srtm_dac_service
 {
     struct _srtm_service service;
     srtm_dac_adapter_t adapter;
-} * srtm_dac_service_t;
+} *srtm_dac_service_t;
 
 /*******************************************************************************
  * Code

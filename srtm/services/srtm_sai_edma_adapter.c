@@ -36,7 +36,7 @@ typedef struct _srtm_sai_edma_buf_runtime
     uint32_t remainingPeriods; /* periods to be consumed/filled */
     uint32_t remainingLoadPeriods; /* periods to be preloaded either to DMA transfer or to local buffer. */
     uint32_t offset;               /* period offset to copy */
-} * srtm_sai_edma_buf_runtime_t;
+} *srtm_sai_edma_buf_runtime_t;
 
 #if SRTM_SAI_EDMA_LOCAL_BUF_ENABLE
 struct _srtm_sai_edma_local_period
@@ -84,7 +84,7 @@ typedef struct _srtm_sai_edma_runtime
 #if SRTM_SAI_EDMA_CONFIG_RX_ENABLE
     void *dataCallbackParam; /* Callback function argument to be passed back to application */
 #endif
-} * srtm_sai_edma_runtime_t;
+} *srtm_sai_edma_runtime_t;
 
 /* SAI EDMA adapter */
 typedef struct _srtm_sai_edma_adapter
@@ -104,7 +104,7 @@ typedef struct _srtm_sai_edma_adapter
     struct _srtm_sai_edma_runtime rxRtm;
 #endif
 
-} * srtm_sai_edma_adapter_t;
+} *srtm_sai_edma_adapter_t;
 
 /*******************************************************************************
  * Prototypes
@@ -134,7 +134,7 @@ void SRTM_SaiEdmaAdapter_GetAudioServiceState(srtm_sai_adapter_t adapter, srtm_a
 #if SRTM_SAI_EDMA_CONFIG_RX_ENABLE
     *pRxState = handle->rxRtm.state;
 #else
-    *pRxState                   = SRTM_AudioStateClosed;
+    *pRxState = SRTM_AudioStateClosed;
 #endif
 }
 
@@ -775,8 +775,8 @@ static srtm_status_t SRTM_SaiEdmaAdapter_Start(srtm_sai_adapter_t adapter, srtm_
     uint32_t *threshold = dir == SRTM_AudioDirTx ? &handle->txConfig.threshold : &handle->rxConfig.threshold;
     uint32_t *guardTime = dir == SRTM_AudioDirTx ? &handle->txConfig.guardTime : &handle->rxConfig.guardTime;
 #else
-    uint32_t *threshold         = &handle->txConfig.threshold;
-    uint32_t *guardTime         = &handle->txConfig.guardTime;
+    uint32_t *threshold = &handle->txConfig.threshold;
+    uint32_t *guardTime = &handle->txConfig.guardTime;
 #endif
 
     uint32_t guardPeroids;
@@ -1188,8 +1188,8 @@ static srtm_status_t SRTM_SaiEdmaAdapter_Suspend(srtm_sai_adapter_t adapter, srt
         thisCfg = &handle->rxConfig;
     }
 #else
-    thisRtm                     = &handle->txRtm;
-    thisCfg                     = &handle->txConfig;
+    thisRtm = &handle->txRtm;
+    thisCfg = &handle->txConfig;
 #endif
 
     if (thisRtm->state == SRTM_AudioStateStarted && thisCfg->stopOnSuspend)
@@ -1239,7 +1239,7 @@ static srtm_status_t SRTM_SaiEdmaAdapter_Resume(srtm_sai_adapter_t adapter, srtm
         thisRtm = &handle->rxRtm;
     }
 #else
-    thisRtm                     = &handle->txRtm;
+    thisRtm = &handle->txRtm;
 #endif
 
     if (thisRtm->stoppedOnSuspend)

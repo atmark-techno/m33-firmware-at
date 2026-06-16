@@ -45,7 +45,7 @@ typedef struct _srtm_can_service
     srtm_can_service_init_t init;
     srtm_can_service_set_wake_t setWake;
     srtm_channel_t channel;
-} * srtm_can_service_t;
+} *srtm_can_service_t;
 
 #define CAN_MTU_MAX MAX(CAN_MTU, CANFD_MTU)
 #define CAN_OPEN_PARAMS_SIZE (sizeof(struct _srtm_can_open_params))

@@ -20,24 +20,20 @@
 #define SYSTICK_HANDLER LPTMR0_IRQHandler
 #define SYSTICK_CLOCK_NAME kCLOCK_Lptmr0
 
-#define IN_REG_CFG(v, m)          \
-    {                             \
-        .volt = (v), .mode = (m), \
+#define IN_REG_CFG(v, m) \
+    {                    \
+        .volt = (v),     \
+        .mode = (m),     \
     }
 
-#define PMIC_CFG(v, m)            \
-    {                             \
-        .volt = (v), .mode = (m), \
+#define PMIC_CFG(v, m) \
+    {                  \
+        .volt = (v),   \
+        .mode = (m),   \
     }
-#define PAD_CFG(c, r, t)                                       \
-    {                                                          \
-        .pad_close = (c), .pad_reset = (r), .pad_tqsleep = (t) \
-    }
-#define MON_CFG(hvd_en, lvd_en, lvdlvl)                                        \
-    {                                                                          \
-        .mon_hvd_en = (hvd_en), .mon_lvd_en = (lvd_en), .mon_lvdlvl = (lvdlvl) \
-    }
-#define BIAS_CFG(m, n, p, mbias)   \
+#define PAD_CFG(c, r, t) { .pad_close = (c), .pad_reset = (r), .pad_tqsleep = (t) }
+#define MON_CFG(hvd_en, lvd_en, lvdlvl) { .mon_hvd_en = (hvd_en), .mon_lvd_en = (lvd_en), .mon_lvdlvl = (lvdlvl) }
+#define BIAS_CFG(m, n, p, mbias) \
     {                              \
         .dombias_cfg =           \
             {                    \
@@ -51,13 +47,16 @@
     {                     \
         .lpm_mode = (m),  \
     }
-#define SWT_BOARD(swt_on, msk)         \
-    {                                  \
-        .on = (swt_on), .mask = (msk), \
+#define SWT_BOARD(swt_on, msk) \
+    {                          \
+        .on   = (swt_on),      \
+        .mask = (msk),         \
     }
-#define SWT_MEM(a, p, m)                         \
-    {                                            \
-        .array = (a), .perif = (p), .mask = (m), \
+#define SWT_MEM(a, p, m) \
+    {                    \
+        .array = (a),    \
+        .perif = (p),    \
+        .mask  = (m),    \
     }
 
 // clang-format off
