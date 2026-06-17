@@ -1,3 +1,9 @@
+1.10
+====
+- spi: support SPI_CPHA, SPI_CPOL, and SPI_CS_HIGH
+
+  -- 2026-06-17
+
 1.9
 ===
 - no need to reset if booting from ONOFF button
