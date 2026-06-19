@@ -181,6 +181,7 @@ static int spi_gpio_transfer(struct spi_settings *settings, srtm_response_t resp
     // tx_buffer is gone when we return here, copy to rx_buffer (that stays) which will be overwritten
     memcpy(rx_buf, tx_buf, len);
     spi_xfer_buf           = rx_buf;
+    spi_xfer_mode          = settings->mode;
     spi_xfer_bits_per_word = bits_per_word;
     spi_xfer_len           = len;
     spi_xfer_response      = response;
@@ -192,7 +193,7 @@ static int spi_gpio_transfer(struct spi_settings *settings, srtm_response_t resp
 
 static int spi_gpio_set_mode(struct spi_settings *settings, uint32_t mode)
 {
-    spi_xfer_mode = mode;
+    settings->mode = mode;
     return 0;
 }
 
@@ -225,6 +226,7 @@ static int spi_gpio_init(struct spi_settings *settings, struct srtm_spi_init_pay
     /* we use SPI_MODE_0 so init to 0 (start of transfer will set clk to 1) */
     APP_GPIO_SetupGPIO_Output(APP_IO_SPLIT_ID(init->sck_pin), 0);
     APP_GPIO_SetupGPIO_Output(APP_IO_SPLIT_ID(init->mosi_pin), 0);
+    settings->mode = init->mode;
 
     /* only init once */
     if (spi_xfer_sem == NULL)
