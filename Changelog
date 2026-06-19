@@ -1,3 +1,9 @@
+1.10.1
+======
+- spi gpio: remember mode per adapter
+
+  -- 2026-06-19
+
 1.10
 ====
 - spi: support SPI_CPHA, SPI_CPOL, and SPI_CS_HIGH
