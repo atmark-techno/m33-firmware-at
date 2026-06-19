@@ -33,7 +33,7 @@
  ******************************************************************************/
 /* Protocol definition */
 #define SRTM_SPI_CATEGORY (0xf4U)
-#define SRTM_SPI_VERSION (0x0201U)
+#define SRTM_SPI_VERSION (0x0202U)
 
 static srtm_status_t SRTM_SPIService_Request(srtm_service_t service, srtm_request_t request);
 static srtm_status_t SRTM_SPIService_Notify(srtm_service_t service, srtm_notification_t notif);
@@ -148,6 +148,7 @@ static srtm_status_t SRTM_SPIService_Request(srtm_service_t service, srtm_reques
     switch (command)
     {
         case SRTM_SPI_CMD_TRANSFER:
+        case SRTM_SPI_CMD_TRANSFER_CONTINUOUS:
             responseLen = requestLen;
             break;
         case SRTM_SPI_CMD_INIT:
@@ -200,7 +201,12 @@ retry_alloc:
         case SRTM_SPI_CMD_TRANSFER:
             /* transfer is responsible for sending response as it can be async to avoid holding task */
             return handle->transfer(response, spiReq->busID, spiReq->bits_per_word, spiReq->speed_hz, spiReq->len,
-                                    spiReq->data, spiResp->data);
+                                    spiReq->data, spiResp->data, false);
+            break;
+        case SRTM_SPI_CMD_TRANSFER_CONTINUOUS:
+            /* transfer is responsible for sending response as it can be async to avoid holding task */
+            return handle->transfer(response, spiReq->busID, spiReq->bits_per_word, spiReq->speed_hz, spiReq->len,
+                                    spiReq->data, spiResp->data, true);
             break;
         case SRTM_SPI_CMD_INIT:
             spiResp->retCode = SRTM_SPIService_Init(handle, spiResp->busID, spiReq->data, requestLen);

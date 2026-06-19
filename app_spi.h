@@ -20,7 +20,7 @@ struct spi_hooks
 {
     int (*init)(struct spi_settings *settings, struct srtm_spi_init_payload *init);
     int (*transfer)(struct spi_settings *settings, srtm_response_t response, uint16_t bits_per_word, uint32_t speed_hz,
-                    uint16_t len, uint8_t *tx_buf, uint8_t *rx_buf);
+                    uint16_t len, uint8_t *tx_buf, uint8_t *rx_buf, bool continuous);
     int (*set_mode)(struct spi_settings *settings, uint32_t mode);
     void (*suspend)(struct spi_settings *settings);
     void (*resume)(struct spi_settings *settings);

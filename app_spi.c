@@ -55,7 +55,8 @@ static struct spi_settings *get_settings(uint8_t port_idx, const char *caller)
 }
 
 static srtm_status_t APP_SPI_transfer(srtm_response_t response, uint8_t port_idx, uint16_t bits_per_word,
-                                      uint32_t speed_hz, uint16_t len, uint8_t *tx_buf, uint8_t *rx_buf)
+                                      uint32_t speed_hz, uint16_t len, uint8_t *tx_buf, uint8_t *rx_buf,
+                                      bool continuous)
 {
     struct spi_settings *settings = get_settings(port_idx, "transfer");
     uint8_t ret                   = 0;
@@ -72,7 +73,8 @@ static srtm_status_t APP_SPI_transfer(srtm_response_t response, uint8_t port_idx
         goto out_fail;
     }
 
-    ret = spi_hooks[settings->type]->transfer(settings, response, bits_per_word, speed_hz, len, tx_buf, rx_buf);
+    ret = spi_hooks[settings->type]->transfer(settings, response, bits_per_word, speed_hz, len, tx_buf, rx_buf,
+                                              continuous);
     if (ret)
         goto out_fail;
 

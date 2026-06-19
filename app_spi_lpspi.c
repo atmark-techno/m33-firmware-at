@@ -39,6 +39,7 @@ struct spi_lpspi_settings
     srtm_response_t response;
 
     bool transmit_in_progress;
+    bool has_pending_transfer;
 };
 
 static struct spi_lpspi_settings *get_spi_lpspi(struct spi_settings *settings)
@@ -61,8 +62,12 @@ static void spi_lpspi_callback(LPSPI_Type *base, lpspi_master_handle_t *handle, 
         __NOP();
     }
 
-    spi_lpspi_reset(spi);
+    /* Do not reset if there is a pending transfer, to keep the chip select asserted. */
+    if (!spi->has_pending_transfer || (status != kStatus_Success))
+        spi_lpspi_reset(spi);
     SRTM_SPIService_SendResponse(spiService, spi->response, status);
+    if (spi->has_pending_transfer && (status != kStatus_Success))
+        spi->has_pending_transfer = false;
     spi->transmit_in_progress = false;
 }
 
@@ -94,7 +99,7 @@ static void spi_lpspi_setup_transfer(struct spi_lpspi_settings *spi, uint32_t mo
 }
 
 static int spi_lpspi_transfer(struct spi_settings *settings, srtm_response_t response, uint16_t bits_per_word,
-                              uint32_t speed_hz, uint16_t len, uint8_t *tx_buf, uint8_t *rx_buf)
+                              uint32_t speed_hz, uint16_t len, uint8_t *tx_buf, uint8_t *rx_buf, bool continuous)
 {
     struct spi_lpspi_settings *spi = get_spi_lpspi(settings);
     lpspi_transfer_t masterXfer;
@@ -113,11 +118,21 @@ static int spi_lpspi_transfer(struct spi_settings *settings, srtm_response_t res
     if (bits_per_word > 32)
     {
         ret = SRTM_SPI_RETCODE_EINVAL;
-        goto out_inval;
+        goto out;
     }
 
-    spi_lpspi_setup_transfer(spi, settings->mode, bits_per_word, speed_hz);
-    spi->response = response;
+    /* A zero-length transfer aborts the operation, even during a continuous transfer. */
+    if (spi->has_pending_transfer && !len)
+    {
+        spi_lpspi_reset(spi);
+        goto out;
+    }
+
+    /* Configured only initially, since they stay constant across the entire split transfer. */
+    if (!spi->has_pending_transfer)
+        spi_lpspi_setup_transfer(spi, settings->mode, bits_per_word, speed_hz);
+    spi->has_pending_transfer = continuous;
+    spi->response             = response;
 
     /* Start master transfer, send data to slave */
     masterXfer.txData      = tx_buf;
@@ -128,8 +143,9 @@ static int spi_lpspi_transfer(struct spi_settings *settings, srtm_response_t res
 
     return 0;
 
-out_inval:
+out:
     taskENTER_CRITICAL();
+    spi->has_pending_transfer = false;
     spi->transmit_in_progress = false;
 out_busy:
     taskEXIT_CRITICAL();
