@@ -240,6 +240,15 @@ void BOARD_BootClockRUN(void)
     int freq_divider = 1;
 
     UPOWER_Init(NULL);
+
+    /* set noise margin: workaround overvoltage errata at low temp */
+    UPOWER_SetPmicReg(0x00, 0x83);
+    UPOWER_SetPmicReg(0x3F, 0x3F);
+    UPOWER_SetPmicReg(0xC3, 0x10);
+    UPOWER_SetPmicReg(0xC5, 0x14);
+    UPOWER_SetPmicReg(0x3F, 0x00);
+    UPOWER_SetPmicReg(0x00, 0x30);
+
     BOARD_InitClock();
 
     /* default voltage is 1.05 V for Real Time Domain, default cortex-m33's clock frequency is 92 MHz(clock source is
