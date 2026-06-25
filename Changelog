@@ -1,3 +1,9 @@
+1.11
+====
+- add workaround for PMIC overvoltage bug
+
+  -- 2026-06-25
+
 1.10.1
 ======
 - spi gpio: remember mode per adapter
