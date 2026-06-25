@@ -38,7 +38,7 @@ void custom_early_init(void) {}
 void custom_init(void)
 {
     /* register GPIOs etc */
-    // APP_GPIO_PinctrlSet(1, 12, IOMUXC_PTB12_PTB12, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
+    // APP_GPIO_PinctrlSet(IOMUXC_PTB12_PTB12, IOMUXC_PCR_PE_MASK | IOMUXC_PCR_PS_MASK);
     // APP_GPIO_SetupGPIO_Input(1, 12);
     // APP_GPIO_SetupIRQ(1, 12, kRGPIO_InterruptRisingEdge, APP_GPIO_IRQCallback_Custom);
 }
