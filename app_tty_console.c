@@ -108,15 +108,14 @@ void APP_TTY_Console_Write(uint8_t *buf, uint16_t len)
     while (len > 0)
     {
         uint8_t *back_buf;
-        uint16_t maxlen;
-        srtm_notification_t notif = SRTM_TtyService_NotifyAlloc(console_settings->port_idx, &back_buf, &maxlen);
+        uint16_t send_len = len;
 
-        /* truncate to whatever srtm sent us */
-        uint16_t num = MIN(maxlen, len);
-        memcpy(back_buf, buf, num);
-        SRTM_TtyService_NotifySend(ttyService, notif, num);
+        srtm_notification_t notif = SRTM_TtyService_NotifyAlloc_Sized(console_settings->port_idx, &back_buf, &send_len);
 
-        len -= num;
-        buf += num;
+        memcpy(back_buf, buf, send_len);
+        SRTM_TtyService_NotifySend(ttyService, notif, send_len);
+
+        len -= send_len;
+        buf += send_len;
     }
 }

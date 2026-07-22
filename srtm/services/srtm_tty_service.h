@@ -111,8 +111,10 @@ void SRTM_TtyService_Destroy(srtm_service_t service);
 void SRTM_TtyService_Reset(srtm_service_t service, srtm_peercore_t core);
 
 // alloc notify buffer
-// store pointer to payload in arg
+// store pointer to payload in arg, len is set to allocated data (always 64)
 srtm_notification_t SRTM_TtyService_NotifyAlloc(uint8_t port_idx, uint8_t **buf, uint16_t *len);
+// same, but *len must be set to desired length first
+srtm_notification_t SRTM_TtyService_NotifyAlloc_Sized(uint8_t port_idx, uint8_t **buf, uint16_t *len);
 // send notify buffer
 srtm_status_t SRTM_TtyService_NotifySend(srtm_service_t service, srtm_notification_t notif, uint16_t len);
 

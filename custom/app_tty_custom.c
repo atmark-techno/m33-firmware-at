@@ -31,15 +31,15 @@ static void custom_tty_to_linux(struct tty_settings *settings, char *buf, uint16
     while (len > 0)
     {
         uint8_t *send_buf;
-        uint16_t send_len;
+        uint16_t send_len = len;
 
         /* get buffer from SRTM */
-        srtm_notification_t notif = SRTM_TtyService_NotifyAlloc(settings->port_idx, &send_buf, &send_len);
+        srtm_notification_t notif = SRTM_TtyService_NotifyAlloc_Sized(settings->port_idx, &send_buf, &send_len);
+        assert(notif);
 
         /* copy data and send */
-        send_len = MIN(send_len, len);
         memcpy(send_buf, buf, send_len);
-        SRTM_TtyService_NotifySend(ttyService, notif, len);
+        SRTM_TtyService_NotifySend(ttyService, notif, send_len);
 
         len -= send_len;
         buf += send_len;

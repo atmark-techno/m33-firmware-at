@@ -353,29 +353,42 @@ void SRTM_TtyService_Reset(srtm_service_t service, srtm_peercore_t core)
     handle->channel = NULL;
 }
 
+/* Allocate buffer for message up to 64 bytes in size */
 srtm_notification_t SRTM_TtyService_NotifyAlloc(uint8_t port_idx, uint8_t **buf, uint16_t *len)
 {
-    struct _srtm_tty_payload *payload;
-    srtm_notification_t notif =
-        SRTM_Notification_Create(NULL, SRTM_TTY_CATEGORY, SRTM_TTY_VERSION, TTY_RPMSG_COMMAND_NOTIFY, sizeof(*payload));
-    if (!notif)
-    {
-        PRINTF("Could not alloc tty rx buffer\r\n");
-        return NULL;
-    }
-
-    SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "%s port %d\r\n", __func__, port_idx);
-
-    payload           = (struct _srtm_tty_payload *)SRTM_CommMessage_GetPayload(notif);
-    payload->port_idx = port_idx;
-
     /* allocate smaller buffers than max: since rx times out in 1ms then
      * with the default 115200 baud rate we never send more than 14-15
      * chars at a timer.
      * At 1M baud rate we'd need 125chars/ms so increasing the size depending
      * on baud rate would make sense, to be tried later.
      */
-    *len = MIN(RPMSG_MAX_SIZE, 64);
+    *len = 64;
+    return SRTM_TtyService_NotifyAlloc_Sized(port_idx, buf, len);
+}
+
+/* Allocate buffer for payload with given size, up to RPMSG_MAX_SIZE */
+srtm_notification_t SRTM_TtyService_NotifyAlloc_Sized(uint8_t port_idx, uint8_t **buf, uint16_t *len)
+{
+    /* Ensure requested length fits and is not zero */
+    if (!*len)
+        *len = 64;
+    *len = MIN(RPMSG_MAX_SIZE, *len);
+
+    uint16_t payload_len = msg_size(*len);
+    srtm_notification_t notif =
+        SRTM_Notification_Create(NULL, SRTM_TTY_CATEGORY, SRTM_TTY_VERSION, TTY_RPMSG_COMMAND_NOTIFY, payload_len);
+    if (!notif)
+    {
+        PRINTF("Could not alloc tty rx buffer\r\n");
+        return NULL;
+    }
+
+    SRTM_DEBUG_MESSAGE(SRTM_DEBUG_VERBOSE_INFO, "%s port %d len %d\r\n", __func__, port_idx, payload_len);
+
+    struct _srtm_tty_payload *payload;
+    payload           = (struct _srtm_tty_payload *)SRTM_CommMessage_GetPayload(notif);
+    payload->port_idx = port_idx;
+
     *buf = payload->buf;
     return notif;
 }
