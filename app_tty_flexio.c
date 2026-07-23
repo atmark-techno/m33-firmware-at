@@ -171,8 +171,8 @@ static void flexio_tty_rx_task(void *pvParameters)
     struct tty_settings *settings      = pvParameters;
     struct flexio_tty_settings *flexio = get_flexio(settings);
 
-    assert(setting);
-    assert(setting->type == TTY_TYPE_FLEXIO);
+    assert(settings);
+    assert(settings->type == TTY_TYPE_FLEXIO);
 
     /* if task was created during suspend make it wait here... */
     if (settings->state & TTY_SUSPENDED)

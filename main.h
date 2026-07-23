@@ -81,7 +81,8 @@ typedef struct
 extern "C" {
 #endif
 
-void PMIC_Reset(void);
+__attribute__((__noreturn__)) void PMIC_Reset(void);
+__attribute__((__noreturn__)) void reset_after_safe_delay(void);
 void APP_PowerModeSwitch(lpm_rtd_power_mode_e targetPowerMode);
 
 extern lpm_rtd_power_mode_e sleepWithLinux;

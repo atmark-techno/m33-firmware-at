@@ -202,6 +202,26 @@ void HardFault_Handler(void)
         "b HardFault_Handler_c \n");
 }
 
+void reset_after_safe_delay(void)
+{
+    /* If this happens early boot we won't have a chance to rollback:
+     * check current time and sleep for at least 40s after boot */
+    TickType_t tick = xTaskGetTickCount();
+    if (tick < configINITIAL_TICK_COUNT + pdMS_TO_TICKS(40000))
+    {
+        int delay = 40000 - pdTICKS_TO_MS(tick - configINITIAL_TICK_COUNT);
+        DebugConsole_Emergency("Waiting for 40s after boot to reset\r\n");
+        sprintf(hardfault_buf, "Sleeping approx %dms\r\n", delay);
+        DebugConsole_Emergency(hardfault_buf);
+        spin_sleep(delay);
+    }
+
+    DebugConsole_Emergency("RESET\r\n");
+    /* we don't know if it's safe to print something in console here, just reset in doubt..
+     * Ideally try to store a flag in something that survives reset (rtc?) and use that? */
+    PMIC_Reset();
+}
+
 __attribute__((optimize("O0"))) void HardFault_Handler_c(struct HardFaultStackFrame *frame)
 {
     /* volatile apparently helps compiler not optimize these variables away,
@@ -277,22 +297,7 @@ __attribute__((optimize("O0"))) void HardFault_Handler_c(struct HardFaultStackFr
     /* uboot cannot enter relocation if we crash early, allow it a chance to rollback */
     hardfault_process_uboot_messages();
 
-    /* If this happens early boot we won't have a chance to rollback:
-     * check current time and sleep for at least 40s after boot */
-    TickType_t tick = xTaskGetTickCount();
-    if (tick < configINITIAL_TICK_COUNT + pdMS_TO_TICKS(40000))
-    {
-        int delay = 40000 - pdTICKS_TO_MS(tick - configINITIAL_TICK_COUNT);
-        DebugConsole_Emergency("Waiting for 40s after boot to reset\r\n");
-        sprintf(hardfault_buf, "Sleeping approx %dms\r\n", delay);
-        DebugConsole_Emergency(hardfault_buf);
-        spin_sleep(delay);
-    }
-
-    DebugConsole_Emergency("RESET\r\n");
-    /* we don't know if it's safe to print something in console here, just reset in doubt..
-     * Ideally try to store a flag in something that survives reset (rtc?) and use that? */
-    PMIC_Reset();
+    reset_after_safe_delay();
 }
 
 /*******************************************************************************
