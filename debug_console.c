@@ -205,7 +205,7 @@ void *DebugConsole_get_uart(void)
  * input
  *********************************************************/
 
-char getchar(void)
+char DebugConsole_getchar(void)
 {
     uint8_t ch;
 
@@ -272,7 +272,7 @@ static void flush(void)
     consoleBufferStart = consoleBufferEnd;
 }
 
-void putchar(char c, bool is_last, bool ignore_quiet)
+void DebugConsole_putchar(char c, bool is_last, bool ignore_quiet)
 {
     if (consoleQuiet && !ignore_quiet && consoleBufferEnd != consoleBufferStart)
     {
@@ -306,7 +306,7 @@ void putchar(char c, bool is_last, bool ignore_quiet)
 void putchar_(char c)
 {
     /* line buffered */
-    putchar(c, /* is_last */ c == '\n', /* ignore_quiet */ false);
+    DebugConsole_putchar(c, /* is_last */ c == '\n', /* ignore_quiet */ false);
 }
 
 void DebugConsole_Replay(void)

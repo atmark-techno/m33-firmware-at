@@ -466,7 +466,7 @@ static int CLI_help(int argc, char **argv)
 
 static void putch_wrapper(void *data, char ch, bool is_last)
 {
-    putchar(ch, is_last, /* ignore_quiet */ true);
+    DebugConsole_putchar(ch, is_last, /* ignore_quiet */ true);
 }
 
 static bool try_commands(int argc, char **argv)
@@ -498,7 +498,7 @@ void CLI_Task(void *pvParameters)
 
     while (true)
     {
-        char ch = getchar();
+        char ch = DebugConsole_getchar();
 
         if (!embedded_cli_insert_char(&cli, ch))
             continue;
