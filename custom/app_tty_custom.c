@@ -22,7 +22,7 @@ struct custom_tty_settings *get_custom(struct tty_settings *settings)
 /* This helper sends data to linux.
  * It's also possible to get a buffer early and write directly into it to
  * avoid a copy */
-static void custom_tty_to_linux(struct tty_settings *settings, char *buf, uint16_t len)
+void custom_tty_to_linux(struct tty_settings *settings, char *buf, uint16_t len)
 {
     /* We should not send data to linux when the tty is not active to avoid filling buffer on linux side */
     if ((settings->state & (TTY_ACTIVE | TTY_SUSPENDED)) != TTY_ACTIVE)
@@ -71,6 +71,8 @@ static int custom_tty_activate(struct tty_settings *settings)
     return 0;
 }
 
+// in cli_custom.c
+void remember_tty(struct tty_settings *settings);
 static int custom_tty_init(struct tty_settings *settings, struct srtm_tty_init_payload *generic_init)
 {
     struct custom_tty_settings *custom        = get_custom(settings);
@@ -78,6 +80,7 @@ static int custom_tty_init(struct tty_settings *settings, struct srtm_tty_init_p
 
     PRINTF("initializing tty %d as CUSTOM '%s'\r\n", settings->port_idx, init->name);
 
+    remember_tty(settings);
     /* Init more things here... */
     (void)custom;
 
