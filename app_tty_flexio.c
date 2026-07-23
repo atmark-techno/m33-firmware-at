@@ -9,13 +9,13 @@
 #include "fsl_flexio_uart.h"
 #include "fsl_reset.h"
 
+#include "app_gpio.h"
 #include "app_srtm_internal.h"
 #include "app_tty.h"
-#include "app_gpio.h"
-#include "tty.h"
 #include "build_bug.h"
 #include "main.h"
 #include "srtm_message.h"
+#include "tty.h"
 
 #define TTY_RX_TASK_PRIORITY (3U)
 #define APP_FLEXIO_IRQ_PRIO (5U)
@@ -182,8 +182,10 @@ static void flexio_tty_rx_task(void *pvParameters)
     uint16_t maxlen, next_maxlen, tmp_maxlen, tmp_maxlen2, recv_len;
     srtm_notification_t notif, next_notif, tmp_notif, tmp_notif2;
 
-    notif                  = SRTM_TtyService_NotifyAlloc(settings->port_idx, &buf, &maxlen);
-    next_notif             = SRTM_TtyService_NotifyAlloc(settings->port_idx, &flexio->rx_next_buf, &next_maxlen);
+    notif = SRTM_TtyService_NotifyAlloc(settings->port_idx, &buf, &maxlen);
+    assert(notif);
+    next_notif = SRTM_TtyService_NotifyAlloc(settings->port_idx, &flexio->rx_next_buf, &next_maxlen);
+    assert(next_notif);
     flexio->rx_next_maxlen = next_maxlen;
 
     flexio_uart_transfer_t xfer = {
@@ -223,6 +225,7 @@ static void flexio_tty_rx_task(void *pvParameters)
 
         /* prepare new buffer to swap in */
         tmp_notif = SRTM_TtyService_NotifyAlloc(settings->port_idx, &tmp_buf, &tmp_maxlen);
+        assert(tmp_notif);
 
         /* disable interrupt to swap buffers */
         FLEXIO_UART_DisableInterrupts(&flexio->uart_dev, kFLEXIO_UART_RxDataRegFullInterruptEnable);
@@ -249,6 +252,7 @@ static void flexio_tty_rx_task(void *pvParameters)
                  * Optimal recovery speed would have us re-enable receive with single buffer
                  * but for code simpliciy just re-inits everything upfront */
                 tmp_notif2 = SRTM_TtyService_NotifyAlloc(settings->port_idx, &flexio->rx_next_buf, &tmp_maxlen2);
+                assert(tmp_notif2);
                 flexio->rx_next_maxlen = tmp_maxlen2;
                 xfer.data              = tmp_buf;
                 xfer.dataSize          = tmp_maxlen;

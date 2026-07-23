@@ -64,12 +64,7 @@ static void lpuart_tty_rx_task(void *pvParameters)
         size_t recvlen = 0;
 
         srtm_notification_t notif = SRTM_TtyService_NotifyAlloc(settings->port_idx, &buf, &maxlen);
-        if (!notif)
-        {
-            // message already printed in alloc failure
-            SDK_DelayAtLeastUs(1000000, SDK_DEVICE_MAXIMUM_CPU_CLOCK_FREQUENCY);
-            continue;
-        }
+        assert(notif);
 
         do
         {
