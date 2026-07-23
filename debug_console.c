@@ -10,16 +10,16 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include "app_gpio.h"
+#include "app_tty_console.h"
+#include "build_bug.h"
+#include "debug_console.h"
+#include "fsl_iomuxc.h"
 #include "fsl_lpuart.h"
 #include "fsl_reset.h"
-#include "fsl_iomuxc.h"
-#include "app_gpio.h"
 #include "lpuart.h"
-
-#include "debug_console.h"
-#include "app_tty_console.h"
+#include "main.h"
 #include "printf.h"
-#include "build_bug.h"
 
 /* build time configuration -- priority over runtime settings if not empty.
  * Default is uart disabled until uboot picks one, rpmsg enabled in dts */
@@ -335,13 +335,14 @@ void DebugConsole_Quiet(bool quiet)
  * abort
  *********************************************************/
 
-__attribute__((__noreturn__)) void _abort(const char *condstr, const char *func, const char *file, int line)
+void __assert_func(const char *file, int line, const char *func, const char *failedExpr)
 {
-    /* we're already screwed so might as well ignore suspended state... */
+    /* we're already screwed so might as well ignore suspended state and try to init... */
+    if (!debug_uart)
+        DebugConsole_Init();
     consoleSuspended = false;
-    PRINTF("%s:%d: %s: Assert failure %s\r\n", file, line, func, condstr);
-    while (1)
-        ;
+    PRINTF("%s:%d: %s: Assert failure %s\r\n", file, line, func, failedExpr);
+    reset_after_safe_delay();
 }
 
 void _DebugConsole_Emergency(const char *buf, int len)
