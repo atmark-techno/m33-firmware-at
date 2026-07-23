@@ -9,16 +9,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* for printf, output one char to console, line-buffered */
-void putchar_(char c);
 /* more generic */
-void putchar(char c, bool is_last, bool ignore_quiet);
+void DebugConsole_putchar(char c, bool is_last, bool ignore_quiet);
+/* input from console */
+char DebugConsole_getchar(void);
+
 /* for hardfault */
 void _DebugConsole_Emergency(const char *buf, int len);
 #define DebugConsole_Emergency(buf) _DebugConsole_Emergency(buf, strlen(buf))
-
-/* input from console */
-char getchar(void);
 
 /* lifecycle */
 void DebugConsole_Init(void);
