@@ -8,6 +8,7 @@
 #include "clock_config.h"
 #include "board.h"
 #include "fsl_upower.h"
+#include "printf.h"
 
 /*******************************************************************************
  * Variables
@@ -448,6 +449,8 @@ drive_mode_e BOARD_GetRtdDriveMode(void)
             case PMIC_BUCK2_VOLTAGE_1_1V:
                 rtd_drive_mode = DRIVE_MODE_OD;
                 break;
+            /* due to errata we set 1.05V for ND, but early boot we get 1.0 */
+            case PMIC_BUCK2_VOLTAGE_1_0V:
             case PMIC_BUCK2_VOLTAGE_1_05V:
                 rtd_drive_mode = DRIVE_MODE_ND;
                 break;
@@ -455,6 +458,7 @@ drive_mode_e BOARD_GetRtdDriveMode(void)
                 rtd_drive_mode = DRIVE_MODE_UD;
                 break;
             default:
+                PRINTF("Got voltage %d\n", voltage);
                 assert(false);
                 break;
         }
