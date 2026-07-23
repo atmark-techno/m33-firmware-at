@@ -111,6 +111,7 @@ void APP_TTY_Console_Write(uint8_t *buf, uint16_t len)
         uint16_t send_len = len;
 
         srtm_notification_t notif = SRTM_TtyService_NotifyAlloc_Sized(console_settings->port_idx, &back_buf, &send_len);
+        assert(notif);
 
         memcpy(back_buf, buf, send_len);
         SRTM_TtyService_NotifySend(ttyService, notif, send_len);
